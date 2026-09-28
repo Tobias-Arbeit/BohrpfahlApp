@@ -20,13 +20,13 @@
         <div class="gd-item"><span class="gd-label">Pfahllänge Soll</span><strong id="gdPfahllaenge">–</strong></div>
         <div class="gd-item"><span class="gd-label">Neigung</span><strong id="gdNeigung">–</strong></div>
         <div class="gd-item"><span class="gd-label">Pfahl-Ø</span><strong id="gdDurchmesser">–</strong></div>
-        <div class="gd-item gd-geraet">
-          <label for="f_geraet">Bohrgerät</label>
-          <select id="f_geraet" name="geraet"></select>
-          <span class="hint" id="geraetHint"></span>
-        </div>
         <div class="gd-item"><span class="gd-label">Betongüte</span><strong id="gdBetongute">–</strong></div>
         <div class="gd-item"><span class="gd-label">Verbrauch Soll</span><strong id="gdSoll">–</strong></div>
+      </div>
+      <div class="geraet-feld">
+        <label for="f_geraet">Bohrgerät</label>
+        <select id="f_geraet" name="geraet"></select>
+        <span class="hint" id="geraetHint"></span>
       </div>
       <fieldset class="nur-voll" style="margin-top:0">
         <legend>Pfahl</legend>
@@ -90,8 +90,8 @@
             </div>
           </div>
           <div class="field">
-            <label for="f_abstich">Abstichmaß Überbeton <span class="unit">[m ab AE]</span></label>
-            <input id="f_abstich" name="abstich" type="text" inputmode="decimal" autocomplete="off">
+            <label for="f_gwTiefe">Grundwasser ab <span class="unit">[m unter Bohrebene]</span></label>
+            <input id="f_gwTiefe" name="gwTiefe" type="text" inputmode="decimal" autocomplete="off">
           </div>
         </div>
 
@@ -168,10 +168,6 @@
 
           <div class="grid" style="margin-top:14px">
             <div class="field">
-              <label for="f_gwTiefe">Grundwasser ab <span class="unit">[m unter Bohrebene]</span></label>
-              <input id="f_gwTiefe" name="gwTiefe" type="text" inputmode="decimal" autocomplete="off">
-            </div>
-            <div class="field">
               <label for="f_grundwasser">Bohren im GW <span class="unit">[m]</span></label>
               <input id="f_grundwasser" name="grundwasser" type="text" inputmode="decimal" autocomplete="off">
               <span class="hint" data-auto-hint="grundwasser"></span>
@@ -238,6 +234,10 @@
           <div class="field">
             <label for="f_verbrauchIst">Verbrauch IST <span class="unit">[m³]</span></label>
             <input id="f_verbrauchIst" name="verbrauchIst" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f_abstich">Abstichmaß Überbeton <span class="unit">[m ab AE]</span></label>
+            <input id="f_abstich" name="abstich" type="text" inputmode="decimal" autocomplete="off">
           </div>
         </div>
       </fieldset>

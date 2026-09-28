@@ -164,7 +164,9 @@ function pileGraphicSvg(p) {
         o.push(`<text x="${cx}" y="${y1 + h / 2 - 1.5}" text-anchor="middle" class="${cls}">${esc2(title)}</text>`);
         o.push(`<text x="${cx}" y="${y1 + h / 2 + 9.5}" text-anchor="middle" class="${cls}">${esc2(clip(l.boden))}</text>`);
       } else {
-        const txt = title ? [title, l.boden].filter(Boolean).join(' – ') : (soil ? soilLabel(soil) : l.boden);
+        // Alle angewählten Bodenarten zeigen (nicht nur die für Farbe/Muster führende erste), z. B. "Kies (Gr), Sand (Sa)"
+        const alle = l.art === 'boden' ? soilsIn(l.boden) : [];
+        const txt = title ? [title, l.boden].filter(Boolean).join(' – ') : (alle.length ? alle.map(soilLabel).join(', ') : l.boden);
         if (txt && h >= 12) o.push(`<text x="${cx}" y="${y1 + h / 2 + 3.5}" text-anchor="middle" class="${cls}">${esc2(clip(txt))}</text>`);
       }
       // Tiefenmarke an der Unterkante der Schicht (nur, wenn genug Abstand zur vorigen Zahl)

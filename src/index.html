@@ -381,13 +381,19 @@ dialog.kompakt .nur-voll { display: none; }
 .gd-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gd-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .gd-item strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.gd-geraet { min-width: 200px; }
-.gd-geraet label { margin-bottom: 2px; }
-.gd-geraet select { height: 34px; }
+.geraet-feld { max-width: 340px; margin: 0 0 14px; }
+.geraet-feld label { margin-bottom: 4px; }
+dialog.kompakt .geraet-feld { max-width: 220px; margin: -4px 0 10px; }
+dialog.kompakt .geraet-feld select { height: 34px; }
 
 /* Höhen und Längen: für den Borist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben) */
 dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
 dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
+/* Auf Wunsch komplett entfernt: für den Borist bleiben in "Höhen und Längen" nur noch
+   Wasserauflast und Grundwasser ab übrig (siehe pile-dialog.html) */
+dialog.kompakt [data-info-toggle="hoehen"],
+dialog.kompakt [data-info-panel="hoehen"] { display: none !important; }
+dialog.kompakt #fsBewehrung { display: none; }
 
 /* "i"-Button (nur Borist/kompakt): blendet Höhen/Grundwasser bzw. Erklärtexte erst auf Wunsch ein,
    statt sie dauerhaft Platz wegnehmen zu lassen. Admin sieht weiterhin alles direkt (kein Button,
@@ -415,8 +421,7 @@ dialog.kompakt .zwei-spalten { display: grid; grid-template-columns: 1fr 1fr; ga
 dialog.kompakt .zwei-spalten fieldset { margin-top: 0; }
 dialog.kompakt #fsBoden { grid-column: 1; grid-row: 1; }
 dialog.kompakt #fsZeiten { grid-column: 2; grid-row: 1; }
-dialog.kompakt #fsBewehrung { grid-column: 1 / -1; grid-row: 2; }
-dialog.kompakt #fsBeton { grid-column: 1 / -1; grid-row: 3; }
+dialog.kompakt #fsBeton { grid-column: 1 / -1; grid-row: 2; }
 @media (max-width: 900px) { dialog.kompakt .zwei-spalten { display: block; } }
 
 /* ---------- Ansicht: Reiter und Karte ---------- */

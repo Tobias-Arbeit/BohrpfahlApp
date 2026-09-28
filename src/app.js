@@ -1241,8 +1241,10 @@ function fillGrunddaten(p) {
 
 /* --- Pflichtfelder des Borists ---
    Ohne diese Angaben kann der Borist einen Pfahl nicht speichern; leere Pflichtfelder sind gelb markiert.
+   Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Borist bei fremden Pfählen
+   nicht mehr zugänglich (siehe "i"-Panel-Entfernung in pile-dialog.html) und deshalb nicht mehr Pflicht.
    Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkung, Fotos. */
-const REQ_NUM = ['arbeitsebene', 'oberkante', 'unterkante', 'bohrlaenge', 'pfahllaenge', 'leerbohrung', 'verbrauchIst'];
+const REQ_NUM = ['verbrauchIst'];
 const empty = el => !el.value || !String(el.value).trim();
 
 function requiredEls() {

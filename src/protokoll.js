@@ -187,7 +187,9 @@ function drawProtokoll(doc, p, proj) {
     const lines = layers.map(l => {
       if (l.art === 'hindernis' || l.art === 'hart') return [l.art === 'hart' ? 'harte Bodenschicht' : 'Bohrhindernis', l.boden].filter(Boolean);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.3 * F);
-      return l.boden ? doc.splitTextToSize(l.boden, 96).slice(0, 2) : [];
+      // Im Protokoll mit Kürzeln statt vollem Namen, z. B. "Gr, Sa" statt "Kies, Sand"
+      const kuerzel = soilsIn(l.boden).map(s => s.sym).join(', ');
+      return l.boden ? doc.splitTextToSize(kuerzel || l.boden, 96).slice(0, 2) : [];
     });
     const mins = lines.map(ls => Math.max(LINE, ls.length * LINE - 2));
     const hs = allocateHeights(layers.map(l => (l.bis - l.von) / D * (bot - top)), bot - top, mins);
