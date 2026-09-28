@@ -14,7 +14,21 @@
 
       <div class="dlg-cols">
       <div class="dlg-form">
-      <fieldset style="margin-top:0">
+      <div class="grunddaten">
+        <div class="gd-item"><span class="gd-label">Pfahl-Nr.</span><strong id="gdNr">–</strong></div>
+        <div class="gd-item"><span class="gd-label">Bohrlänge Soll</span><strong id="gdBohrlaenge">–</strong></div>
+        <div class="gd-item"><span class="gd-label">Pfahllänge Soll</span><strong id="gdPfahllaenge">–</strong></div>
+        <div class="gd-item"><span class="gd-label">Neigung</span><strong id="gdNeigung">–</strong></div>
+        <div class="gd-item"><span class="gd-label">Pfahl-Ø</span><strong id="gdDurchmesser">–</strong></div>
+        <div class="gd-item gd-geraet">
+          <label for="f_geraet">Bohrgerät</label>
+          <select id="f_geraet" name="geraet"></select>
+          <span class="hint" id="geraetHint"></span>
+        </div>
+        <div class="gd-item"><span class="gd-label">Betongüte</span><strong id="gdBetongute">–</strong></div>
+        <div class="gd-item"><span class="gd-label">Verbrauch Soll</span><strong id="gdSoll">–</strong></div>
+      </div>
+      <fieldset class="nur-voll" style="margin-top:0">
         <legend>Pfahl</legend>
         <div class="grid">
           <div class="field">
@@ -41,15 +55,10 @@
             <label for="f_neigung">Neigung <span class="unit">[°]</span></label>
             <input id="f_neigung" name="neigung" type="text" inputmode="decimal" autocomplete="off">
           </div>
-          <div class="field span3">
-            <label for="f_geraet">Bohrgerät</label>
-            <select id="f_geraet" name="geraet"></select>
-            <span class="hint" id="geraetHint"></span>
-          </div>
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset class="nur-voll">
         <legend>Lage (Koordinaten)</legend>
         <div class="grid">
           <div class="field">
@@ -160,7 +169,8 @@
         </div>
       </fieldset>
 
-      <fieldset>
+      <div class="zwei-spalten">
+      <fieldset id="fsBoden">
         <legend>Bodenaufschluss (Schichtenfolge)</legend>
         <p class="sub">Der Bodenaufschluss beginnt bei <strong>0,00 = Arbeitsebene</strong> und endet bei der <strong>Pfahl-Unterkante</strong>: Die letzte Tiefe wird automatisch aus der Bohrlänge übernommen (Ist, sonst Soll). Dazwischen tragen Sie die Schichten ein: Tiefe der <strong>Unterkante</strong> in m unter Bohrebene und Bodenart. „Bohrhindernis“ und „harte Bodenschicht“ erscheinen im Protokoll mit Ihrem Hinweistext (z. B. „Holz“).</p>
         <div class="schicht-fixed"><b>0,00 m</b><span>Arbeitsebene</span><em id="aeLabel"></em></div>
@@ -172,7 +182,7 @@
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset id="fsBewehrung">
         <legend>Pfahlbewehrung</legend>
         <div class="grid">
           <div class="field">
@@ -190,7 +200,7 @@
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset id="fsBeton">
         <legend>Pfahlbeton</legend>
         <div class="grid">
           <div class="field">
@@ -213,7 +223,7 @@
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset id="fsZeiten">
         <legend>Ausführung</legend>
         <div class="zeit-head"><span>Arbeitsvorgang</span><span>Datum</span><span>von</span><span>bis</span><span></span></div>
         <div id="zeitRows" class="rows"></div>
@@ -223,6 +233,7 @@
           <span class="sum">Summe Bohrhindernisse: <strong id="hindOut">–</strong></span>
         </div>
       </fieldset>
+      </div>
 
       <fieldset>
         <legend>Bemerkung</legend>

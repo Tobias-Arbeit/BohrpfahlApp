@@ -26,9 +26,11 @@ const soilLabel = s => `${s.name} (${s.sym})`;
 
 const normSoil = s => String(s ?? '').toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss').replace(/[^a-z0-9]/g, '');
 
-/** Bodenart zu einem Text finden (Name, Symbol oder Anfang des Namens); sonst null */
+/** Bodenart zu einem Text finden (Name, Symbol oder Anfang des Namens); sonst null.
+    Bei mehreren, kommagetrennten Bodenarten (Borist-Checkboxen) zählt für Farbe/Zeichen
+    die zuerst genannte (Haupt-)Bodenart. */
 function soilOf(text) {
-  const n = normSoil(text);
+  const n = normSoil(String(text ?? '').split(',')[0]);
   if (!n) return null;
   return SOILS.find(s => normSoil(s.name) === n || normSoil(s.sym) === n) ||
     SOILS.find(s => n.startsWith(normSoil(s.name))) ||

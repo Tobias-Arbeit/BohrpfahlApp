@@ -233,6 +233,10 @@ td.actions { padding: 4px 8px; text-align: right; }
 .placeholder { padding: 48px 20px; text-align: center; color: var(--muted); }
 .placeholder h2 { margin: 0 0 6px; color: var(--ink); font-size: 18px; }
 
+/* Kompakte Pfahlliste für den Borist: weniger Spalten (siehe BORIST_TABLE_KEYS) und dichter. */
+body.is-borist th, body.is-borist td { padding: 6px 10px; font-size: 13.5px; }
+body.is-borist thead th { font-size: 12px; }
+
 /* ---------- Dialog ---------- */
 dialog {
   width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 0;
@@ -308,6 +312,18 @@ svg.chart { display: block; }
 .soil-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .soil-cell select, .soil-cell input { flex: 1; min-width: 0; }
 .soil-cell .sw { flex: none; display: block; width: 26px; height: 18px; }
+
+/* Bodenart-Checkboxen (Borist): mehrere Bodenbestandteile je Schicht, kompakt als Chips */
+.soil-checks { display: flex; flex-wrap: wrap; gap: 4px 6px; flex: 1; min-width: 0; }
+.soil-chk {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none;
+}
+.soil-chk:has(input:checked) { background: var(--yes-bg); border-color: var(--yes-ink); color: var(--yes-ink); }
+.soil-chk input { width: 13px; height: 13px; margin: 0; flex: none; }
+/* Pflichtfeld-Markierung (.need landet auf dem unsichtbaren data-s=boden-Feld) für die Checkboxen sichtbar machen */
+input[data-s=boden].need ~ .soil-checks { background: var(--need-bg); box-shadow: inset 4px 0 0 var(--need-line); border-radius: 8px; padding: 4px 6px; margin: -4px -6px; }
 .schicht-fixed { display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; border-radius: var(--radius); background: var(--surface-2); font-size: 14px; }
 .schicht-fixed b { display: inline-block; min-width: 96px; font-variant-numeric: tabular-nums; }
 .schicht-fixed em { color: var(--muted); font-style: normal; font-size: 13px; }
@@ -320,6 +336,25 @@ svg.chart { display: block; }
 .zeit-head, .zeile { display: grid; grid-template-columns: 120px 1.3fr 1fr 1fr 56px; gap: 8px; align-items: center; }
 .zeile .btn { width: 100%; justify-content: center; padding: 0; }
 .zeit-head { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+
+/* Borist: Start/Stopp statt "Jetzt", Datum/Uhrzeit erst nach dem Start klein sichtbar (siehe data-zstate) */
+.zeile-borist {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+  padding: 6px 0; border-bottom: 1px dashed var(--line);
+}
+.zeile-borist .zl { flex: 1 1 100px; }
+.zeile-borist .btn { width: auto; }
+.zeile-borist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
+.zeile-borist[data-zstate="bearbeiten"] input[data-z] { display: block; }
+.zeile-borist [data-start], .zeile-borist [data-stop], .zeile-borist [data-edit-zeit], .zeile-borist .zeit-anzeige { display: none; }
+.zeile-borist[data-zstate="leer"] [data-start] { display: inline-flex; }
+.zeile-borist[data-zstate="laeuft"] [data-stop],
+.zeile-borist[data-zstate="laeuft"] [data-edit-zeit],
+.zeile-borist[data-zstate="laeuft"] .zeit-anzeige,
+.zeile-borist[data-zstate="fertig"] [data-edit-zeit],
+.zeile-borist[data-zstate="fertig"] .zeit-anzeige,
+.zeile-borist[data-zstate="bearbeiten"] [data-edit-zeit] { display: inline-flex; }
+.zeile-borist .zeit-anzeige { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .zeile .zl { font-weight: 600; font-size: 14px; }
 .zeile .zl.more { font-weight: 400; color: var(--muted); }
 .logo-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -328,6 +363,34 @@ svg.chart { display: block; }
   border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); font-size: 13px; background: #fff;
 }
 .logo-prev img { max-height: 46px; max-width: 160px; }
+
+/* ---------- Borist: kompaktes Pfahlformular ---------- */
+/* Grunddaten-Leiste: fasst Nr./Soll-Maße/Betongüte/Verbrauch Soll kompakt zusammen und ersetzt für den
+   Borist bei fremden Pfählen die (ohnehin gesperrten) Fieldsets "Pfahl", "Lage" und die Soll-Spalte von
+   "Höhen und Längen" (siehe .kompakt unten). Bei eigenen/neuen Pfählen (voller Zugriff) bleibt es beim
+   bisherigen vollständigen Formular, die Leiste ist dann per JS ausgeblendet. */
+.grunddaten { display: none; }
+dialog.kompakt .grunddaten { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: flex-end; padding: 10px 12px; margin-bottom: 4px; background: var(--surface-2); border-radius: var(--radius); }
+dialog.kompakt .nur-voll { display: none; }
+.gd-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gd-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.gd-item strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gd-geraet { min-width: 200px; }
+.gd-geraet label { margin-bottom: 2px; }
+.gd-geraet select { height: 34px; }
+
+/* Höhen und Längen: für den Borist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben) */
+dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
+dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
+
+/* Bodenaufschluss und Ausführungszeiten nebeneinander, Bewehrung/Beton darunter über die volle Breite */
+dialog.kompakt .zwei-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; align-items: start; }
+dialog.kompakt .zwei-spalten fieldset { margin-top: 0; }
+dialog.kompakt #fsBoden { grid-column: 1; grid-row: 1; }
+dialog.kompakt #fsZeiten { grid-column: 2; grid-row: 1; }
+dialog.kompakt #fsBewehrung { grid-column: 1 / -1; grid-row: 2; }
+dialog.kompakt #fsBeton { grid-column: 1 / -1; grid-row: 3; }
+@media (max-width: 900px) { dialog.kompakt .zwei-spalten { display: block; } }
 
 /* ---------- Ansicht: Reiter und Karte ---------- */
 .view-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }

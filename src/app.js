@@ -316,6 +316,9 @@ const COLS = [
   { k: 'bemerkung',     label: 'Bemerkung',             unit: '',        kind: 'text' },
 ];
 const TCOLS = COLS.filter(c => c.t);
+/* Kompakte Tabelle für den Borist: weniger Spalten, dafür der Bewehrungstyp dabei (sonst nur im CSV). */
+const BORIST_TABLE_KEYS = ['nr', 'bewTyp', 'typ', 'durchmesser', 'pfahllaenge', 'wasserauflast', 'verbrauchIst', 'status'];
+const tableCols = () => isAdmin() ? TCOLS : COLS.filter(c => BORIST_TABLE_KEYS.includes(c.k));
 const unitOf = c => c.unit === '@H' ? hoehenbezug() : c.unit === '@C' ? coordLabels().unit : c.unit;
 
 function getVal(p, k) {
@@ -684,14 +687,15 @@ function render() {
     return;
   }
 
-  const head = TCOLS.map(c => {
+  const cols = tableCols();
+  const head = cols.map(c => {
     const sorted = ui.sort.k === c.k ? (ui.sort.dir === 1 ? 'ascending' : 'descending') : 'none';
     const u = unitOf(c);
     return `<th class="${colClass(c)}" aria-sort="${sorted}"><button type="button" class="sort" data-sort="${c.k}">` +
       `<span class="lbl">${esc(c.label)}</span>${u ? `<span class="u">[${esc(u)}]</span>` : ''}</button></th>`;
   }).join('') + '<th></th>';
 
-  const rows = list.map(p => '<tr data-id="' + esc(p.id) + '">' + TCOLS.map(c => {
+  const rows = list.map(p => '<tr data-id="' + esc(p.id) + '">' + cols.map(c => {
     const t = cellText(p, c);
     if (c.kind === 'bool') return `<td class="mid"><span class="chip${p.wasserauflast ? ' yes' : ''}">${t}</span></td>`;
     if (c.kind === 'status') return `<td><span class="chip st-${pileStatus(p)}">${esc(t)}</span></td>`;
@@ -707,7 +711,7 @@ function render() {
     </td></tr>`).join('');
 
   const t = totals(list);
-  const foot = '<tr>' + TCOLS.map((c, i) => {
+  const foot = '<tr>' + cols.map((c, i) => {
     if (i === 0) return '<td>Summe</td>';
     return `<td class="${colClass(c)}">${c.sum ? esc(totalText(c, t[c.k])) : ''}</td>`;
   }).join('') + '<td></td></tr>';
@@ -911,7 +915,8 @@ function fillGeraetSelect(p) {
   $('#geraetHint').textContent = list.length ? '' : 'Noch keine Geräte angelegt – der Administrator legt sie unter „Projektdaten“ an.';
 }
 
-/** Auswahl der Bodenarten (Hauptanteile lt. Vorlage); ein früherer Freitext bleibt als „(bisher)“ erhalten */
+/** Auswahl der Bodenarten (Hauptanteile lt. Vorlage); ein früherer Freitext bleibt als „(bisher)“ erhalten.
+    Admin: Dropdown (eine Bodenart). Borist: Checkboxen (mehrere Bodenbestandteile), siehe soilChecksHtml. */
 const soilOptionsHtml = cur => {
   const n = normSoil(cur);
   const known = n ? SOILS.find(s => normSoil(s.name) === n || normSoil(s.sym) === n) : null;   // nur exakte Treffer, sonst bleibt der Text erhalten
@@ -920,12 +925,30 @@ const soilOptionsHtml = cur => {
     ...(cur && !known ? [`<option value="${esc(cur)}" selected>${esc(cur)} (bisher)</option>`] : [])].join('');
 };
 
+/** Welche Bodenarten in einem (evtl. kommagetrennten) Text stecken, in SOILS-Reihenfolge. */
+function soilsIn(cur) {
+  const parts = String(cur ?? '').split(',').map(normSoil).filter(Boolean);
+  return SOILS.filter(s => parts.includes(normSoil(s.name)));
+}
+/** Checkboxen für mehrere Bodenbestandteile; das erste angehakte gilt für Grafik/Protokoll als Hauptanteil (soilOf). */
+const soilChecksHtml = cur => {
+  const checked = new Set(soilsIn(cur).map(s => s.name));
+  return SOILS.map(s => `<label class="soil-chk" title="${esc(s.name)}">
+    <input type="checkbox" data-soil="${esc(s.name)}"${checked.has(s.name) ? ' checked' : ''}>
+    <span>${esc(s.sym)}</span></label>`).join('');
+};
+
 const schichtRowHTML = s => {
   const art = s.art || (s.hart ? 'hart' : 'boden');
+  const bodenCur = art === 'boden' ? s.boden : '';
+  const bodenHtml = isAdmin()
+    ? `<select data-s="boden" aria-label="Bodenart"${art === 'boden' ? '' : ' hidden'}>${soilOptionsHtml(bodenCur)}</select>`
+    : `<input type="hidden" data-s="boden" value="${esc(bodenCur || '')}">
+       <div class="soil-checks" role="group" aria-label="Bodenart (mehrere möglich)"${art === 'boden' ? '' : ' hidden'}>${soilChecksHtml(bodenCur)}</div>`;
   return `<div class="schicht">
   <div class="field"><input type="text" inputmode="decimal" data-s="bis" placeholder="bis Tiefe [m]" aria-label="Schicht bis Tiefe in m unter Bohrebene" value="${s.bis != null && !Number.isNaN(s.bis) ? esc(fmtInput(s.bis)) : ''}"></div>
   <div class="soil-cell"><i class="sw" aria-hidden="true"></i>
-    <select data-s="boden" aria-label="Bodenart"${art === 'boden' ? '' : ' hidden'}>${soilOptionsHtml(art === 'boden' ? s.boden : '')}</select>
+    ${bodenHtml}
     <input type="text" data-s="hinweis" placeholder="Hinweis (z. B. Holz, Findling)" aria-label="Hinweis zum Hindernis bzw. zur harten Schicht" maxlength="60"${art === 'boden' ? ' hidden' : ''} value="${esc(art === 'boden' ? '' : (s.boden || ''))}">
   </div>
   <select data-s="art" aria-label="Art der Schicht">${SCHICHT_ARTEN.map(a => `<option value="${a.k}"${art === a.k ? ' selected' : ''}>${a.label}</option>`).join('')}</select>
@@ -936,14 +959,42 @@ const schichtRowHTML = s => {
 function buildZeitRows(z) {
   $('#zeitRows').innerHTML = ZEIT_GROUPS.map(g => Array.from({ length: g.n }, (_, i) => {
     const e = z?.[g.k]?.[i] || {};
-    return `<div class="zeile" data-g="${g.k}" data-i="${i}">
-      <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
-      <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
-      <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
-      <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
-      <button type="button" class="btn small" data-now title="Aktuelle Zeit eintragen">Jetzt</button>
-    </div>`;
+    return isAdmin() ? zeitZeileAdmin(g, i, e) : zeitZeileBorist(g, i, e);
   }).join('')).join('');
+}
+
+function zeitZeileAdmin(g, i, e) {
+  return `<div class="zeile" data-g="${g.k}" data-i="${i}">
+    <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
+    <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
+    <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
+    <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
+    <button type="button" class="btn small" data-now title="Aktuelle Zeit eintragen">Jetzt</button>
+  </div>`;
+}
+
+/* Zeit-Zeile des Borists: Start-/Stopp-Button statt "Jetzt". Datum/Uhrzeit erscheinen erst danach,
+   klein, mit einem Bearbeiten-Button für die manuelle Korrektur (z. B. wenn das Tippen vergessen wurde). */
+const zeitZustand = e => !e.von ? 'leer' : !e.bis ? 'laeuft' : 'fertig';
+const zeitAnzeigeText = e => e.von ? `${e.d ? fmtDateShort(e.d) + ', ' : ''}${e.von}${e.bis ? '–' + e.bis : ' …'} Uhr` : '';
+const readZeileZeit = row => ({ d: $('[data-z=d]', row).value, von: $('[data-z=von]', row).value, bis: $('[data-z=bis]', row).value });
+function setZeitZustand(row) {
+  const e = readZeileZeit(row);
+  row.dataset.zstate = zeitZustand(e);
+  $('[data-anzeige]', row).textContent = zeitAnzeigeText(e);
+}
+
+function zeitZeileBorist(g, i, e) {
+  return `<div class="zeile zeile-borist" data-g="${g.k}" data-i="${i}" data-zstate="${zeitZustand(e)}">
+    <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
+    <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
+    <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
+    <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
+    <span class="zeit-anzeige" data-anzeige>${esc(zeitAnzeigeText(e))}</span>
+    <button type="button" class="btn small" data-start>▶ Start</button>
+    <button type="button" class="btn small danger" data-stop>■ Stopp</button>
+    <button type="button" class="icon-btn" data-edit-zeit title="Zeit bearbeiten" aria-label="${esc(g.label)}: Zeit bearbeiten">${ICON.edit}</button>
+  </div>`;
 }
 
 /* Der Bodenaufschluss beginnt bei 0,00 (Arbeitsebene) und endet bei der Pfahl-UK: Die letzte Tiefe wird aus der
@@ -968,6 +1019,8 @@ function syncEndRow() {
   rows.forEach((r, i) => {
     const art = $('[data-s=art]', r).value;
     $('[data-s=boden]', r).hidden = art !== 'boden';
+    const sc = $('.soil-checks', r);
+    if (sc) sc.hidden = art !== 'boden';
     $('[data-s=hinweis]', r).hidden = art === 'boden';
     $('.sw', r).innerHTML = soilSwatch(art, art === 'boden' ? $('[data-s=boden]', r).value : '');
     const bis = $('[data-s=bis]', r);
@@ -1130,6 +1183,22 @@ function applyPileLock(p, isNew) {
   note.textContent = locked
     ? 'Dieser Pfahl wurde vom Administrator geprüft und ist gesperrt.'
     : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkung und Fotos ergänzen (gelb markierte Pflichtfelder müssen ausgefüllt sein). Planwerte und Stammdaten sind gesperrt.';
+  // Kompaktes Formular nur für den Borist bei fremden (nicht voll bearbeitbaren) Pfählen;
+  // bei eigenen/neuen Pfählen sieht auch der Borist das vollständige Formular (Admin immer).
+  pileDlg.classList.toggle('kompakt', !isAdmin() && !full);
+  fillGrunddaten(p);
+}
+
+/** Kurzreferenz oben im kompakten Formular: Nr., Soll-Maße, Betongüte, Verbrauch Soll. */
+function fillGrunddaten(p) {
+  $('#gdNr').textContent = p.nr || '–';
+  $('#gdBohrlaenge').textContent = isNum(p.sBohrlaenge) ? `${nf3.format(p.sBohrlaenge)} m` : '–';
+  $('#gdPfahllaenge').textContent = isNum(p.sPfahllaenge) ? `${nf3.format(p.sPfahllaenge)} m` : '–';
+  $('#gdNeigung').textContent = isNum(p.neigung) ? `${nf1.format(p.neigung)}°` : '–';
+  $('#gdDurchmesser').textContent = isNum(p.durchmesser) ? `${nf1.format(p.durchmesser)} cm` : '–';
+  $('#gdBetongute').textContent = p.betongute || '–';
+  const s = soll(p);
+  $('#gdSoll').textContent = s == null ? '–' : `${fmtFlex(s)} m³`;
 }
 
 /* --- Pflichtfelder des Borists ---
@@ -1245,6 +1314,16 @@ form.addEventListener('input', e => {
   if (e.target === $$('.schicht [data-s=bis]', form).at(-1)) autoEnd = e.target.value.trim() === '';
   recalc();
 });
+/* Borist-Checkboxen (mehrere Bodenarten je Schicht) im gemeinsamen Feld data-s=boden zusammenführen,
+   in SOILS-Reihenfolge (die erste zählt in Grafik/Protokoll als Hauptanteil, siehe soilOf). Läuft vor dem
+   generischen recalc-Listener, damit der zusammengeführte Wert schon beim Neuzeichnen vorliegt. */
+form.addEventListener('change', e => {
+  const chk = e.target.closest('[data-soil]');
+  if (!chk) return;
+  const row = chk.closest('.schicht');
+  const checked = new Set($$('.soil-checks input[data-soil]', row).filter(i => i.checked).map(i => i.dataset.soil));
+  $('[data-s=boden]', row).value = SOILS.filter(s => checked.has(s.name)).map(s => s.name).join(', ');
+});
 form.addEventListener('change', recalc);
 
 form.addEventListener('click', e => {
@@ -1280,7 +1359,38 @@ form.addEventListener('click', e => {
     const dEl = $('[data-z=d]', row), vEl = $('[data-z=von]', row), bEl = $('[data-z=bis]', row);
     if (!dEl.value) dEl.value = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
     if (!vEl.value) vEl.value = hm; else bEl.value = hm;
-    recalc();
+    return recalc();
+  }
+  const startBtn = e.target.closest('[data-start]');
+  if (startBtn) {
+    const row = startBtn.closest('.zeile');
+    const d = new Date();
+    $('[data-z=d]', row).value = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    $('[data-z=von]', row).value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    setZeitZustand(row);
+    return recalc();
+  }
+  const stopBtn = e.target.closest('[data-stop]');
+  if (stopBtn) {
+    const row = stopBtn.closest('.zeile');
+    const d = new Date();
+    $('[data-z=bis]', row).value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    setZeitZustand(row);
+    return recalc();
+  }
+  const editZeitBtn = e.target.closest('[data-edit-zeit]');
+  if (editZeitBtn) {
+    const row = editZeitBtn.closest('.zeile');
+    if (row.dataset.zstate === 'bearbeiten') {
+      setZeitZustand(row);
+      editZeitBtn.innerHTML = ICON.edit;
+      editZeitBtn.title = editZeitBtn.ariaLabel = 'Zeit bearbeiten';
+    } else {
+      row.dataset.zstate = 'bearbeiten';
+      editZeitBtn.innerHTML = ICON.check;
+      editZeitBtn.title = editZeitBtn.ariaLabel = 'Fertig';
+    }
+    return;
   }
 });
 
