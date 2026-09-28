@@ -252,6 +252,8 @@ dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 24
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; }
 .grid .span2 { grid-column: span 2; }
 .grid .span3 { grid-column: 1 / -1; }
+.bemerkung-grid { grid-template-columns: 1fr 1fr; }
+@media (max-width: 640px) { .bemerkung-grid { grid-template-columns: 1fr; } }
 fieldset { border: 0; margin: 18px 0 0; padding: 0; }
 legend { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 10px; }
 .msgs { margin-top: 14px; display: grid; gap: 6px; }

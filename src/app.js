@@ -43,9 +43,10 @@ const ZEIT_GROUPS = [
 ];
 
 /* Was der Borist bei importierten bzw. vom Administrator angelegten Pfählen ergänzen darf:
-   Ist-Werte, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Bodenaufschluss, Zeiten, Bemerkung */
+   Ist-Werte, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Bodenaufschluss, Zeiten,
+   Bemerkungen (extern und intern) */
 const BORIST_NUM = ['arbeitsebene', 'oberkante', 'unterkante', 'bohrlaenge', 'pfahllaenge', 'leerbohrung', 'gwTiefe', 'grundwasser', 'abstich', 'verbrauchIst'];
-const BORIST_KEYS = [...BORIST_NUM, 'wasserauflast', 'bemerkung', 'schichten', 'zeiten', 'geraet', 'geraetInfo', 'fotos'];
+const BORIST_KEYS = [...BORIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'schichten', 'zeiten', 'geraet', 'geraetInfo', 'fotos'];
 
 /** Bohrgerät als Text („Typ · Inv.-Nr. …“); nutzt die Projektliste, sonst die gespeicherte Kopie am Pfahl */
 const geraetText = (g, fallback) => {
@@ -119,7 +120,7 @@ const emptyPile = () => ({
   wasserauflast: false, gwTiefe: null, grundwasser: null, abstich: null,
   schichten: [], planNr: '', masse: null,
   betongute: '', konsistenz: '', verbrauchIst: null,
-  zeiten: emptyZeiten(), bemerkung: '',
+  zeiten: emptyZeiten(), bemerkung: '', bemerkungIntern: '',
   fotos: [],                         // Fotos zur Bemerkung: { id, name, data (JPEG-Data-URL), w, h }
   geraet: '', geraetInfo: null,      // Bohrgerät (id im Projekt) und Kopie von Typ/Inventarnummer für das Protokoll
 });
@@ -322,7 +323,8 @@ const COLS = [
   { k: 'geraet',        label: 'Bohrgerät',             unit: '',        kind: 'text' },
   { k: 'status',        label: 'Ausführungsstand',      unit: '',        kind: 'status', t: true },
   { k: 'geprueft',      label: 'Geprüft von / am',      unit: '',        kind: 'text' },
-  { k: 'bemerkung',     label: 'Bemerkung',             unit: '',        kind: 'text' },
+  { k: 'bemerkung',     label: 'Bemerkung (extern)',    unit: '',        kind: 'text' },
+  { k: 'bemerkungIntern', label: 'Bemerkung (intern)',  unit: '',        kind: 'text' },
 ];
 const TCOLS = COLS.filter(c => c.t);
 /* Kompakte Tabelle für den Borist: weniger Spalten, dafür der Bewehrungstyp dabei (sonst nur im CSV). */
@@ -836,7 +838,7 @@ const NUM_FIELDS = {
   gwTiefe: 2, grundwasser: 3, abstich: 2,
   masse: 2, verbrauchIst: 2, ost: 8, nord: 8,
 };
-const TEXT_FIELDS = ['nr', 'bewTyp', 'typ', 'planNr', 'betongute', 'konsistenz', 'bemerkung'];
+const TEXT_FIELDS = ['nr', 'bewTyp', 'typ', 'planNr', 'betongute', 'konsistenz', 'bemerkung', 'bemerkungIntern'];
 const LABEL = {
   durchmesser: 'Pfahl-Ø', neigung: 'Neigung',
   sArbeitsebene: 'Arbeitsebene (Soll)', sOberkante: 'Pfahl-OK (Soll)', sUnterkante: 'Pfahl-UK (Soll)',
@@ -1200,7 +1202,7 @@ let editingGeprueft = null;
 function applyPileLock(p, isNew) {
   const full = isNew || canFullEdit(p);
   const locked = !isNew && isLocked(p);
-  const open = new Set([...BORIST_NUM, 'wasserauflast', 'bemerkung', 'geraet']);
+  const open = new Set([...BORIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'geraet']);
   for (const el of form.elements) if (el.name) el.disabled = locked || (!full && !open.has(el.name));
   $$('#schichtRows input, #schichtRows select, #schichtRows button, #zeitRows input, #zeitRows button, #btnAddSchicht, #btnCopySoll').forEach(el => { el.disabled = locked; });
   $('#btnSave').hidden = locked;
@@ -1208,7 +1210,7 @@ function applyPileLock(p, isNew) {
   note.hidden = !(locked || !full);
   note.textContent = locked
     ? 'Dieser Pfahl wurde vom Administrator geprüft und ist gesperrt.'
-    : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkung und Fotos ergänzen (gelb markierte Pflichtfelder müssen ausgefüllt sein). Planwerte und Stammdaten sind gesperrt.';
+    : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos ergänzen (gelb markierte Pflichtfelder müssen ausgefüllt sein). Planwerte und Stammdaten sind gesperrt.';
   // Kompaktes Formular für den Admin immer, für den Borist außer bei eigenen/neuen Pfählen
   // (dort sieht auch der Borist weiterhin das vollständige, unkompaktierte Formular).
   pileDlg.classList.toggle('kompakt', isAdmin() || !full);
@@ -1231,7 +1233,7 @@ function fillGrunddaten(p) {
    Ohne diese Angaben kann der Borist einen Pfahl nicht speichern; leere Pflichtfelder sind gelb markiert.
    Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Borist bei fremden Pfählen
    nicht mehr zugänglich (siehe "i"-Panel-Entfernung in pile-dialog.html) und deshalb nicht mehr Pflicht.
-   Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkung, Fotos. */
+   Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkungen, Fotos. */
 const REQ_NUM = ['verbrauchIst'];
 const empty = el => !el.value || !String(el.value).trim();
 

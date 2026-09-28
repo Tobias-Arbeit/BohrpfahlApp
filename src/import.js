@@ -40,7 +40,7 @@ const IMP_GROUPS = [
       [`${g.k}_text`, `${g.label}: „Datum von–bis“ als Text`, 'zeittext'],
     ]),
   ] },
-  { label: 'Sonstiges', fields: [['bemerkung', 'Bemerkung', 'text']] },
+  { label: 'Sonstiges', fields: [['bemerkung', 'Bemerkung (extern)', 'text'], ['bemerkungIntern', 'Bemerkung (intern)', 'text']] },
 ];
 const IMP_DEF = Object.fromEntries(IMP_GROUPS.flatMap(g => g.fields.map(([k, label, type, dec]) => [k, { k, label, type, dec }])));
 
@@ -74,6 +74,7 @@ const IMP_ALIASES = (() => {
     konsistenz: ['konsistenz'],
     verbrauchIst: ['verbrauchist', 'betonverbrauch', 'verbrauch', 'betonverbrauchist'],
     bemerkung: ['bemerkung', 'bem', 'anmerkung', 'kommentar', 'bemerkungen'],
+    bemerkungIntern: ['bemerkungintern', 'internebemerkung', 'internebemerkungen', 'internerkommentar', 'internenotiz', 'notizintern'],
     ost: ['rechtswert', 'rw', 'ost', 'ostwert', 'easting', 'east', 'longitude', 'lon', 'lng', 'laengengrad', 'geolaenge', 'koordinateost', 'koordrw'],
     nord: ['hochwert', 'hw', 'nord', 'nordwert', 'northing', 'north', 'latitude', 'lat', 'breitengrad', 'geobreite', 'koordinatenord', 'koordhw'],
     beginn: ['beginn', 'start', 'bohrbeginn', 'startzeit', 'beginnzeit'],

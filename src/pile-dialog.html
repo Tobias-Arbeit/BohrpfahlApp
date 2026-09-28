@@ -256,8 +256,15 @@
 
       <fieldset>
         <legend>Bemerkung</legend>
-        <div class="field">
-          <textarea id="f_bemerkung" name="bemerkung" rows="3" maxlength="600" aria-label="Bemerkung"></textarea>
+        <div class="grid bemerkung-grid">
+          <div class="field">
+            <label for="f_bemerkung">Bemerkungen (extern) <span class="unit">(erscheint im Bohrprotokoll)</span></label>
+            <textarea id="f_bemerkung" name="bemerkung" rows="3" maxlength="600" aria-label="Bemerkungen (extern), erscheint im Bohrprotokoll"></textarea>
+          </div>
+          <div class="field">
+            <label for="f_bemerkungIntern">Bemerkungen (intern) <span class="unit">(nur interne Dokumentation)</span></label>
+            <textarea id="f_bemerkungIntern" name="bemerkungIntern" rows="3" maxlength="600" aria-label="Bemerkungen (intern), nur interne Dokumentation"></textarea>
+          </div>
         </div>
         <div class="field" style="margin-top:12px">
           <label>Fotos <span class="unit">(optional)</span></label>
