@@ -383,6 +383,27 @@ dialog.kompakt .nur-voll { display: none; }
 dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
 dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
 
+/* "i"-Button (nur Borist/kompakt): blendet Höhen/Grundwasser bzw. Erklärtexte erst auf Wunsch ein,
+   statt sie dauerhaft Platz wegnehmen zu lassen. Admin sieht weiterhin alles direkt (kein Button,
+   info-panel immer offen wie schon immer). */
+.btn-info { display: none; }
+dialog.kompakt .btn-info {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 19px; height: 19px; margin-left: 6px; border-radius: 50%;
+  background: var(--primary); color: var(--primary-ink); border: 0;
+  font-size: 11px; font-weight: 700; font-style: italic; cursor: pointer; vertical-align: middle; padding: 0;
+}
+.info-panel-head { display: none; }
+dialog.kompakt .info-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12.5px; font-weight: 700; color: var(--ink); margin-bottom: 8px; text-transform: none; letter-spacing: 0;
+}
+dialog.kompakt .info-panel {
+  display: none; padding: 10px 12px; margin-top: 10px;
+  background: var(--surface-2); border-radius: var(--radius);
+}
+dialog.kompakt .info-panel.offen { display: block; }
+
 /* Bodenaufschluss und Ausführungszeiten nebeneinander, Bewehrung/Beton darunter über die volle Breite */
 dialog.kompakt .zwei-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; align-items: start; }
 dialog.kompakt .zwei-spalten fieldset { margin-top: 0; }

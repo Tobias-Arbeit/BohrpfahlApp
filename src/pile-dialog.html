@@ -78,74 +78,10 @@
       </fieldset>
 
       <fieldset>
-        <legend>Höhen und Längen</legend>
-        <p class="sub">Soll = Planwerte (z. B. aus dem Excel-Import), Ist = ausgeführt. Höhen in <span data-hb></span>. Bohrlänge, Pfahllänge und Leerbohrung werden berechnet.</p>
-        <div class="soll-ist">
-          <div class="col-h">Soll (Plan)</div>
-          <div class="col-h">Ist (ausgeführt) <button type="button" class="link" id="btnCopySoll" style="float:right;text-transform:none;letter-spacing:0;font-weight:500">Soll übernehmen</button></div>
-
-          <div class="field">
-            <label for="f_sArbeitsebene">Arbeitsebene <span class="unit">[<span data-hb></span>]</span></label>
-            <input id="f_sArbeitsebene" name="sArbeitsebene" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="f_arbeitsebene">Arbeitsebene <span class="unit">[<span data-hb></span>]</span></label>
-            <input id="f_arbeitsebene" name="arbeitsebene" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-
-          <div class="field">
-            <label for="f_sOberkante">Pfahl-OK <span class="unit">[<span data-hb></span>]</span></label>
-            <input id="f_sOberkante" name="sOberkante" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="f_oberkante">Pfahl-OK <span class="unit">[<span data-hb></span>]</span></label>
-            <input id="f_oberkante" name="oberkante" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-
-          <div class="field">
-            <label for="f_sUnterkante">Pfahl-UK <span class="unit">[<span data-hb></span>]</span></label>
-            <input id="f_sUnterkante" name="sUnterkante" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="f_unterkante">Pfahl-UK <span class="unit">[<span data-hb></span>]</span></label>
-            <input id="f_unterkante" name="unterkante" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-
-          <div class="field">
-            <label for="f_sBohrlaenge">Bohrlänge <span class="unit">[m]</span></label>
-            <input id="f_sBohrlaenge" name="sBohrlaenge" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint" data-auto-hint="sBohrlaenge"></span>
-          </div>
-          <div class="field">
-            <label for="f_bohrlaenge">Bohrlänge <span class="unit">[m]</span></label>
-            <input id="f_bohrlaenge" name="bohrlaenge" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint" data-auto-hint="bohrlaenge"></span>
-          </div>
-
-          <div class="field">
-            <label for="f_sPfahllaenge">Pfahllänge <span class="unit">[m]</span></label>
-            <input id="f_sPfahllaenge" name="sPfahllaenge" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint" data-auto-hint="sPfahllaenge"></span>
-          </div>
-          <div class="field">
-            <label for="f_pfahllaenge">Pfahllänge <span class="unit">[m]</span></label>
-            <input id="f_pfahllaenge" name="pfahllaenge" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint" data-auto-hint="pfahllaenge"></span>
-          </div>
-
-          <div class="field">
-            <label for="f_sLeerbohrung">Leerbohrung <span class="unit">[m]</span></label>
-            <input id="f_sLeerbohrung" name="sLeerbohrung" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint" data-auto-hint="sLeerbohrung"></span>
-          </div>
-          <div class="field">
-            <label for="f_leerbohrung">Leerbohrung <span class="unit">[m]</span></label>
-            <input id="f_leerbohrung" name="leerbohrung" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint" data-auto-hint="leerbohrung"></span>
-          </div>
-        </div>
-
-        <div class="grid" style="margin-top:14px">
+        <legend>Höhen und Längen
+          <button type="button" class="btn-info" data-info-toggle="hoehen" title="Höhen, Längen und Grundwasser anzeigen" aria-label="Höhen, Längen und Grundwasser anzeigen">i</button>
+        </legend>
+        <div class="grid">
           <div class="field">
             <label>Wasserauflast</label>
             <div class="seg" role="radiogroup" aria-label="Wasserauflast">
@@ -154,25 +90,108 @@
             </div>
           </div>
           <div class="field">
-            <label for="f_gwTiefe">Grundwasser ab <span class="unit">[m unter Bohrebene]</span></label>
-            <input id="f_gwTiefe" name="gwTiefe" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="f_grundwasser">Bohren im GW <span class="unit">[m]</span></label>
-            <input id="f_grundwasser" name="grundwasser" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint" data-auto-hint="grundwasser"></span>
-          </div>
-          <div class="field">
             <label for="f_abstich">Abstichmaß Überbeton <span class="unit">[m ab AE]</span></label>
             <input id="f_abstich" name="abstich" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="info-panel" data-info-panel="hoehen">
+          <div class="info-panel-head">
+            <span>Höhen, Längen und Grundwasser</span>
+            <button type="button" class="icon-btn" data-info-close aria-label="Schließen">✕</button>
+          </div>
+          <p class="sub">Soll = Planwerte (z. B. aus dem Excel-Import), Ist = ausgeführt. Höhen in <span data-hb></span>. Bohrlänge, Pfahllänge und Leerbohrung werden berechnet.</p>
+          <div class="soll-ist">
+            <div class="col-h">Soll (Plan)</div>
+            <div class="col-h">Ist (ausgeführt) <button type="button" class="link" id="btnCopySoll" style="float:right;text-transform:none;letter-spacing:0;font-weight:500">Soll übernehmen</button></div>
+
+            <div class="field">
+              <label for="f_sArbeitsebene">Arbeitsebene <span class="unit">[<span data-hb></span>]</span></label>
+              <input id="f_sArbeitsebene" name="sArbeitsebene" type="text" inputmode="decimal" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="f_arbeitsebene">Arbeitsebene <span class="unit">[<span data-hb></span>]</span></label>
+              <input id="f_arbeitsebene" name="arbeitsebene" type="text" inputmode="decimal" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="f_sOberkante">Pfahl-OK <span class="unit">[<span data-hb></span>]</span></label>
+              <input id="f_sOberkante" name="sOberkante" type="text" inputmode="decimal" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="f_oberkante">Pfahl-OK <span class="unit">[<span data-hb></span>]</span></label>
+              <input id="f_oberkante" name="oberkante" type="text" inputmode="decimal" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="f_sUnterkante">Pfahl-UK <span class="unit">[<span data-hb></span>]</span></label>
+              <input id="f_sUnterkante" name="sUnterkante" type="text" inputmode="decimal" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="f_unterkante">Pfahl-UK <span class="unit">[<span data-hb></span>]</span></label>
+              <input id="f_unterkante" name="unterkante" type="text" inputmode="decimal" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="f_sBohrlaenge">Bohrlänge <span class="unit">[m]</span></label>
+              <input id="f_sBohrlaenge" name="sBohrlaenge" type="text" inputmode="decimal" autocomplete="off">
+              <span class="hint" data-auto-hint="sBohrlaenge"></span>
+            </div>
+            <div class="field">
+              <label for="f_bohrlaenge">Bohrlänge <span class="unit">[m]</span></label>
+              <input id="f_bohrlaenge" name="bohrlaenge" type="text" inputmode="decimal" autocomplete="off">
+              <span class="hint" data-auto-hint="bohrlaenge"></span>
+            </div>
+
+            <div class="field">
+              <label for="f_sPfahllaenge">Pfahllänge <span class="unit">[m]</span></label>
+              <input id="f_sPfahllaenge" name="sPfahllaenge" type="text" inputmode="decimal" autocomplete="off">
+              <span class="hint" data-auto-hint="sPfahllaenge"></span>
+            </div>
+            <div class="field">
+              <label for="f_pfahllaenge">Pfahllänge <span class="unit">[m]</span></label>
+              <input id="f_pfahllaenge" name="pfahllaenge" type="text" inputmode="decimal" autocomplete="off">
+              <span class="hint" data-auto-hint="pfahllaenge"></span>
+            </div>
+
+            <div class="field">
+              <label for="f_sLeerbohrung">Leerbohrung <span class="unit">[m]</span></label>
+              <input id="f_sLeerbohrung" name="sLeerbohrung" type="text" inputmode="decimal" autocomplete="off">
+              <span class="hint" data-auto-hint="sLeerbohrung"></span>
+            </div>
+            <div class="field">
+              <label for="f_leerbohrung">Leerbohrung <span class="unit">[m]</span></label>
+              <input id="f_leerbohrung" name="leerbohrung" type="text" inputmode="decimal" autocomplete="off">
+              <span class="hint" data-auto-hint="leerbohrung"></span>
+            </div>
+          </div>
+
+          <div class="grid" style="margin-top:14px">
+            <div class="field">
+              <label for="f_gwTiefe">Grundwasser ab <span class="unit">[m unter Bohrebene]</span></label>
+              <input id="f_gwTiefe" name="gwTiefe" type="text" inputmode="decimal" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="f_grundwasser">Bohren im GW <span class="unit">[m]</span></label>
+              <input id="f_grundwasser" name="grundwasser" type="text" inputmode="decimal" autocomplete="off">
+              <span class="hint" data-auto-hint="grundwasser"></span>
+            </div>
           </div>
         </div>
       </fieldset>
 
       <div class="zwei-spalten">
       <fieldset id="fsBoden">
-        <legend>Bodenaufschluss (Schichtenfolge)</legend>
-        <p class="sub">Der Bodenaufschluss beginnt bei <strong>0,00 = Arbeitsebene</strong> und endet bei der <strong>Pfahl-Unterkante</strong>: Die letzte Tiefe wird automatisch aus der Bohrlänge übernommen (Ist, sonst Soll). Dazwischen tragen Sie die Schichten ein: Tiefe der <strong>Unterkante</strong> in m unter Bohrebene und Bodenart. „Bohrhindernis“ und „harte Bodenschicht“ erscheinen im Protokoll mit Ihrem Hinweistext (z. B. „Holz“).</p>
+        <legend>Bodenaufschluss (Schichtenfolge)
+          <button type="button" class="btn-info" data-info-toggle="boden" title="Erklärung anzeigen" aria-label="Erklärung zum Bodenaufschluss anzeigen">i</button>
+        </legend>
+        <div class="info-panel" data-info-panel="boden">
+          <div class="info-panel-head">
+            <span>Bodenaufschluss</span>
+            <button type="button" class="icon-btn" data-info-close aria-label="Schließen">✕</button>
+          </div>
+          <p class="sub">Der Bodenaufschluss beginnt bei <strong>0,00 = Arbeitsebene</strong> und endet bei der <strong>Pfahl-Unterkante</strong>: Die letzte Tiefe wird automatisch aus der Bohrlänge übernommen (Ist, sonst Soll). Dazwischen tragen Sie die Schichten ein: Tiefe der <strong>Unterkante</strong> in m unter Bohrebene und Bodenart. „Bohrhindernis“ und „harte Bodenschicht“ erscheinen im Protokoll mit Ihrem Hinweistext (z. B. „Holz“).</p>
+        </div>
         <div class="schicht-fixed"><b>0,00 m</b><span>Arbeitsebene</span><em id="aeLabel"></em></div>
         <div id="schichtRows" class="rows"></div>
         <div class="schicht-fixed"><b id="endDepth">–</b><span>Pfahl-Unterkante (übernommen)</span><em id="ukLabel"></em></div>

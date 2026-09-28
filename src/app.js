@@ -1375,6 +1375,16 @@ form.addEventListener('click', e => {
     $('[data-s=bis]', now.length > 1 ? now.at(-2) : now[0]).focus();
     return recalc();
   }
+  const infoToggle = e.target.closest('[data-info-toggle]');
+  if (infoToggle) {
+    $(`[data-info-panel="${infoToggle.dataset.infoToggle}"]`, form)?.classList.add('offen');
+    return;
+  }
+  const infoClose = e.target.closest('[data-info-close]');
+  if (infoClose) {
+    infoClose.closest('.info-panel').classList.remove('offen');
+    return;
+  }
   const rm = e.target.closest('[data-rm]');
   if (rm) {
     const row = rm.closest('.schicht');
