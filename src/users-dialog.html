@@ -1,0 +1,55 @@
+<dialog id="usersDialog" class="wide" aria-labelledby="usersTitle">
+  <form id="usersForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="usersTitle">Benutzerverwaltung</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dlg-body">
+      <p class="sub" style="margin-top:0">
+        <strong>Administrator:</strong> alles (Import, Projektdaten, Planwerte, Löschen, Prüfen, Benutzer).<br>
+        <strong>Borist:</strong> ergänzt Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkung und Fotos (Pflichtfelder, ohne die er nicht speichern kann). Er sieht nur „Pfähle“ und „Karte“ und hat kein „Mein Konto“: Passwörter vergibt und ändert ausschließlich der Administrator hier. Importierte und vom Administrator angelegte Pfähle kann er weder löschen noch kopieren, geprüfte Pfähle sind für ihn gesperrt.
+      </p>
+
+      <table class="users-table">
+        <thead><tr><th>Benutzer</th><th>Rolle</th><th></th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+
+      <h3 class="imp-h">Neuen Benutzer anlegen</h3>
+      <div class="grid">
+        <div class="field">
+          <label for="u_name">Benutzername</label>
+          <input id="u_name" type="text" autocomplete="off" spellcheck="false" maxlength="40">
+        </div>
+        <div class="field">
+          <label for="u_role">Rolle</label>
+          <select id="u_role"><option value="borist">Borist</option><option value="admin">Administrator</option></select>
+        </div>
+        <div class="field">
+          <label for="u_pass">Passwort <span class="unit">(mind. 8 Zeichen)</span></label>
+          <input id="u_pass" type="password" autocomplete="new-password">
+        </div>
+      </div>
+      <p style="margin:10px 0 0"><button type="button" class="btn primary small" id="btnUserAdd">Benutzer anlegen</button></p>
+
+      <h3 class="imp-h">Passwort zurücksetzen</h3>
+      <div class="grid">
+        <div class="field">
+          <label for="u_pick">Benutzer</label>
+          <select id="u_pick"></select>
+        </div>
+        <div class="field">
+          <label for="u_newpass">Neues Passwort</label>
+          <input id="u_newpass" type="password" autocomplete="new-password">
+        </div>
+      </div>
+      <p style="margin:10px 0 0"><button type="button" class="btn small" id="btnUserPass">Passwort setzen</button></p>
+
+      <div id="usersMsgs" class="msgs" aria-live="polite"></div>
+      <p class="sub" style="margin-top:14px">Hinweis: Die Rollen steuern die Bedienung dieser Anwendung. Da alle Daten in einer verschlüsselten Datei im Browser liegen, ist das kein Schutz gegen technisch versierte Nutzer mit Zugriff auf dasselbe Gerät. Ein gelöschter Benutzer kann mit früheren Sicherungen seines Passworts weiterhin lesen, was darin stand.</p>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn primary" data-close>Schließen</button>
+    </div>
+  </form>
+</dialog>

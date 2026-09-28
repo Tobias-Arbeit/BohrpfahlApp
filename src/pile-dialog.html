@@ -1,0 +1,321 @@
+<dialog id="pileDialog" aria-labelledby="pileTitle">
+  <form id="pileForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="pileTitle">Neuer Pfahl</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dlg-body">
+      <div id="roleNote" class="notice" hidden></div>
+      <div id="reqNote" class="req-note" hidden></div>
+      <div id="pruefBox" class="pruef" hidden>
+        <div><strong id="pruefText"></strong></div>
+        <button type="button" class="btn small" id="btnPruef" data-admin></button>
+      </div>
+
+      <div class="dlg-cols">
+      <div class="dlg-form">
+      <fieldset style="margin-top:0">
+        <legend>Pfahl</legend>
+        <div class="grid">
+          <div class="field">
+            <label for="f_nr">Pfahl-Nr. *</label>
+            <input id="f_nr" name="nr" type="text" maxlength="40" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f_pfahlart">Pfahlart</label>
+            <select id="f_pfahlart" name="pfahlart">
+              <option value="bewehrt">bewehrt</option>
+              <option value="unbewehrt">unbewehrt</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f_durchmesser">Pfahl-Ø <span class="unit">[cm]</span></label>
+            <input id="f_durchmesser" name="durchmesser" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field span2">
+            <label for="f_typ">Typ / Verfahren</label>
+            <input id="f_typ" name="typ" type="text" list="typList" maxlength="80" autocomplete="off" placeholder="Auswählen oder eingeben">
+            <datalist id="typList"></datalist>
+          </div>
+          <div class="field">
+            <label for="f_neigung">Neigung <span class="unit">[°]</span></label>
+            <input id="f_neigung" name="neigung" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field span3">
+            <label for="f_geraet">Bohrgerät</label>
+            <select id="f_geraet" name="geraet"></select>
+            <span class="hint" id="geraetHint"></span>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Lage (Koordinaten)</legend>
+        <div class="grid">
+          <div class="field">
+            <label for="f_ost"><span data-coord-label="ost">Rechtswert (Ost)</span> <span class="unit">[<span data-coord-unit>m</span>]</span></label>
+            <input id="f_ost" name="ost" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f_nord"><span data-coord-label="nord">Hochwert (Nord)</span> <span class="unit">[<span data-coord-unit>m</span>]</span></label>
+            <input id="f_nord" name="nord" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Kontrolle (WGS84)</label>
+            <div class="readout" id="geoHint" style="font-weight:500;font-size:13px;line-height:1.3;white-space:nowrap"></div>
+            <span class="hint">Koordinatensystem: siehe „Projektdaten“</span>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Höhen und Längen</legend>
+        <p class="sub">Soll = Planwerte (z. B. aus dem Excel-Import), Ist = ausgeführt. Höhen in <span data-hb></span>. Bohrlänge, Pfahllänge und Leerbohrung werden berechnet.</p>
+        <div class="soll-ist">
+          <div class="col-h">Soll (Plan)</div>
+          <div class="col-h">Ist (ausgeführt) <button type="button" class="link" id="btnCopySoll" style="float:right;text-transform:none;letter-spacing:0;font-weight:500">Soll übernehmen</button></div>
+
+          <div class="field">
+            <label for="f_sArbeitsebene">Arbeitsebene <span class="unit">[<span data-hb></span>]</span></label>
+            <input id="f_sArbeitsebene" name="sArbeitsebene" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f_arbeitsebene">Arbeitsebene <span class="unit">[<span data-hb></span>]</span></label>
+            <input id="f_arbeitsebene" name="arbeitsebene" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="f_sOberkante">Pfahl-OK <span class="unit">[<span data-hb></span>]</span></label>
+            <input id="f_sOberkante" name="sOberkante" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f_oberkante">Pfahl-OK <span class="unit">[<span data-hb></span>]</span></label>
+            <input id="f_oberkante" name="oberkante" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="f_sUnterkante">Pfahl-UK <span class="unit">[<span data-hb></span>]</span></label>
+            <input id="f_sUnterkante" name="sUnterkante" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f_unterkante">Pfahl-UK <span class="unit">[<span data-hb></span>]</span></label>
+            <input id="f_unterkante" name="unterkante" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="f_sBohrlaenge">Bohrlänge <span class="unit">[m]</span></label>
+            <input id="f_sBohrlaenge" name="sBohrlaenge" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint" data-auto-hint="sBohrlaenge"></span>
+          </div>
+          <div class="field">
+            <label for="f_bohrlaenge">Bohrlänge <span class="unit">[m]</span></label>
+            <input id="f_bohrlaenge" name="bohrlaenge" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint" data-auto-hint="bohrlaenge"></span>
+          </div>
+
+          <div class="field">
+            <label for="f_sPfahllaenge">Pfahllänge <span class="unit">[m]</span></label>
+            <input id="f_sPfahllaenge" name="sPfahllaenge" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint" data-auto-hint="sPfahllaenge"></span>
+          </div>
+          <div class="field">
+            <label for="f_pfahllaenge">Pfahllänge <span class="unit">[m]</span></label>
+            <input id="f_pfahllaenge" name="pfahllaenge" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint" data-auto-hint="pfahllaenge"></span>
+          </div>
+
+          <div class="field">
+            <label for="f_sLeerbohrung">Leerbohrung <span class="unit">[m]</span></label>
+            <input id="f_sLeerbohrung" name="sLeerbohrung" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint" data-auto-hint="sLeerbohrung"></span>
+          </div>
+          <div class="field">
+            <label for="f_leerbohrung">Leerbohrung <span class="unit">[m]</span></label>
+            <input id="f_leerbohrung" name="leerbohrung" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint" data-auto-hint="leerbohrung"></span>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:14px">
+          <div class="field">
+            <label>Wasserauflast</label>
+            <div class="seg" role="radiogroup" aria-label="Wasserauflast">
+              <label><input type="radio" name="wasserauflast" value="ja"><span>Ja</span></label>
+              <label><input type="radio" name="wasserauflast" value="nein" checked><span>Nein</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f_gwTiefe">Grundwasser ab <span class="unit">[m unter Bohrebene]</span></label>
+            <input id="f_gwTiefe" name="gwTiefe" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f_grundwasser">Bohren im GW <span class="unit">[m]</span></label>
+            <input id="f_grundwasser" name="grundwasser" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint" data-auto-hint="grundwasser"></span>
+          </div>
+          <div class="field">
+            <label for="f_abstich">Abstichmaß Überbeton <span class="unit">[m ab AE]</span></label>
+            <input id="f_abstich" name="abstich" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Bodenaufschluss (Schichtenfolge)</legend>
+        <p class="sub">Der Bodenaufschluss beginnt bei <strong>0,00 = Arbeitsebene</strong> und endet bei der <strong>Pfahl-Unterkante</strong>: Die letzte Tiefe wird automatisch aus der Bohrlänge übernommen (Ist, sonst Soll). Dazwischen tragen Sie die Schichten ein: Tiefe der <strong>Unterkante</strong> in m unter Bohrebene und Bodenart. „Bohrhindernis“ und „harte Bodenschicht“ erscheinen im Protokoll mit Ihrem Hinweistext (z. B. „Holz“).</p>
+        <div class="schicht-fixed"><b>0,00 m</b><span>Arbeitsebene</span><em id="aeLabel"></em></div>
+        <div id="schichtRows" class="rows"></div>
+        <div class="schicht-fixed"><b id="endDepth">–</b><span>Pfahl-Unterkante (übernommen)</span><em id="ukLabel"></em></div>
+        <div class="row-foot">
+          <button type="button" class="btn small" id="btnAddSchicht">+ Schicht</button>
+          <span class="sum">Summe harte Bodenschichten: <strong id="hartOut">–</strong></span>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Pfahlbewehrung</legend>
+        <div class="grid">
+          <div class="field">
+            <label for="f_bewTyp">Bew. Typ</label>
+            <input id="f_bewTyp" name="bewTyp" type="text" maxlength="60" autocomplete="off" placeholder="z. B. Block 00">
+          </div>
+          <div class="field">
+            <label for="f_planNr">lt. Plan Nr.</label>
+            <input id="f_planNr" name="planNr" type="text" maxlength="80" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f_masse">Masse <span class="unit">[kg]</span></label>
+            <input id="f_masse" name="masse" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Pfahlbeton</legend>
+        <div class="grid">
+          <div class="field">
+            <label for="f_betongute">Betongüte</label>
+            <input id="f_betongute" name="betongute" type="text" maxlength="80" autocomplete="off" placeholder="z. B. C25/30 GK32 BS-TB1">
+          </div>
+          <div class="field">
+            <label for="f_konsistenz">Konsistenz</label>
+            <input id="f_konsistenz" name="konsistenz" type="text" maxlength="40" autocomplete="off" placeholder="z. B. F59">
+          </div>
+          <div class="field">
+            <label>Verbrauch SOLL <span class="unit">[m³]</span></label>
+            <div class="readout" id="sollOut">–</div>
+            <span class="hint">Pfahllänge × π × r²</span>
+          </div>
+          <div class="field">
+            <label for="f_verbrauchIst">Verbrauch IST <span class="unit">[m³]</span></label>
+            <input id="f_verbrauchIst" name="verbrauchIst" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Ausführung</legend>
+        <div class="zeit-head"><span>Arbeitsvorgang</span><span>Datum</span><span>von</span><span>bis</span><span></span></div>
+        <div id="zeitRows" class="rows"></div>
+        <div class="row-foot">
+          <span class="sum">Beginn – Ende: <strong id="spanOut">–</strong></span>
+          <span class="sum">Dauer: <strong id="dauerOut">–</strong></span>
+          <span class="sum">Summe Bohrhindernisse: <strong id="hindOut">–</strong></span>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Bemerkung</legend>
+        <div class="field">
+          <textarea id="f_bemerkung" name="bemerkung" rows="3" maxlength="600" aria-label="Bemerkung"></textarea>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>Fotos <span class="unit">(optional)</span></label>
+          <div id="fotoList" class="foto-list"></div>
+          <p style="margin:8px 0 0"><button type="button" class="btn small" id="btnAddFoto">+ Foto hinzufügen</button></p>
+          <input id="fotoFile" type="file" accept="image/*" multiple hidden>
+          <span class="hint" id="fotoHint">Die Fotos werden verkleinert gespeichert und erscheinen im PDF auf einer eigenen Seite nach dem Protokoll.</span>
+        </div>
+      </fieldset>
+
+      <div id="formMsgs" class="msgs" aria-live="polite"></div>
+      </div>
+      <aside class="dlg-graphic" aria-label="Grafische Übersicht">
+        <div class="dlg-sticky">
+          <h3 class="graphic-h">Grafische Übersicht</h3>
+          <div id="pileGraphic"></div>
+          <p class="sub graphic-note">S = Soll, I = Ist, Höhen in <span data-hb></span>. Tiefen in m unter Bohrebene.</p>
+        </div>
+      </aside>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn primary" id="btnSave">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="projDialog" aria-labelledby="projTitle">
+  <form id="projForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="projTitle">Projektdaten</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dlg-body">
+      <p class="sub" style="margin-top:0">Diese Angaben erscheinen im Kopf jedes Bohrprotokolls.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="pj_nr">Baustelle Nr.</label>
+          <input id="pj_nr" type="text" maxlength="60" autocomplete="off">
+        </div>
+        <div class="field span2">
+          <label for="pj_name">Baustelle</label>
+          <input id="pj_name" type="text" maxlength="120" autocomplete="off">
+        </div>
+        <div class="field span3">
+          <label for="pj_ort">Ort</label>
+          <input id="pj_ort" type="text" maxlength="120" autocomplete="off">
+        </div>
+        <div class="field span2">
+          <label for="pj_titel">Protokolltitel</label>
+          <input id="pj_titel" type="text" maxlength="60" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="pj_norm">Norm</label>
+          <input id="pj_norm" type="text" maxlength="40" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="pj_hb">Höhenbezug</label>
+          <input id="pj_hb" type="text" maxlength="20" autocomplete="off">
+          <span class="hint">z. B. m ü. A, m ü. NN</span>
+        </div>
+        <div class="field span3">
+          <label for="pj_crs">Koordinatensystem der Pfahl-Koordinaten</label>
+          <select id="pj_crs"></select>
+          <span class="hint">Gilt für alle Pfähle. Wird nur zur Darstellung auf der Karte umgerechnet – gespeichert werden die Werte so, wie Sie sie eingeben bzw. importieren.</span>
+        </div>
+        <div class="field span3">
+          <label>Bohrgeräte</label>
+          <div id="gerRows" class="rows"></div>
+          <p style="margin:8px 0 0"><button type="button" class="btn small" id="btnAddGeraet">+ Gerät</button></p>
+          <span class="hint">Gerätetyp, Inventarnummer und Kommentar. Beim Pfahl wird das Gerät ausgewählt; Typ und Inventarnummer erscheinen im Bohrprotokoll.</span>
+        </div>
+        <div class="field span2">
+          <label>Firmenlogo <span class="unit">(optional, PNG/JPG)</span></label>
+          <div class="logo-row">
+            <div id="logoPrev" class="logo-prev">kein Logo</div>
+            <button type="button" class="btn small" id="btnLogo">Logo wählen …</button>
+            <button type="button" class="btn small danger" id="btnLogoRm">Entfernen</button>
+            <input id="logoFile" type="file" accept="image/png,image/jpeg" hidden>
+          </div>
+        </div>
+      </div>
+      <div id="projMsgs" class="msgs" aria-live="polite"></div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn primary">Speichern</button>
+    </div>
+  </form>
+</dialog>

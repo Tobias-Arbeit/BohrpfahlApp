@@ -1,0 +1,5 @@
+# Build-Artefakt, wird aus src/ per build.ps1 erzeugt
+Bohrpfahl-Verwaltung.html
+
+# Zugangsdaten (Klartext) - nicht versionieren
+zugänge.txt

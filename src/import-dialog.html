@@ -1,0 +1,64 @@
+<dialog id="impDialog" class="wide" aria-labelledby="impTitle">
+  <form id="impForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="impTitle">Excel-Import</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dlg-body">
+
+      <div id="impStep1">
+        <p class="sub" style="margin-top:0">Wählen Sie eine Excel-Datei (.xlsx, .xls) oder CSV. Jede Zeile wird ein Bohrpfahl. Die Spalten werden anhand der Überschriften zugeordnet, die Zuordnung können Sie danach anpassen. Importierte Pfähle lassen sich wie alle anderen bearbeiten.</p>
+        <div class="imp-drop" id="impDrop">
+          <button type="button" class="btn primary" id="btnImpFile">Datei wählen …</button>
+          <span id="impFileName" class="sub" style="margin:0">oder Datei hierher ziehen</span>
+        </div>
+        <p class="sub" style="margin-top:14px">Noch keine passende Datei? <button type="button" class="link" id="btnImpTemplate">Excel-Vorlage herunterladen</button> (alle Spalten mit einer Beispielzeile).</p>
+      </div>
+
+      <div id="impStep2" hidden>
+        <div class="imp-file"><strong id="impFileTitle"></strong> <button type="button" class="link" id="btnImpOther">andere Datei wählen</button></div>
+        <div class="grid two" style="margin-top:12px">
+          <div class="field">
+            <label for="impSheet">Tabellenblatt</label>
+            <select id="impSheet"></select>
+          </div>
+          <div class="field">
+            <label for="impHeaderRow">Zeile mit den Überschriften</label>
+            <input id="impHeaderRow" type="text" inputmode="numeric" autocomplete="off">
+            <span class="hint" id="impUnitHint"></span>
+          </div>
+        </div>
+
+        <h3 class="imp-h">Spaltenzuordnung</h3>
+        <div id="impMap" class="imp-map"></div>
+
+        <div id="impCrsBox" class="field" style="margin-top:12px" hidden>
+          <label for="impCrs">Koordinatensystem der Datei</label>
+          <select id="impCrs"></select>
+          <span class="hint" id="impCrsHint"></span>
+        </div>
+
+        <h3 class="imp-h">Vorhandene Pfähle</h3>
+        <div class="field">
+          <label for="impMode">Wenn die Pfahl-Nr. schon existiert</label>
+          <select id="impMode">
+            <option value="skip">Überspringen (vorhandene Pfähle bleiben unverändert)</option>
+            <option value="update">Aktualisieren (nur Spalten mit Inhalt überschreiben)</option>
+          </select>
+        </div>
+
+        <h3 class="imp-h">Vorschau</h3>
+        <div id="impSummary" class="imp-summary" aria-live="polite"></div>
+        <div id="impPrev" class="imp-prev"></div>
+        <div id="impIssues" class="msgs" aria-live="polite"></div>
+      </div>
+
+      <div id="impError" class="msgs" aria-live="polite"></div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn primary" id="btnImpRun" disabled>Importieren</button>
+    </div>
+  </form>
+  <input id="impFile" type="file" accept=".xlsx,.xlsm,.xls,.csv,.txt" hidden>
+</dialog>

@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Bohrpfahl-Verwaltung</title>
+<style><!--INLINE:vendor/leaflet.css--></style>
+<style>
+/* Farben der Marke Keller (kellergrundbau.at): Marineblau, Dunkelblau, Gelb, Hellgrau */
+:root {
+  --bg: #edf1f4;
+  --surface: #ffffff;
+  --surface-2: #e4eaf0;
+  --ink: #011343;
+  --muted: #56667f;
+  --line: #ccd6e0;
+  --accent: #003366;          /* Marineblau: Links, aktive Reiter */
+  --accent-hover: #011343;
+  --accent-ink: #ffffff;
+  --primary: #fdc600;         /* Keller-Gelb: Hauptbutton */
+  --primary-hover: #e6b300;
+  --primary-ink: #011343;
+  --danger: #b01c1c;
+  --warn: #7a5200;
+  --warn-bg: #fff3c9;
+  --err-bg: #fde8e6;
+  --yes-bg: #dbe6ff;
+  --yes-ink: #002e9a;
+  --focus: #004eff;
+  --shadow: 0 1px 2px rgba(1, 19, 67, .06), 0 1px 3px rgba(1, 19, 67, .08);
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a1330;
+    --surface: #111c3d;
+    --surface-2: #1a2850;
+    --ink: #e9eef9;
+    --muted: #9fb1d1;
+    --line: #2a3d6b;
+    --accent: #9db8ff;
+    --accent-hover: #cfdcff;
+    --accent-ink: #011343;
+    --primary: #fdc600;
+    --primary-hover: #ffd94d;
+    --primary-ink: #011343;
+    --danger: #f28b8b;
+    --warn: #fbd24a;
+    --warn-bg: #3a3010;
+    --err-bg: #3d1f24;
+    --yes-bg: #1c3468;
+    --yes-ink: #c8d9ff;
+    --focus: #7aa2ff;
+    --shadow: none;
+  }
+}
+.k-navy { fill: #003366; }
+@media (prefers-color-scheme: dark) { .k-navy { fill: #ffffff; } }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); font-weight: 600; }
+.btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn.danger { color: var(--danger); }
+.btn.small { height: 30px; padding: 0 10px; font-size: 13px; }
+.btn svg, .icon-btn svg { width: 16px; height: 16px; flex: none; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 32px; height: 32px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+.icon-btn.danger:hover { color: var(--danger); }
+
+/* ---------- Form controls ---------- */
+label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+label .unit { font-weight: 400; color: var(--muted); }
+input[type=text], input[type=password], input[type=search], input[type=datetime-local], select {
+  width: 100%; height: 40px; padding: 0 10px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface);
+}
+input::placeholder { color: var(--muted); opacity: .7; }
+.field { min-width: 0; }
+.field .hint { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); }
+.field .hint:empty { display: none; }
+.field.invalid input { border-color: var(--danger); }
+
+/* Pflichtfelder des Borists: gelb hinterlegt, solange sie leer sind */
+:root { --need-bg: #fff2b8; --need-line: #d99a00; }
+@media (prefers-color-scheme: dark) { :root { --need-bg: #4a3f0c; --need-line: #e6b400; } }
+.need { background: var(--need-bg) !important; border-color: var(--need-line) !important; box-shadow: inset 5px 0 0 var(--need-line); }
+.field:has(> .need) > label::after, .field:has(> .soil-cell .need) > label::after { content: ' *'; color: var(--danger); font-weight: 800; }
+.req-note { padding: 10px 12px; border-radius: var(--radius); background: var(--need-bg); border: 1px solid var(--need-line); color: var(--ink); font-size: 13px; margin-bottom: 14px; }
+.req-note.done { background: var(--yes-bg); border-color: var(--yes-ink); color: var(--yes-ink); }
+.req-note ul { margin: 6px 0 0; padding-left: 18px; }
+#btnSave:disabled { opacity: .55; cursor: not-allowed; }
+.foto-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.foto-item { position: relative; width: 132px; }
+.foto-item img { display: block; width: 132px; height: 100px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.foto-item .icon-btn { position: absolute; top: 3px; right: 3px; background: rgba(255,255,255,.92); color: var(--danger); width: 28px; height: 28px; }
+.foto-item span { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; height: 40px; }
+.seg label { margin: 0; font-weight: 500; font-size: 15px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: grid; place-items: center; height: 100%; min-width: 72px; padding: 0 14px; cursor: pointer; background: var(--surface); }
+.seg input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: -2px; }
+.with-btn { display: flex; gap: 6px; }
+.with-btn input { flex: 1; min-width: 0; }
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid.two .span2 { grid-column: 1 / -1; }
+.dauer-row { display: flex; align-items: baseline; gap: 10px; }
+.dauer-row label { margin: 0; }
+.dauer-row .dauer-out { height: auto; }
+
+/* ---------- Lock screen ---------- */
+.lock { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.lock-card {
+  width: 100%; max-width: 400px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px; padding: 28px; box-shadow: var(--shadow);
+}
+.lock-card h1 { margin: 12px 0 4px; font-size: 22px; }
+.lock-card p { margin: 0 0 18px; color: var(--muted); }
+.lock-card .field { margin-bottom: 14px; }
+.lock-card .btn.primary { width: 100%; justify-content: center; height: 42px; }
+.lock-mark {
+  width: 44px; height: 44px; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center;
+}
+.lock-mark svg { width: 24px; height: 24px; }
+.notice { padding: 10px 12px; border-radius: var(--radius); background: var(--warn-bg); color: var(--warn); font-size: 13px; margin-bottom: 14px; }
+.notice.err { background: var(--err-bg); color: var(--danger); }
+.lock-links { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.link { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; text-align: left; font-size: 13px; }
+.link:hover { color: var(--ink); }
+.only-setup, .lock:not(.setup) .only-setup { display: none; }
+.lock.setup .only-setup { display: block; }
+.lock.setup .only-login { display: none; }
+
+/* ---------- App shell ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+.brand .lock-mark { width: 32px; height: 32px; border-radius: 8px; }
+.brand .lock-mark svg { width: 18px; height: 18px; }
+.topbar-right { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+main { padding: 20px; max-width: 1800px; margin: 0 auto; }
+.project { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.proj-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.proj-title { margin: 0; font-size: 22px; line-height: 1.25; }
+.proj-title.empty { color: var(--muted); font-weight: 500; }
+.proj-sub { color: var(--muted); font-size: 14px; }
+.proj-sub:empty { display: none; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.toolbar .search { flex: 1 1 220px; max-width: 340px; }
+.toolbar .type-filter { flex: 0 1 220px; }
+.toolbar .spacer { flex: 1; }
+.menu-wrap { position: relative; }
+.menu {
+  position: absolute; right: 0; top: 42px; z-index: 20; min-width: 220px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+.menu button {
+  display: block; width: 100%; text-align: left; padding: 9px 10px; border: 0; background: none;
+  border-radius: 6px; cursor: pointer;
+}
+.menu button:hover { background: var(--surface-2); }
+.menu button svg { width: 18px; height: 18px; margin-right: 10px; vertical-align: -4px; color: var(--accent); }
+.foto-slot { display: inline-block; width: 40px; }
+.foto-badge { display: inline-flex; align-items: center; gap: 2px; width: 40px; justify-content: center; color: var(--accent); font-size: 12px; vertical-align: middle; }
+.foto-badge svg { width: 18px; height: 18px; }
+
+.count { color: var(--muted); font-size: 13px; margin: 0 0 6px 2px; }
+
+/* ---------- Table ---------- */
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: auto; max-height: calc(100vh - 290px); min-height: 160px;
+}
+table { border-collapse: separate; border-spacing: 0; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+thead th {
+  position: sticky; top: 0; z-index: 2; background: var(--surface-2);
+  font-size: 12.5px; font-weight: 600; vertical-align: bottom; white-space: normal; line-height: 1.25; padding: 0;
+}
+thead th .sort {
+  display: block; width: 100%; padding: 9px 12px; border: 0; background: none; text-align: inherit; cursor: pointer; font: inherit;
+}
+thead th .sort:hover { background: var(--line); }
+thead th .u { display: block; font-weight: 400; color: var(--muted); }
+thead th[aria-sort=ascending] .lbl::after { content: " ▲"; font-size: 10px; }
+thead th[aria-sort=descending] .lbl::after { content: " ▼"; font-size: 10px; }
+th.num, td.num { text-align: right; }
+td.mid, th.mid { text-align: center; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--surface-2); }
+tbody td:first-child, thead th:first-child, tfoot td:first-child {
+  position: sticky; left: 0; background: var(--surface); font-weight: 600; z-index: 1;
+}
+thead th:first-child { background: var(--surface-2); z-index: 3; }
+tbody tr:hover td:first-child { background: var(--surface-2); }
+tfoot td {
+  position: sticky; bottom: 0; background: var(--surface-2); font-weight: 600;
+  border-top: 2px solid var(--line); border-bottom: 0; z-index: 2;
+}
+tfoot td:first-child { background: var(--surface-2); z-index: 3; }
+td.empty { color: var(--muted); }
+td.actions { padding: 4px 8px; text-align: right; }
+.chip { display: inline-block; padding: 1px 10px; border-radius: 999px; font-size: 13px; background: var(--surface-2); color: var(--muted); }
+.chip.yes { background: var(--yes-bg); color: var(--yes-ink); font-weight: 600; }
+.placeholder { padding: 48px 20px; text-align: center; color: var(--muted); }
+.placeholder h2 { margin: 0 0 6px; color: var(--ink); font-size: 18px; }
+
+/* ---------- Dialog ---------- */
+dialog {
+  width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 0;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink);
+  box-shadow: 0 20px 60px rgba(0,0,0,.35); overflow: hidden;   /* gescrollt wird nur der Inhaltsbereich, sonst entsteht unter der Fußzeile ein weißer Bereich */
+}
+dialog::backdrop { background: rgba(10, 14, 20, .55); }
+dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 24px); }
+.dlg-head { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.dlg-head h2 { margin: 0; font-size: 18px; }
+.dlg-body { padding: 18px 20px; overflow: auto; min-height: 0; overscroll-behavior: contain; }
+.dlg-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; }
+.grid .span2 { grid-column: span 2; }
+.grid .span3 { grid-column: 1 / -1; }
+fieldset { border: 0; margin: 18px 0 0; padding: 0; }
+legend { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 10px; }
+.msgs { margin-top: 14px; display: grid; gap: 6px; }
+.msgs div { padding: 8px 10px; border-radius: var(--radius); font-size: 13px; }
+.msgs .e { background: var(--err-bg); color: var(--danger); }
+.msgs .w { background: var(--warn-bg); color: var(--warn); }
+.dauer-out { display: flex; align-items: center; height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ---------- Erfassungsformular: Zeilen ---------- */
+textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); color: inherit; font: inherit; resize: vertical;
+}
+input[type=date], input[type=time] {
+  width: 100%; height: 40px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); min-width: 0;
+}
+.sub { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+.readout { display: flex; align-items: center; height: 40px; padding: 0 10px; border-radius: var(--radius); background: var(--surface-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rows { display: grid; gap: 8px; }
+.row-foot { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-top: 10px; }
+.row-foot .sum { color: var(--muted); font-size: 13px; }
+.row-foot .sum strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.schicht { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+.schicht > .field { grid-column: 1; grid-row: 1; }
+.schicht > .soil-cell { grid-column: 2; grid-row: 1; }
+.schicht > select[data-s=art] { grid-column: 2; grid-row: 2; }
+.schicht > [data-rm] { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
+.schicht select, .schicht input[type=text] { height: 40px; }
+/* ---------- Auswertung ---------- */
+.stats-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; margin-bottom: 14px; }
+.stats-bar label { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+.stats-bar select, .stats-bar input[type=date] { display: block; width: auto; height: 36px; margin-top: 3px; font-size: 14px; color: var(--ink); }
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.stat-l { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.stat-v { margin-top: 4px; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-s { margin-top: 2px; font-size: 13px; color: var(--muted); }
+.chart-head { margin: 4px 0 6px; }
+.chart-head label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.chart-head select { display: inline-block; width: auto; height: 34px; margin-left: 8px; font-size: 14px; }
+.chart-wrap { overflow-x: auto; padding: 8px 10px 4px; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+svg.chart { display: block; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .ax { fill: var(--muted); font: 11px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.chart .ax.sub { font-size: 9.5px; }
+.chart .ax.unit { font-weight: 700; }
+.chart .val { fill: var(--ink); font: 600 11px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.chart .bar { fill: var(--accent); }
+.stat-table { max-height: none; margin-bottom: 8px; }
+.stat-table tbody td:first-child, .stat-table tfoot td:first-child { position: static; font-weight: 600; background: transparent; }
+.stat-table thead th, .stat-table thead th:first-child { position: static; padding: 9px 12px; background: var(--surface-2); }
+.stat-table tbody tr { cursor: default; }
+.stat-table .u { display: block; font-weight: 400; color: var(--muted); }
+.ger-row { display: grid; grid-template-columns: 1.5fr 1fr 1.6fr auto; gap: 8px; align-items: center; }
+@media (max-width: 640px) { .ger-row { grid-template-columns: 1fr auto; } .ger-row input { grid-column: 1; } .ger-row [data-grm] { grid-column: 2; grid-row: 1; } }
+.schicht input.auto { background: var(--surface-2); font-weight: 600; }
+.soil-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.soil-cell select, .soil-cell input { flex: 1; min-width: 0; }
+.soil-cell .sw { flex: none; display: block; width: 26px; height: 18px; }
+.schicht-fixed { display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; border-radius: var(--radius); background: var(--surface-2); font-size: 14px; }
+.schicht-fixed b { display: inline-block; min-width: 96px; font-variant-numeric: tabular-nums; }
+.schicht-fixed em { color: var(--muted); font-style: normal; font-size: 13px; }
+.rows + .schicht-fixed, .schicht-fixed + .rows { margin-top: 8px; }
+.soll-ist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.soll-ist .col-h { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-bottom: 2px; border-bottom: 1px solid var(--line); }
+.chip.st-offen { background: #dc2626; color: #fff; }
+.chip.st-aktiv { background: #e08600; color: #1a1207; }
+.chip.st-fertig { background: #2e7d32; color: #fff; }
+.zeit-head, .zeile { display: grid; grid-template-columns: 120px 1.3fr 1fr 1fr 56px; gap: 8px; align-items: center; }
+.zeile .btn { width: 100%; justify-content: center; padding: 0; }
+.zeit-head { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.zeile .zl { font-weight: 600; font-size: 14px; }
+.zeile .zl.more { font-weight: 400; color: var(--muted); }
+.logo-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.logo-prev {
+  height: 56px; min-width: 120px; padding: 4px 8px; display: grid; place-items: center;
+  border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); font-size: 13px; background: #fff;
+}
+.logo-prev img { max-height: 46px; max-width: 160px; }
+
+/* ---------- Ansicht: Reiter und Karte ---------- */
+.view-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.view-bar .count { margin: 0; }
+.tabs { display: inline-flex; padding: 3px; gap: 2px; background: var(--surface-2); border-radius: var(--radius); }
+.tabs button { height: 32px; padding: 0 16px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected=true] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.map-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 10px; }
+.map-base { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 500; }
+.map-base select { width: auto; height: 32px; font-size: 13px; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
+.map-legend .lg { display: inline-flex; align-items: center; gap: 6px; }
+.map-legend i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+.map-legend b { font-variant-numeric: tabular-nums; }
+.map-wrap { position: relative; }
+.map { height: calc(100vh - 340px); min-height: 420px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); z-index: 0; }
+.map-empty { position: absolute; inset: 0; z-index: 500; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); background: color-mix(in srgb, var(--surface) 80%, transparent); border-radius: var(--radius); pointer-events: none; }
+.map-empty[hidden] { display: none; }
+.pile-label { display: none; padding: 0 5px; border: 0; box-shadow: none; background: rgba(255, 255, 255, .88); color: #111; font-weight: 700; font-size: 11px; }
+.pile-label::before { display: none; }
+.labels-on .pile-label { display: block; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--ink); }
+.leaflet-popup-content { margin: 12px 14px; font: 13px/1.5 system-ui, sans-serif; }
+.pop .pk { color: var(--muted); display: inline-block; min-width: 64px; }
+.pop-st { display: inline-block; margin-left: 4px; padding: 0 8px; border-radius: 999px; font-size: 12px; color: var(--ink); background: var(--c); }
+.pop-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.pop-act .btn { white-space: nowrap; }
+
+/* ---------- Pfahl-Dialog: Formular + Grafik ---------- */
+#pileDialog { width: min(1120px, calc(100vw - 24px)); }
+.dlg-cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: stretch; }
+.dlg-graphic { min-width: 0; }
+.dlg-sticky { position: sticky; top: 0; }
+.graphic-h { margin: 0 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.graphic-note { margin-top: 6px; }
+.pruef { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 14px; border-radius: var(--radius); background: var(--surface-2); border-left: 4px solid #2563eb; }
+.pg-empty { padding: 16px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); font-size: 13px; }
+svg.pg { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.pg text { font: 10px system-ui, sans-serif; fill: var(--ink); }
+.pg .pg-axis { fill: var(--muted); font-size: 9.5px; }
+.pg .pg-head { font-weight: 700; font-size: 10px; fill: var(--muted); }
+.pg .pg-soil { fill: #2b2417; font-size: 9.5px; }
+.pg .pg-soil.light { fill: #fff; font-weight: 600; paint-order: stroke; stroke: rgba(0, 0, 0, .55); stroke-width: 2.5px; }
+.pg .pg-lbl { font-weight: 700; font-size: 10.5px; }
+.pg .pg-lbl.gw { fill: #2563eb; }
+.pg .pg-sub { fill: var(--muted); font-size: 9.5px; font-variant-numeric: tabular-nums; }
+.pg .pg-gwtxt { fill: #2563eb; font-weight: 700; font-size: 9.5px; }
+.pg .pg-bg { fill: var(--surface-2); }
+.pg .pg-ground { stroke: var(--ink); stroke-width: 1.6; }
+.pg .pg-tick { stroke: var(--muted); stroke-width: .8; }
+.pg .pg-pile { fill: #9aa3ad; stroke: var(--ink); stroke-width: 1.2; }
+.pg .pg-bore { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 2; }
+.chip.st-geprueft { background: #2563eb; color: #fff; }
+.icon-btn.on { color: #2563eb; }
+.pruef-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: #2563eb; color: #fff; box-shadow: 0 0 0 2px rgba(37,99,235,.25); cursor: default; }
+.pruef-slot { display: inline-block; width: 28px; }
+.pruef-badge svg { width: 18px; height: 18px; stroke-width: 3; }
+.users-table { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }
+.users-table thead th, .users-table tbody td, .users-table tbody td:first-child, .users-table thead th:first-child {
+  position: static; padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: normal; background: transparent; font-weight: 500;
+}
+.users-table thead th { font-size: 12px; color: var(--muted); }
+.users-table td select { height: 32px; width: auto; }
+input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: not-allowed; background: var(--surface-2); }
+.seg input:disabled + span { opacity: .55; cursor: not-allowed; }
+@media (max-width: 900px) { .dlg-cols { grid-template-columns: 1fr; } .dlg-graphic { order: -1; } .dlg-sticky { position: static; } }
+@media (max-width: 640px) { #pileDialog { width: 100vw; max-width: 100vw; } }
+
+/* ---------- Import ---------- */
+dialog.wide { width: min(920px, calc(100vw - 24px)); }
+.imp-drop { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 22px; border: 2px dashed var(--line); border-radius: var(--radius); }
+.imp-drop.over { border-color: var(--accent); background: var(--surface-2); }
+.imp-file { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.imp-h { margin: 20px 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.imp-map { display: grid; gap: 6px; max-height: 300px; overflow: auto; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); }
+.map-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: center; }
+.map-row select { height: 36px; }
+.map-src { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.map-src strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.map-src small { color: var(--muted); flex-basis: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-id { min-width: 22px; padding: 0 5px; text-align: center; font-size: 11px; font-weight: 700; border-radius: 4px; background: var(--surface-2); color: var(--muted); }
+.imp-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.chip.bad { background: var(--err-bg); color: var(--danger); font-weight: 600; }
+.imp-prev { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.imp-prev:empty { display: none; }
+.imp-prev thead th { padding: 8px 12px; font-weight: 600; white-space: nowrap; }
+.imp-prev tbody tr { cursor: default; }
+.imp-prev td.empty { color: var(--muted); }
+
+/* ---------- Kopfbereich und Reiter (wie im Vorbild-Screenshot) ---------- */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; padding: 14px 24px 12px; max-width: 1800px; margin: 0 auto; }
+.page-title { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.brand-logo { display: inline-flex; flex: none; }
+.brand-logo svg { display: block; height: 34px; width: auto; }
+.title-sep { width: 1px; align-self: stretch; margin: 2px 0; background: var(--line); }
+.page-title h1 { margin: 0; font-size: 21px; line-height: 1.2; display: flex; align-items: center; gap: 9px; }
+.page-title h1 svg { width: 22px; height: 22px; flex: none; color: var(--ink); }
+.page-sub { margin-top: 2px; color: var(--muted); font-size: 13px; }
+.page-sub:empty { display: none; }
+.head-actions { display: flex; align-items: center; gap: 6px 20px; flex-wrap: wrap; }
+.who { color: var(--muted); font-size: 13px; }
+.linkbtn { display: inline-flex; align-items: center; gap: 7px; padding: 6px 2px; border: 0; background: none; color: var(--accent); font-weight: 600; cursor: pointer; }
+.linkbtn:hover { text-decoration: underline; }
+.linkbtn svg { width: 16px; height: 16px; flex: none; }
+.navtabs { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 10px; max-width: 1752px; margin: 0 auto; padding: 0 12px; border-bottom: 1px solid var(--line); }
+.navtabs > .menu-wrap { display: flex; }
+.navtab { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 84px; padding: 10px 14px 9px; margin-bottom: -1px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.navtab svg { width: 24px; height: 24px; }
+.navtab:hover { color: var(--ink); }
+.navtab[aria-selected=true] { color: var(--accent); border-bottom-color: var(--primary); }
+.navtabs .menu { top: 100%; right: auto; left: 50%; transform: translateX(-50%); min-width: 260px; max-width: calc(100vw - 24px); }
+.lock-logo { display: block; margin-bottom: 6px; }
+.lock-logo svg { display: block; height: 44px; width: auto; }
+
+/* ---------- Grafik: Beschriftung mit Lichthof, Legende der Bodenarten ---------- */
+.pg .pg-halo { paint-order: stroke; stroke: rgba(255, 255, 255, .8); stroke-width: 2.4px; stroke-linejoin: round; }
+.pg .pg-soil.light.pg-halo { fill: #fff; stroke: rgba(0, 0, 0, .65); }
+.pg-leg { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; font-size: 12px; }
+.pg-leg li { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.pg-leg svg { flex: none; }
+.pg-leg span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 100;
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: var(--radius); font-size: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3); max-width: calc(100vw - 32px);
+}
+
+@media (max-width: 640px) {
+  .map-row { grid-template-columns: 1fr; gap: 4px; }
+  .schicht { grid-template-columns: 88px minmax(0, 1fr) auto; }
+  .zeit-head { display: none; }
+  .zeile { grid-template-columns: 1.4fr 1fr 1fr; gap: 6px; }
+  .zeile .zl { grid-column: 1 / 3; grid-row: 1; }
+  .zeile .btn { grid-column: 3; grid-row: 1; width: auto; justify-self: end; padding: 0 14px; }
+  .zeile + .zeile { margin-top: 4px; }
+  main { padding: 12px; }
+  .topbar { padding: 8px 12px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid .span2, .grid .span3 { grid-column: 1 / -1; }
+  dialog { width: 100vw; max-width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; }
+  dialog form { max-height: 100vh; height: 100vh; }
+  .dlg-body { flex: 1; }
+  .table-wrap { max-height: none; }
+  .toolbar .search, .toolbar .type-filter { flex-basis: 100%; max-width: none; }
+  .hide-sm { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ Sperrbildschirm ============ -->
+<div id="lock" class="lock" hidden>
+  <form id="lockForm" class="lock-card" autocomplete="on">
+    <div class="lock-logo" data-brand="44"></div>
+    <h1>Bohrpfahl-Verwaltung</h1>
+    <p class="only-login">Bitte melden Sie sich an.</p>
+    <p class="only-setup">Ersteinrichtung: Legen Sie Benutzername und Passwort fest.</p>
+
+    <div id="lockError" class="notice err" role="alert" hidden></div>
+
+    <div class="field">
+      <label for="lUser">Benutzername</label>
+      <input id="lUser" type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    </div>
+    <div class="field">
+      <label for="lPass">Passwort</label>
+      <input id="lPass" type="password" name="password" required>
+      <span class="hint only-setup">Mindestens 8 Zeichen.</span>
+    </div>
+    <div class="field only-setup">
+      <label for="lPass2">Passwort wiederholen</label>
+      <input id="lPass2" type="password" autocomplete="new-password">
+    </div>
+    <div class="notice only-setup">
+      Die Daten werden mit diesem Passwort verschlüsselt im Browser gespeichert. Ohne Passwort sind sie nicht wiederherstellbar –
+      bitte regelmäßig eine Sicherung anlegen (Menü „Mehr“).
+    </div>
+    <button id="lockSubmit" class="btn primary" type="submit"><span class="only-login">Anmelden</span><span class="only-setup">Einrichten</span></button>
+
+    <div class="lock-links">
+      <button type="button" class="link only-setup" id="lockRestore">Vorhandene Sicherung laden …</button>
+      <button type="button" class="link only-login" id="lockReset">Passwort vergessen? Alle Daten löschen und neu beginnen</button>
+    </div>
+  </form>
+</div>
+
+<!-- ============ Anwendung ============ -->
+<div id="app" hidden>
+  <header class="page-head">
+    <div class="page-title">
+      <span class="brand-logo" data-brand="34"></span>
+      <span class="title-sep" aria-hidden="true"></span>
+      <div>
+        <h1 id="pageTitle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+          <span id="pageTitleText">Pfähle</span>
+        </h1>
+        <div id="projektSub" class="page-sub"></div>
+      </div>
+    </div>
+    <div class="head-actions">
+      <span id="whoami" class="who hide-sm"></span>
+      <button id="btnCsv" class="linkbtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
+        CSV-Export
+      </button>
+      <button id="btnRueck" class="linkbtn" type="button" data-borist data-act="rueck-export" title="Ihre Eintragungen als Datei für den Administrator speichern">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/></svg>
+        Rückmeldung senden
+      </button>
+      <div class="menu-wrap">
+        <button id="btnPdf" class="linkbtn" type="button" aria-haspopup="true" aria-expanded="false" data-menu="menuPdf">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
+          PDF-Export
+        </button>
+        <div id="menuPdf" class="menu" hidden>
+          <button type="button" data-act="pdf-proto">Bohrprotokolle mit Fotos (Anhang je Pfahl)</button>
+          <button type="button" data-act="pdf-proto-nofoto">Bohrprotokolle ohne Fotos</button>
+          <button type="button" data-act="pdf-list">Übersichtsliste (Tabelle)</button>
+        </div>
+      </div>
+      <button id="btnLock" class="linkbtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Abmelden
+      </button>
+    </div>
+  </header>
+
+  <nav class="navtabs" aria-label="Hauptmenü">
+    <button type="button" class="navtab" data-view="table" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+      <span>Pfähle</span>
+    </button>
+    <button type="button" class="navtab" data-view="map" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>
+      <span>Karte</span>
+    </button>
+    <button type="button" class="navtab" data-view="stats" data-admin aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      <span>Auswertung</span>
+    </button>
+    <div class="menu-wrap" data-admin>
+      <button type="button" class="navtab" aria-haspopup="true" aria-expanded="false" data-menu="menuAdmin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span>Verwaltung</span>
+      </button>
+      <div id="menuAdmin" class="menu" hidden>
+        <button type="button" data-nav="projekt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M21 18h-1"/><circle cx="16" cy="6" r="2.2"/><circle cx="10" cy="12" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg>Projektdaten</button>
+        <button type="button" data-nav="import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/></svg>Import aus Excel</button>
+        <button type="button" data-nav="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14c2.7 0 4.5 1.9 4.5 4.5"/></svg>Benutzer und Passwörter</button>
+        <button type="button" data-act="backup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M8 20v-6h8v6"/></svg>Sicherung speichern</button>
+        <button type="button" data-act="restore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Sicherung laden …</button>
+        <button type="button" data-act="rueck-import" title="Übernimmt die Eintragungen, die der Borist auf seinem Gerät gemacht und als Datei gespeichert hat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v6h16v-6"/><path d="M12 3v11"/><path d="M8 10l4 4 4-4"/></svg>Eintragungen vom Borist einlesen …</button>
+        <button type="button" data-nav="konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>Mein Konto</button>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="toolbar">
+      <button id="btnNew" class="btn primary" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Neuer Pfahl
+      </button>
+      <input id="q" class="search" type="search" placeholder="Suchen (Nr., Typ) …" aria-label="Suchen">
+      <select id="typFilter" class="type-filter" aria-label="Nach Typ filtern"></select>
+      <select id="statusFilter" class="type-filter" aria-label="Nach Ausführungsstand filtern">
+        <option value="">Alle Stände</option>
+        <option value="offen">Noch nicht ausgeführt</option>
+        <option value="aktiv">In Ausführung</option>
+        <option value="fertig">Ausgeführt (inkl. geprüft)</option>
+        <option value="zupruefen">Ausgeführt, noch nicht geprüft</option>
+        <option value="geprueft">Durch Bauleitung geprüft</option>
+      </select>
+      <span class="spacer"></span>
+    </div>
+
+    <p id="count" class="count" aria-live="polite"></p>
+    <div class="table-wrap" id="tableWrap"></div>
+
+    <div id="statsView" hidden>
+      <div class="stats-bar">
+        <label>Auswertung nach
+          <select id="stGroup"><option value="day">Tag</option><option value="week">Woche</option><option value="month">Monat</option></select>
+        </label>
+        <label>Zuordnung nach
+          <select id="stBasis"><option value="bohren">Bohrdatum</option><option value="betonieren">Betondatum</option></select>
+        </label>
+        <label>Von <input type="date" id="stFrom"></label>
+        <label>Bis <input type="date" id="stTo"></label>
+        <label>Bohrgerät <select id="stGeraet"></select></label>
+        <button type="button" class="btn small" id="btnStatsCsv">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
+          Auswertung als CSV
+        </button>
+      </div>
+      <div id="stCards" class="stat-cards"></div>
+      <div class="chart-head">
+        <label>Diagramm <select id="stMetric" aria-label="Kennzahl im Diagramm"></select></label>
+      </div>
+      <div id="stChart" class="chart-wrap"></div>
+      <div class="table-wrap stat-table" id="stTable"></div>
+      <h3 class="imp-h">Je Bohrgerät (im gewählten Zeitraum)</h3>
+      <div class="table-wrap stat-table" id="stDevices"></div>
+      <p id="stNote" class="sub"></p>
+    </div>
+
+    <div id="mapView" hidden>
+      <div class="map-bar">
+        <label class="map-base">Hintergrund
+          <select id="mapBase" aria-label="Kartenhintergrund">
+            <option value="osm">Karte (OpenStreetMap)</option>
+            <option value="osmde">Karte (OpenStreetMap Deutschland)</option>
+            <option value="basemap">Karte (basemap.at, nur Österreich)</option>
+            <option value="ortho">Luftbild (basemap.at, nur Österreich)</option>
+            <option value="none">Ohne Hintergrund (offline)</option>
+          </select>
+        </label>
+        <button type="button" class="btn small" id="btnMapFit">Alle Pfähle anzeigen</button>
+        <div id="mapLegend" class="map-legend"></div>
+      </div>
+      <div id="mapStatus" class="notice" role="status" hidden></div>
+      <div class="map-wrap">
+        <div id="map" class="map" role="application" aria-label="Karte mit Bohrpfählen"></div>
+        <div id="mapEmpty" class="map-empty" hidden></div>
+      </div>
+      <p id="mapNoCoords" class="sub"></p>
+      <p class="sub">Hintergrundkarten werden aus dem Internet geladen; dabei wird nur der sichtbare Kartenausschnitt abgefragt, keine Pfahldaten. Mit „Ohne Hintergrund“ arbeitet die Karte offline.</p>
+    </div>
+  </main>
+</div>
+
+<!-- ============ Pfahl erfassen / Projektdaten ============ -->
+<!--INLINE:src/pile-dialog.html-->
+<!--INLINE:src/import-dialog.html-->
+<!--INLINE:src/users-dialog.html-->
+
+<!-- ============ Zugangsdaten ändern ============ -->
+<dialog id="pwDialog" aria-labelledby="pwTitle">
+  <form id="pwForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="pwTitle">Mein Konto</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dlg-body">
+      <div class="grid" style="grid-template-columns:1fr">
+        <div class="field"><label for="p_user">Benutzername</label><input id="p_user" type="text" autocomplete="username" spellcheck="false"></div>
+        <div class="field"><label for="p_old">Aktuelles Passwort</label><input id="p_old" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="p_new">Neues Passwort <span class="unit">(leer lassen = unverändert)</span></label><input id="p_new" type="password" autocomplete="new-password"></div>
+        <div class="field"><label for="p_new2">Neues Passwort wiederholen</label><input id="p_new2" type="password" autocomplete="new-password"></div>
+      </div>
+      <div id="pwMsgs" class="msgs" aria-live="polite"></div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn primary">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<input id="restoreFile" type="file" accept=".json,application/json" hidden>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script><!--INLINE:vendor/xlsx.full.min.js--></script>
+<script><!--INLINE:vendor/proj4.js--></script>
+<script><!--INLINE:vendor/leaflet.js--></script>
+<script><!--INLINE:vendor/jspdf.umd.min.js--></script>
+<script><!--INLINE:vendor/jspdf.plugin.autotable.min.js--></script>
+<script><!--INLINE:src/protokoll.js--></script>
+<script><!--INLINE:src/graphic.js--></script>
+<script><!--INLINE:src/brand.js--></script>
+<script><!--INLINE:src/app.js--></script>
+<script><!--INLINE:src/map.js--></script>
+<script><!--INLINE:src/stats.js--></script>
+<script><!--INLINE:src/import.js--></script>
+</body>
+</html>
