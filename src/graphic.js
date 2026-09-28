@@ -24,17 +24,38 @@ const SOILS = [
 ];
 const soilLabel = s => `${s.name} (${s.sym})`;
 
+/* Vom Administrator in den Projektdaten angelegte, zusätzliche Bodenarten (state.projekt.bodenartenCustom:
+   [{ name, sym }]). Bekommen reihum eine Farbe aus einer kleinen Palette und ein gemeinsames, generisches
+   Zeichen (Raute) in der Grafik, da für frei benannte Bodenarten keine Norm-Schraffur existiert. */
+const CUSTOM_SOIL_PALETTE = ['#c9d6e3', '#e3c9d6', '#d6e3c9', '#e3d6c9', '#c9e3d6', '#d6c9e3'];
+function customSoils() {
+  return (state.projekt.bodenartenCustom || []).map((c, i) => ({
+    name: c.name, sym: c.sym || c.name.slice(0, 2), farbe: '', ncs: '',
+    color: CUSTOM_SOIL_PALETTE[i % CUSTOM_SOIL_PALETTE.length], pat: 'custom', custom: true,
+  }));
+}
+/** Alle Bodenarten: Standardliste (SOILS) + vom Administrator angelegte zusätzliche. */
+function allSoils() { return [...SOILS, ...customSoils()]; }
+/** Für den Borist freigegebene Bodenarten (Projektdaten "Bodenarten für den Borist");
+    ohne Einschränkung (bodenartenAktiv nicht gesetzt) stehen alle Standard-Bodenarten zur Verfügung. */
+function enabledSoils() {
+  const aktiv = state.projekt.bodenartenAktiv;
+  const basis = Array.isArray(aktiv) ? SOILS.filter(s => aktiv.includes(s.name)) : SOILS;
+  return [...basis, ...customSoils()];
+}
+
 const normSoil = s => String(s ?? '').toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss').replace(/[^a-z0-9]/g, '');
 
 /** Bodenart zu einem Text finden (Name, Symbol oder Anfang des Namens); sonst null.
     Bei mehreren, kommagetrennten Bodenarten (Borist-Checkboxen) zählt für Farbe/Zeichen
-    die zuerst genannte (Haupt-)Bodenart. */
+    die zuerst genannte (Haupt-)Bodenart. Berücksichtigt auch vom Administrator angelegte Bodenarten. */
 function soilOf(text) {
   const n = normSoil(String(text ?? '').split(',')[0]);
   if (!n) return null;
-  return SOILS.find(s => normSoil(s.name) === n || normSoil(s.sym) === n) ||
-    SOILS.find(s => n.startsWith(normSoil(s.name))) ||
-    SOILS.find(s => n.includes(normSoil(s.name)) && normSoil(s.name).length > 3) || null;
+  const all = allSoils();
+  return all.find(s => normSoil(s.name) === n || normSoil(s.sym) === n) ||
+    all.find(s => n.startsWith(normSoil(s.name))) ||
+    all.find(s => n.includes(normSoil(s.name)) && normSoil(s.name).length > 3) || null;
 }
 
 /* Schraffuren (Zeichen) als Muster; einmal im Dokument definiert und überall per url(#…) verwendet */
@@ -54,6 +75,7 @@ const SOIL_PATTERNS = {
   loess:   '<path d="M3 2 v3 M9 7 v3"/><circle cx="8" cy="3" r=".6" fill="#2b2b2b"/><circle cx="3" cy="9" r=".6" fill="#2b2b2b"/>',
   loam:    '<path d="M0 12 L12 0 M-3 3 L3 -3 M9 15 L15 9"/>',
   coal:    '<rect width="12" height="12" fill="#111" stroke="none"/>',
+  custom:  '<path d="M6 1 L11 6 L6 11 L1 6 Z"/>',   // generisches Zeichen für vom Administrator angelegte Bodenarten
 };
 
 (function injectDefs() {

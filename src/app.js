@@ -105,6 +105,8 @@ const defaultProjekt = () => ({
   hoehenbezug: 'm ü. A', logo: null, logoW: 0, logoH: 0,
   crs: 'EPSG:25832',   // Koordinatensystem der Pfahl-Koordinaten
   geraete: [],         // Bohrgeräte: { id, typ, inv, kommentar }
+  bodenartenAktiv: null,   // für den Borist freigegebene Standard-Bodenarten (Namen); null = alle
+  bodenartenCustom: [],    // zusätzliche, selbst angelegte Bodenarten: { id, name, sym }
 });
 
 /* Höhen/Längen gibt es zweimal: Soll (Plan, Präfix s…) und Ist (ausgeführt) – wie im Bohrprotokoll */
@@ -925,21 +927,29 @@ function fillGeraetSelect(p) {
     Admin: Dropdown (eine Bodenart). Borist: Checkboxen (mehrere Bodenbestandteile), siehe soilChecksHtml. */
 const soilOptionsHtml = cur => {
   const n = normSoil(cur);
-  const known = n ? SOILS.find(s => normSoil(s.name) === n || normSoil(s.sym) === n) : null;   // nur exakte Treffer, sonst bleibt der Text erhalten
+  const all = allSoils();
+  const known = n ? all.find(s => normSoil(s.name) === n || normSoil(s.sym) === n) : null;   // nur exakte Treffer, sonst bleibt der Text erhalten
   return ['<option value="">– Bodenart wählen –</option>',
-    ...SOILS.map(s => `<option value="${esc(s.name)}"${known && known.name === s.name ? ' selected' : ''}>${esc(soilLabel(s))}</option>`),
+    ...all.map(s => `<option value="${esc(s.name)}"${known && known.name === s.name ? ' selected' : ''}>${esc(soilLabel(s))}</option>`),
     ...(cur && !known ? [`<option value="${esc(cur)}" selected>${esc(cur)} (bisher)</option>`] : [])].join('');
 };
 
-/** Welche Bodenarten in einem (evtl. kommagetrennten) Text stecken, in SOILS-Reihenfolge. */
+/** Welche Bodenarten in einem (evtl. kommagetrennten) Text stecken, in Standard-Reihenfolge
+    (Standardliste zuerst, dann zusätzliche Bodenarten). */
 function soilsIn(cur) {
   const parts = String(cur ?? '').split(',').map(normSoil).filter(Boolean);
-  return SOILS.filter(s => parts.includes(normSoil(s.name)));
+  return allSoils().filter(s => parts.includes(normSoil(s.name)));
 }
-/** Checkboxen für mehrere Bodenbestandteile; das erste angehakte gilt für Grafik/Protokoll als Hauptanteil (soilOf). */
+/** Checkboxen für mehrere Bodenbestandteile, beschränkt auf die für den Borist freigegebenen
+    Bodenarten (Projektdaten); bereits gesetzte, inzwischen nicht mehr freigegebene Bodenarten
+    bleiben zusätzlich sichtbar, damit keine Angaben stillschweigend verschwinden.
+    Das erste angehakte gilt für Grafik/Protokoll als Hauptanteil (soilOf). */
 const soilChecksHtml = cur => {
-  const checked = new Set(soilsIn(cur).map(s => s.name));
-  return SOILS.map(s => `<label class="soil-chk" title="${esc(s.name)}">
+  const gewaehlt = soilsIn(cur);
+  const checked = new Set(gewaehlt.map(s => s.name));
+  const verfuegbar = enabledSoils();
+  const fehlend = gewaehlt.filter(s => !verfuegbar.some(v => v.name === s.name));
+  return [...verfuegbar, ...fehlend].map(s => `<label class="soil-chk" title="${esc(s.name)}">
     <input type="checkbox" data-soil="${esc(s.name)}"${checked.has(s.name) ? ' checked' : ''}>
     <span>${esc(s.sym)}</span></label>`).join('');
 };
@@ -1350,7 +1360,7 @@ form.addEventListener('change', e => {
   if (!chk) return;
   const row = chk.closest('.schicht');
   const checked = new Set($$('.soil-checks input[data-soil]', row).filter(i => i.checked).map(i => i.dataset.soil));
-  $('[data-s=boden]', row).value = SOILS.filter(s => checked.has(s.name)).map(s => s.name).join(', ');
+  $('[data-s=boden]', row).value = allSoils().filter(s => checked.has(s.name)).map(s => s.name).join(', ');
 });
 // Manuelle Eingabe von Datum/Uhrzeit (Admin) kann eine growable-Zeile ebenfalls abschließen
 form.addEventListener('change', e => {
@@ -1492,6 +1502,25 @@ $('#btnAddGeraet').addEventListener('click', () => {
 });
 $('#gerRows').addEventListener('click', e => { const b = e.target.closest('[data-grm]'); if (b) b.closest('.ger-row').remove(); });
 
+/** Checkboxen der Standard-Bodenarten (Vorauswahl für den Borist) */
+function bodenartRowsHTML(aktiv) {
+  const set = Array.isArray(aktiv) ? new Set(aktiv) : null;   // null = alle aktiv (noch nicht eingeschränkt)
+  return SOILS.map(s => `<label>
+    <input type="checkbox" data-ba="${esc(s.name)}"${!set || set.has(s.name) ? ' checked' : ''}>
+    ${esc(soilLabel(s))}
+  </label>`).join('');
+}
+const bodenartCustomRowHTML = c => `<div class="boden-custom-row" data-id="${esc(c.id || '')}">
+  <input type="text" data-bc="name" maxlength="60" placeholder="Name (z. B. Bauschutt)" aria-label="Name der Bodenart" value="${esc(c.name || '')}">
+  <input type="text" data-bc="sym" maxlength="6" placeholder="Kürzel" aria-label="Kürzel" value="${esc(c.sym || '')}">
+  <button type="button" class="icon-btn danger" data-bcrm title="Bodenart entfernen" aria-label="Bodenart entfernen">${ICON.rm}</button>
+</div>`;
+$('#btnAddBodenart').addEventListener('click', () => {
+  $('#bodenartCustomRows').insertAdjacentHTML('beforeend', bodenartCustomRowHTML({}));
+  $$('#bodenartCustomRows [data-bc=name]').at(-1).focus();
+});
+$('#bodenartCustomRows').addEventListener('click', e => { const b = e.target.closest('[data-bcrm]'); if (b) b.closest('.boden-custom-row').remove(); });
+
 function openProjekt() {
   const pr = state.projekt;
   $('#pj_nr').value = pr.nr; $('#pj_name').value = pr.name; $('#pj_ort').value = pr.ort;
@@ -1501,6 +1530,8 @@ function openProjekt() {
   $('#pj_crs').value = crsInfo(pr.crs).id;
   const ger = (pr.geraete && pr.geraete.length) ? pr.geraete : [{}, {}];      // Vorschlag: zwei leere Zeilen
   $('#gerRows').innerHTML = ger.map(gerRowHTML).join('');
+  $('#bodenartRows').innerHTML = bodenartRowsHTML(pr.bodenartenAktiv);
+  $('#bodenartCustomRows').innerHTML = (pr.bodenartenCustom || []).map(bodenartCustomRowHTML).join('');
   $('#projMsgs').innerHTML = '';
   showLogoPreview();
   projDlg.showModal();
@@ -1542,8 +1573,14 @@ projForm.addEventListener('submit', async e => {
     id: r.dataset.id || uid(),
     typ: $('[data-g=typ]', r).value.trim(), inv: $('[data-g=inv]', r).value.trim(), kommentar: $('[data-g=kommentar]', r).value.trim(),
   })).filter(g => g.typ || g.inv);
+  const bodenartenAktivGewaehlt = $$('#bodenartRows [data-ba]').filter(i => i.checked).map(i => i.dataset.ba);
+  const bodenartenAktiv = bodenartenAktivGewaehlt.length === SOILS.length ? null : bodenartenAktivGewaehlt;
+  const bodenartenCustom = $$('#bodenartCustomRows .boden-custom-row').map(r => ({
+    id: r.dataset.id || uid(),
+    name: $('[data-bc=name]', r).value.trim(), sym: $('[data-bc=sym]', r).value.trim(),
+  })).filter(c => c.name);
   state.projekt = {
-    geraete,
+    geraete, bodenartenAktiv, bodenartenCustom,
     nr: $('#pj_nr').value.trim(), name: $('#pj_name').value.trim(), ort: $('#pj_ort').value.trim(),
     titel: $('#pj_titel').value.trim() || d.titel, norm: $('#pj_norm').value.trim(),
     hoehenbezug: $('#pj_hb').value.trim() || d.hoehenbezug,
