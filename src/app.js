@@ -31,13 +31,15 @@ const SCHICHT_ARTEN = [
   { k: 'hart',      label: 'harte Bodenschicht' },
 ];
 
-/* Arbeitsvorgänge der Ausführungszeiten (n = Anzahl Zeilen im Protokoll) */
+/* Arbeitsvorgänge der Ausführungszeiten. growable: es gibt zu Beginn nur eine Zeile;
+   sobald die letzte Zeile abgeschlossen ist (von + bis ausgefüllt), erscheint automatisch
+   eine weitere (siehe zeitRowsFor / maybeGrowZeitGroup). Bewehren/Betonieren bleiben einzeilig. */
 const ZEIT_GROUPS = [
-  { k: 'bohren',     label: 'Bohren',              n: 2 },
-  { k: 'hindernis',  label: 'Bohrhindernis',       n: 2 },
-  { k: 'hart',       label: 'harte Bodenschicht',  n: 2 },
-  { k: 'bewehren',   label: 'Bewehren',            n: 1 },
-  { k: 'betonieren', label: 'Betonieren',          n: 1 },
+  { k: 'bohren',     label: 'Bohren',              growable: true },
+  { k: 'hindernis',  label: 'Bohrhindernis',       growable: true },
+  { k: 'hart',       label: 'harte Bodenschicht',  growable: true },
+  { k: 'bewehren',   label: 'Bewehren' },
+  { k: 'betonieren', label: 'Betonieren' },
 ];
 
 /* Was der Borist bei importierten bzw. vom Administrator angelegten Pfählen ergänzen darf:
@@ -96,7 +98,7 @@ async function unseal(k, blob) {
 /* =====================================================================
    Datenmodell & Migration
    ===================================================================== */
-const emptyZeiten = () => Object.fromEntries(ZEIT_GROUPS.map(g => [g.k, Array.from({ length: g.n }, () => ({}))]));
+const emptyZeiten = () => Object.fromEntries(ZEIT_GROUPS.map(g => [g.k, [{}]]));
 
 const defaultProjekt = () => ({
   nr: '', name: '', ort: '', titel: 'Ortbetonbohrpfähle', norm: 'nach EN 1536',
@@ -133,9 +135,13 @@ function migratePile(p, fromVersion) {
     q.zeiten = z;
     delete q.beginn; delete q.ende;
   }
-  // fehlende Zeilen ergänzen; nicht mehr angezeigte Arbeitsvorgänge (z. B. „Entsanden“) bleiben in den Daten erhalten
+  // mindestens eine Zeile je Arbeitsvorgang sicherstellen; nicht mehr angezeigte Arbeitsvorgänge
+  // (z. B. „Entsanden“) bleiben in den Daten erhalten
   const z = emptyZeiten();
-  for (const g of ZEIT_GROUPS) for (let i = 0; i < g.n; i++) z[g.k][i] = { ...(q.zeiten?.[g.k]?.[i] || {}) };
+  for (const g of ZEIT_GROUPS) {
+    const existing = q.zeiten?.[g.k];
+    z[g.k] = (Array.isArray(existing) && existing.length ? existing : [{}]).map(e => ({ ...e }));
+  }
   for (const k of Object.keys(q.zeiten || {})) if (!(k in z)) z[k] = q.zeiten[k];
   q.zeiten = z;
   if (!Array.isArray(q.fotos)) q.fotos = [];
@@ -956,11 +962,33 @@ const schichtRowHTML = s => {
 </div>`;
 };
 
+/* Zu Beginn nur eine Zeile je Arbeitsvorgang; bei "growable"-Vorgängen (Bohren, Bohrhindernis,
+   harte Bodenschicht) kommt automatisch eine weitere leere Zeile dazu, sobald die letzte
+   abgeschlossen ist (von + bis ausgefüllt) — siehe auch maybeGrowZeitGroup. */
+function zeitRowsFor(g, entries) {
+  const list = (entries && entries.length ? entries : [{}]).map(e => e || {});
+  if (!g.growable) return [list[0] || {}];
+  const last = list[list.length - 1];
+  return (last.von && last.bis) ? [...list, {}] : list;
+}
+
 function buildZeitRows(z) {
-  $('#zeitRows').innerHTML = ZEIT_GROUPS.map(g => Array.from({ length: g.n }, (_, i) => {
-    const e = z?.[g.k]?.[i] || {};
-    return isAdmin() ? zeitZeileAdmin(g, i, e) : zeitZeileBorist(g, i, e);
-  }).join('')).join('');
+  $('#zeitRows').innerHTML = ZEIT_GROUPS.map(g =>
+    zeitRowsFor(g, z?.[g.k]).map((e, i) => isAdmin() ? zeitZeileAdmin(g, i, e) : zeitZeileBorist(g, i, e)).join('')
+  ).join('');
+}
+
+/** Legt bei Bedarf die nächste leere Zeile an, wenn die aktuell letzte Zeile einer growable-Kategorie
+    gerade abgeschlossen wurde (von + bis beide ausgefüllt). */
+function maybeGrowZeitGroup(row) {
+  const g = ZEIT_GROUPS.find(x => x.k === row.dataset.g);
+  if (!g || !g.growable) return;
+  const rows = $$(`.zeile[data-g="${g.k}"]`, form);
+  if (row !== rows[rows.length - 1]) return;
+  const e = readZeileZeit(row);
+  if (!(e.von && e.bis)) return;
+  const i = rows.length;
+  row.insertAdjacentHTML('afterend', isAdmin() ? zeitZeileAdmin(g, i, {}) : zeitZeileBorist(g, i, {}));
 }
 
 function zeitZeileAdmin(g, i, e) {
@@ -1324,6 +1352,11 @@ form.addEventListener('change', e => {
   const checked = new Set($$('.soil-checks input[data-soil]', row).filter(i => i.checked).map(i => i.dataset.soil));
   $('[data-s=boden]', row).value = SOILS.filter(s => checked.has(s.name)).map(s => s.name).join(', ');
 });
+// Manuelle Eingabe von Datum/Uhrzeit (Admin) kann eine growable-Zeile ebenfalls abschließen
+form.addEventListener('change', e => {
+  const zeile = e.target.closest('[data-z]')?.closest('.zeile');
+  if (zeile) maybeGrowZeitGroup(zeile);
+});
 form.addEventListener('change', recalc);
 
 form.addEventListener('click', e => {
@@ -1359,6 +1392,7 @@ form.addEventListener('click', e => {
     const dEl = $('[data-z=d]', row), vEl = $('[data-z=von]', row), bEl = $('[data-z=bis]', row);
     if (!dEl.value) dEl.value = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
     if (!vEl.value) vEl.value = hm; else bEl.value = hm;
+    maybeGrowZeitGroup(row);
     return recalc();
   }
   const startBtn = e.target.closest('[data-start]');
@@ -1376,6 +1410,7 @@ form.addEventListener('click', e => {
     const d = new Date();
     $('[data-z=bis]', row).value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
     setZeitZustand(row);
+    maybeGrowZeitGroup(row);
     return recalc();
   }
   const editZeitBtn = e.target.closest('[data-edit-zeit]');
@@ -1383,6 +1418,7 @@ form.addEventListener('click', e => {
     const row = editZeitBtn.closest('.zeile');
     if (row.dataset.zstate === 'bearbeiten') {
       setZeitZustand(row);
+      maybeGrowZeitGroup(row);
       editZeitBtn.innerHTML = ICON.edit;
       editZeitBtn.title = editZeitBtn.ariaLabel = 'Zeit bearbeiten';
     } else {

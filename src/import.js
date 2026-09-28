@@ -258,9 +258,8 @@ function impAutoMap(headers) {
 function impMergeZeiten(base, z) {
   for (const g of ZEIT_GROUPS) {
     (z[g.k] || []).forEach((e, i) => {
-      if (i >= g.n) return;
       const clean = Object.fromEntries(Object.entries(e).filter(([, v]) => v));
-      base[g.k][i] = { ...base[g.k][i], ...clean };
+      base[g.k][i] = { ...(base[g.k][i] || {}), ...clean };
     });
   }
   return base;

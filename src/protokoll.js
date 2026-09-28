@@ -361,12 +361,15 @@ function drawProtokoll(doc, p, proj) {
   T(isNum(p.verbrauchIst) ? `${fmtFlex(p.verbrauchIst)} m³` : '', 501.2, 479.4, { maxW: 40 });
   L(267.6, 484.4, 543.6, 484.4, 1.6);
 
-  /* ---------- Ausführungszeiten ---------- */
+  /* ---------- Ausführungszeiten ----------
+     Nicht mehr pro Arbeitsvorgang fest reservierte Zeilen (früher immer 2 für Bohren/
+     Bohrhindernis/harte Bodenschicht, unabhängig davon ob genutzt): stattdessen eine
+     Zeile je tatsächlich erfasstem Ereignis, über das ganze Feld verteilt. Kategorien
+     ohne Eintrag erscheinen gar nicht. */
   L(267.6, 500.7, 543.6, 500.7);
   head('Ausführungszeiten', 511.8);
   L(267.6, 517, 543.6, 517);
   L(427.6, 533.35, 541.8, 533.35, 0.6);
-  L(267.6, 549.6, 541.8, 549.6, 1);
   L(361.2, 517, 361.2, 678.2, 0.8);
   L(427.6, 517, 427.6, 678.2, 0.8);
   L(485.2, 533.35, 485.2, 678.2, 0.8);
@@ -376,25 +379,23 @@ function drawProtokoll(doc, p, proj) {
   T('von', 456.6, 544.4, { align: 'center' });
   T('bis', 514.2, 544.4, { align: 'center' });
 
-  const zeilen = [
-    { k: 'bohren',     label: 'Bohren',             y0: 550.1, y1: 582.2, base: [560.8, 577.1] },
-    { k: 'hindernis',  label: 'Bohrhindernis',      y0: 582.7, y1: 615,   base: [593.4, 609.7] },
-    { k: 'hart',       label: 'harte Bodenschicht', y0: 615,   y1: 647.5, base: [626, 642.4], size: 9.3 },
-    { k: 'bewehren',   label: 'Bewehren',           y0: 648,   y1: 663.9, base: [658.7] },
-    { k: 'betonieren', label: 'Betonieren',         y0: 664.3, y1: 677.6, base: [674] },
-  ];
-  for (const z of zeilen) {
-    L(267.6, z.y1, 541.8, z.y1, 0.8);
-    const mid = (z.y0 + z.y1) / 2;
-    T(z.label, 313.8, z.base.length === 1 ? z.base[0] : mid + 3.5, { size: z.size || 10.3, align: 'center', maxW: 88 });
-    if (z.base.length === 2) L(361.2, mid, 541.8, mid, 0.5);
-    z.base.forEach((y, i) => {
-      const e = p.zeiten?.[z.k]?.[i] || {};
-      T(fmtDateShort(e.d), 394.5, y, { align: 'center' });
-      T(e.von, 456.6, y, { align: 'center' });
-      T(e.bis, 514.2, y, { align: 'center' });
-    });
-  }
+  const zTop = 549.6, zBottom = 678.2;
+  const eintraege = ZEIT_GROUPS.flatMap(g =>
+    (p.zeiten?.[g.k] || [])
+      .filter(e => e.d || e.von || e.bis)
+      .map(e => ({ label: g.label, e }))
+  );
+  L(267.6, zTop, 541.8, zTop, 1);
+  const rowH = eintraege.length ? Math.max(11, (zBottom - zTop) / eintraege.length) : 16.1;
+  eintraege.forEach((row, i) => {
+    const y1 = zTop + (i + 1) * rowH;
+    const mid = y1 - rowH / 2 + 3.5;
+    T(row.label, 313.8, mid, { size: row.label.length > 12 ? 9.3 : 10.3, align: 'center', maxW: 88 });
+    T(fmtDateShort(row.e.d), 394.5, mid, { align: 'center' });
+    T(row.e.von, 456.6, mid, { align: 'center' });
+    T(row.e.bis, 514.2, mid, { align: 'center' });
+    L(267.6, y1, 541.8, y1, 0.8);
+  });
   L(41, 678.2, 543.6, 678.2, 1.8);
 
   /* ---------- Bemerkung & Unterschriften ---------- */
