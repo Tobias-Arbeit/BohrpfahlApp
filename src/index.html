@@ -370,14 +370,15 @@ input[data-s=boden].need ~ .soil-checks { background: var(--need-bg); box-shadow
 }
 .logo-prev img { max-height: 46px; max-width: 160px; }
 
-/* ---------- Borist: kompaktes Pfahlformular ---------- */
-/* Grunddaten-Leiste: fasst Nr./Soll-Maße/Betongüte/Verbrauch Soll kompakt zusammen und ersetzt für den
-   Borist bei fremden Pfählen die (ohnehin gesperrten) Fieldsets "Pfahl", "Lage" und die Soll-Spalte von
-   "Höhen und Längen" (siehe .kompakt unten). Bei eigenen/neuen Pfählen (voller Zugriff) bleibt es beim
-   bisherigen vollständigen Formular, die Leiste ist dann per JS ausgeblendet. */
+/* ---------- Kompaktes Pfahlformular (Admin und Borist) ---------- */
+/* Grunddaten-Leiste: fasst Nr./Soll-Maße/Betongüte/Verbrauch Soll kompakt zusammen. Für den Borist
+   bei fremden Pfählen ersetzt sie die (ohnehin gesperrten) Fieldsets "Pfahl" und "Lage" (siehe
+   .nur-voll unten); bei eigenen/neuen Pfählen (voller Zugriff) bleibt es beim vollständigen
+   Formular, die Leiste ist dann per JS ausgeblendet. Beim Admin bleiben "Pfahl" und "Lage" zusätzlich
+   zur Leiste sichtbar und bearbeitbar (siehe body.is-borist-Einschränkung bei .nur-voll). */
 .grunddaten { display: none; }
 dialog.kompakt .grunddaten { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: flex-end; padding: 10px 12px; margin-bottom: 4px; background: var(--surface-2); border-radius: var(--radius); }
-dialog.kompakt .nur-voll { display: none; }
+body.is-borist dialog.kompakt .nur-voll { display: none; }
 .gd-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gd-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .gd-item strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -386,18 +387,23 @@ dialog.kompakt .nur-voll { display: none; }
 dialog.kompakt .geraet-feld { max-width: 220px; margin: -4px 0 10px; }
 dialog.kompakt .geraet-feld select { height: 34px; }
 
-/* Höhen und Längen: für den Borist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben) */
-dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
-dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
+/* Höhen und Längen: für den Borist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben);
+   der Admin sieht weiterhin beide Spalten. */
+body.is-borist dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
+body.is-borist dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
 /* Auf Wunsch komplett entfernt: für den Borist bleiben in "Höhen und Längen" nur noch
-   Wasserauflast und Grundwasser ab übrig (siehe pile-dialog.html) */
-dialog.kompakt [data-info-toggle="hoehen"],
-dialog.kompakt [data-info-panel="hoehen"] { display: none !important; }
-dialog.kompakt #fsBewehrung { display: none; }
+   Wasserauflast und Grundwasser ab übrig (siehe pile-dialog.html). Der Admin behält den
+   gesamten Block wie bisher dauerhaft sichtbar (kein i-Button, kein Einklappen). */
+body.is-borist dialog.kompakt [data-info-toggle="hoehen"],
+body.is-borist dialog.kompakt [data-info-panel="hoehen"] { display: none !important; }
+body:not(.is-borist) dialog.kompakt [data-info-toggle="hoehen"] { display: none; }
+body:not(.is-borist) dialog.kompakt [data-info-panel="hoehen"] { display: block !important; }
+/* Pfahlbewehrung entfällt nur für den Borist (siehe Round-3-Anforderung); der Admin behält den
+   Block, eingeordnet unterhalb von Bodenaufschluss/Zeiten (siehe .zwei-spalten-Platzierung unten). */
+body.is-borist dialog.kompakt #fsBewehrung { display: none; }
 
-/* "i"-Button (nur Borist/kompakt): blendet Höhen/Grundwasser bzw. Erklärtexte erst auf Wunsch ein,
-   statt sie dauerhaft Platz wegnehmen zu lassen. Admin sieht weiterhin alles direkt (kein Button,
-   info-panel immer offen wie schon immer). */
+/* "i"-Button: blendet Höhen/Grundwasser bzw. Erklärtexte erst auf Wunsch ein, statt sie dauerhaft
+   Platz wegnehmen zu lassen (jetzt für Admin und Borist gleich, außer beim Höhen-Block s. o.). */
 .btn-info { display: none; }
 dialog.kompakt .btn-info {
   display: inline-flex; align-items: center; justify-content: center;
@@ -416,12 +422,15 @@ dialog.kompakt .info-panel {
 }
 dialog.kompakt .info-panel.offen { display: block; }
 
-/* Bodenaufschluss und Ausführungszeiten nebeneinander, Bewehrung/Beton darunter über die volle Breite */
+/* Bodenaufschluss und Ausführungszeiten nebeneinander; Beton (und beim Admin zusätzlich Bewehrung)
+   darunter über die volle Breite. */
 dialog.kompakt .zwei-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; align-items: start; }
 dialog.kompakt .zwei-spalten fieldset { margin-top: 0; }
 dialog.kompakt #fsBoden { grid-column: 1; grid-row: 1; }
 dialog.kompakt #fsZeiten { grid-column: 2; grid-row: 1; }
 dialog.kompakt #fsBeton { grid-column: 1 / -1; grid-row: 2; }
+body:not(.is-borist) dialog.kompakt #fsBewehrung { grid-column: 1 / -1; grid-row: 2; }
+body:not(.is-borist) dialog.kompakt #fsBeton { grid-row: 3; }
 @media (max-width: 900px) { dialog.kompakt .zwei-spalten { display: block; } }
 
 /* ---------- Ansicht: Reiter und Karte ---------- */

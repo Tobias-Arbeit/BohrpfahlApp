@@ -923,31 +923,20 @@ function fillGeraetSelect(p) {
   $('#geraetHint').textContent = list.length ? '' : 'Noch keine Geräte angelegt – der Administrator legt sie unter „Projektdaten“ an.';
 }
 
-/** Auswahl der Bodenarten (Hauptanteile lt. Vorlage); ein früherer Freitext bleibt als „(bisher)“ erhalten.
-    Admin: Dropdown (eine Bodenart). Borist: Checkboxen (mehrere Bodenbestandteile), siehe soilChecksHtml. */
-const soilOptionsHtml = cur => {
-  const n = normSoil(cur);
-  const all = allSoils();
-  const known = n ? all.find(s => normSoil(s.name) === n || normSoil(s.sym) === n) : null;   // nur exakte Treffer, sonst bleibt der Text erhalten
-  return ['<option value="">– Bodenart wählen –</option>',
-    ...all.map(s => `<option value="${esc(s.name)}"${known && known.name === s.name ? ' selected' : ''}>${esc(soilLabel(s))}</option>`),
-    ...(cur && !known ? [`<option value="${esc(cur)}" selected>${esc(cur)} (bisher)</option>`] : [])].join('');
-};
-
 /** Welche Bodenarten in einem (evtl. kommagetrennten) Text stecken, in Standard-Reihenfolge
     (Standardliste zuerst, dann zusätzliche Bodenarten). */
 function soilsIn(cur) {
   const parts = String(cur ?? '').split(',').map(normSoil).filter(Boolean);
   return allSoils().filter(s => parts.includes(normSoil(s.name)));
 }
-/** Checkboxen für mehrere Bodenbestandteile, beschränkt auf die für den Borist freigegebenen
-    Bodenarten (Projektdaten); bereits gesetzte, inzwischen nicht mehr freigegebene Bodenarten
-    bleiben zusätzlich sichtbar, damit keine Angaben stillschweigend verschwinden.
-    Das erste angehakte gilt für Grafik/Protokoll als Hauptanteil (soilOf). */
+/** Checkboxen für mehrere Bodenbestandteile (siehe schichtRowHTML). Admin sieht alle Bodenarten,
+    der Borist nur die in den Projektdaten freigegebenen; bereits gesetzte, inzwischen nicht mehr
+    freigegebene Bodenarten bleiben zusätzlich sichtbar, damit keine Angaben stillschweigend
+    verschwinden. Das erste angehakte gilt für Grafik/Protokoll als Hauptanteil (soilOf). */
 const soilChecksHtml = cur => {
   const gewaehlt = soilsIn(cur);
   const checked = new Set(gewaehlt.map(s => s.name));
-  const verfuegbar = enabledSoils();
+  const verfuegbar = isAdmin() ? allSoils() : enabledSoils();
   const fehlend = gewaehlt.filter(s => !verfuegbar.some(v => v.name === s.name));
   return [...verfuegbar, ...fehlend].map(s => `<label class="soil-chk" title="${esc(s.name)}">
     <input type="checkbox" data-soil="${esc(s.name)}"${checked.has(s.name) ? ' checked' : ''}>
@@ -957,10 +946,8 @@ const soilChecksHtml = cur => {
 const schichtRowHTML = s => {
   const art = s.art || (s.hart ? 'hart' : 'boden');
   const bodenCur = art === 'boden' ? s.boden : '';
-  const bodenHtml = isAdmin()
-    ? `<select data-s="boden" aria-label="Bodenart"${art === 'boden' ? '' : ' hidden'}>${soilOptionsHtml(bodenCur)}</select>`
-    : `<input type="hidden" data-s="boden" value="${esc(bodenCur || '')}">
-       <div class="soil-checks" role="group" aria-label="Bodenart (mehrere möglich)"${art === 'boden' ? '' : ' hidden'}>${soilChecksHtml(bodenCur)}</div>`;
+  const bodenHtml = `<input type="hidden" data-s="boden" value="${esc(bodenCur || '')}">
+     <div class="soil-checks" role="group" aria-label="Bodenart (mehrere möglich)"${art === 'boden' ? '' : ' hidden'}>${soilChecksHtml(bodenCur)}</div>`;
   return `<div class="schicht">
   <div class="field"><input type="text" inputmode="decimal" data-s="bis" placeholder="bis Tiefe [m]" aria-label="Schicht bis Tiefe in m unter Bohrebene" value="${s.bis != null && !Number.isNaN(s.bis) ? esc(fmtInput(s.bis)) : ''}"></div>
   <div class="soil-cell"><i class="sw" aria-hidden="true"></i>
@@ -984,7 +971,7 @@ function zeitRowsFor(g, entries) {
 
 function buildZeitRows(z) {
   $('#zeitRows').innerHTML = ZEIT_GROUPS.map(g =>
-    zeitRowsFor(g, z?.[g.k]).map((e, i) => isAdmin() ? zeitZeileAdmin(g, i, e) : zeitZeileBorist(g, i, e)).join('')
+    zeitRowsFor(g, z?.[g.k]).map((e, i) => zeitZeileBorist(g, i, e)).join('')
   ).join('');
 }
 
@@ -998,21 +985,12 @@ function maybeGrowZeitGroup(row) {
   const e = readZeileZeit(row);
   if (!(e.von && e.bis)) return;
   const i = rows.length;
-  row.insertAdjacentHTML('afterend', isAdmin() ? zeitZeileAdmin(g, i, {}) : zeitZeileBorist(g, i, {}));
+  row.insertAdjacentHTML('afterend', zeitZeileBorist(g, i, {}));
 }
 
-function zeitZeileAdmin(g, i, e) {
-  return `<div class="zeile" data-g="${g.k}" data-i="${i}">
-    <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
-    <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
-    <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
-    <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
-    <button type="button" class="btn small" data-now title="Aktuelle Zeit eintragen">Jetzt</button>
-  </div>`;
-}
-
-/* Zeit-Zeile des Borists: Start-/Stopp-Button statt "Jetzt". Datum/Uhrzeit erscheinen erst danach,
-   klein, mit einem Bearbeiten-Button für die manuelle Korrektur (z. B. wenn das Tippen vergessen wurde). */
+/* Zeit-Zeile mit Start-/Stopp-Button (für Admin und Borist gleich). Datum/Uhrzeit erscheinen erst
+   nach dem Start, klein, mit einem Bearbeiten-Button für die manuelle Korrektur (z. B. wenn das
+   Tippen vergessen wurde). */
 const zeitZustand = e => !e.von ? 'leer' : !e.bis ? 'laeuft' : 'fertig';
 const zeitAnzeigeText = e => e.von ? `${e.d ? fmtDateShort(e.d) + ', ' : ''}${e.von}${e.bis ? '–' + e.bis : ' …'} Uhr` : '';
 const readZeileZeit = row => ({ d: $('[data-z=d]', row).value, von: $('[data-z=von]', row).value, bis: $('[data-z=bis]', row).value });
@@ -1221,9 +1199,9 @@ function applyPileLock(p, isNew) {
   note.textContent = locked
     ? 'Dieser Pfahl wurde vom Administrator geprüft und ist gesperrt.'
     : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkung und Fotos ergänzen (gelb markierte Pflichtfelder müssen ausgefüllt sein). Planwerte und Stammdaten sind gesperrt.';
-  // Kompaktes Formular nur für den Borist bei fremden (nicht voll bearbeitbaren) Pfählen;
-  // bei eigenen/neuen Pfählen sieht auch der Borist das vollständige Formular (Admin immer).
-  pileDlg.classList.toggle('kompakt', !isAdmin() && !full);
+  // Kompaktes Formular für den Admin immer, für den Borist außer bei eigenen/neuen Pfählen
+  // (dort sieht auch der Borist weiterhin das vollständige, unkompaktierte Formular).
+  pileDlg.classList.toggle('kompakt', isAdmin() || !full);
   fillGrunddaten(p);
 }
 
@@ -1404,17 +1382,6 @@ form.addEventListener('click', e => {
     row.remove();
     if (!$$('.schicht', form).length) $('#schichtRows').innerHTML = schichtRowHTML({});
     if (wasLast) autoEnd = true;
-    return recalc();
-  }
-  const now = e.target.closest('[data-now]');
-  if (now) {
-    const row = now.closest('.zeile');
-    const d = new Date();
-    const hm = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    const dEl = $('[data-z=d]', row), vEl = $('[data-z=von]', row), bEl = $('[data-z=bis]', row);
-    if (!dEl.value) dEl.value = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    if (!vEl.value) vEl.value = hm; else bEl.value = hm;
-    maybeGrowZeitGroup(row);
     return recalc();
   }
   const startBtn = e.target.closest('[data-start]');
