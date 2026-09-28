@@ -541,6 +541,7 @@ function lock() {
   ui.q = ''; ui.typ = ''; ui.status = ''; ui.view = 'table';
   $('#q').value = ''; $('#statusFilter').value = '';
   clearMap();
+  clear3D();
   showLock();
 }
 
@@ -652,8 +653,9 @@ function renderProjekt() {
 }
 
 /** Seitentitel wie im Vorbild: „Pfähle (295)“ bzw. „Karte (12)“ */
+const VIEW_LABEL = { table: 'Pfähle', map: 'Karte', '3d': '3D-Ansicht' };
 function renderTitle(n) {
-  $('#pageTitleText').textContent = ui.view === 'stats' ? 'Auswertung' : `${ui.view === 'map' ? 'Karte' : 'Pfähle'} (${nf0.format(n)})`;
+  $('#pageTitleText').textContent = ui.view === 'stats' ? 'Auswertung' : `${VIEW_LABEL[ui.view] || 'Pfähle'} (${nf0.format(n)})`;
 }
 
 function render() {
@@ -672,6 +674,7 @@ function render() {
 
   wrap.hidden = ui.view !== 'table';
   $('#mapView').hidden = ui.view !== 'map';
+  $('#view3dView').hidden = ui.view !== '3d';
   $('#statsView').hidden = ui.view !== 'stats';
   $('.toolbar').hidden = ui.view === 'stats';
   count.hidden = ui.view === 'stats';
@@ -680,6 +683,11 @@ function render() {
   if (ui.view === 'map') {
     count.textContent = state.piles.length ? countText : '';
     renderMap(list);
+    return;
+  }
+  if (ui.view === '3d') {
+    count.textContent = state.piles.length ? countText : '';
+    render3D(list);
     return;
   }
 

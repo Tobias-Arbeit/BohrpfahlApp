@@ -461,6 +461,8 @@ body:not(.is-borist) dialog.kompakt #fsBeton { grid-row: 3; }
 .map { height: calc(100vh - 340px); min-height: 420px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); z-index: 0; }
 .map-empty { position: absolute; inset: 0; z-index: 500; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); background: color-mix(in srgb, var(--surface) 80%, transparent); border-radius: var(--radius); pointer-events: none; }
 .map-empty[hidden] { display: none; }
+#view3dCanvas { overflow: hidden; touch-action: none; }
+#view3dCanvas canvas { display: block; width: 100%; height: 100%; }
 .pile-label { display: none; padding: 0 5px; border: 0; box-shadow: none; background: rgba(255, 255, 255, .88); color: #111; font-weight: 700; font-size: 11px; }
 .pile-label::before { display: none; }
 .labels-on .pile-label { display: block; }
@@ -687,6 +689,10 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>
       <span>Karte</span>
     </button>
+    <button type="button" class="navtab" data-view="3d" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>
+      <span>3D-Ansicht</span>
+    </button>
     <button type="button" class="navtab" data-view="stats" data-admin aria-selected="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
       <span>Auswertung</span>
@@ -779,6 +785,18 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
       <p id="mapNoCoords" class="sub"></p>
       <p class="sub">Hintergrundkarten werden aus dem Internet geladen; dabei wird nur der sichtbare Kartenausschnitt abgefragt, keine Pfahldaten. Mit „Ohne Hintergrund“ arbeitet die Karte offline.</p>
     </div>
+
+    <div id="view3dView" hidden>
+      <div class="map-bar">
+        <button type="button" class="btn small" id="btnView3dFit">Alle Pfähle anzeigen</button>
+        <span class="sub" style="margin:0">Ziehen = drehen · Scrollen = zoomen · Rechte Maustaste/zwei Finger = verschieben · Klick auf einen Pfahl öffnet ihn</span>
+      </div>
+      <div class="map-wrap">
+        <div id="view3dCanvas" class="map" role="application" aria-label="3D-Ansicht der Bohrpfähle"></div>
+        <div id="view3dEmpty" class="map-empty" hidden></div>
+      </div>
+      <p id="view3dNoCoords" class="sub"></p>
+    </div>
   </main>
 </div>
 
@@ -820,11 +838,14 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 <script><!--INLINE:vendor/msal-browser.min.js--></script>
 <script><!--INLINE:vendor/jspdf.umd.min.js--></script>
 <script><!--INLINE:vendor/jspdf.plugin.autotable.min.js--></script>
+<script><!--INLINE:vendor/three.min.js--></script>
+<script><!--INLINE:vendor/OrbitControls.js--></script>
 <script><!--INLINE:src/protokoll.js--></script>
 <script><!--INLINE:src/graphic.js--></script>
 <script><!--INLINE:src/brand.js--></script>
 <script><!--INLINE:src/app.js--></script>
 <script><!--INLINE:src/map.js--></script>
+<script><!--INLINE:src/view3d.js--></script>
 <script><!--INLINE:src/stats.js--></script>
 <script><!--INLINE:src/import.js--></script>
 </body>
