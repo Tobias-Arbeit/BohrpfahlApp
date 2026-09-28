@@ -330,6 +330,16 @@ input[data-s=boden].need ~ .soil-checks { background: var(--need-bg); box-shadow
 .boden-check-grid input { width: 16px; height: 16px; flex: none; }
 .boden-custom-row { display: grid; grid-template-columns: 2fr 1fr auto; gap: 8px; align-items: center; }
 .boden-custom-row + .boden-custom-row { margin-top: 8px; }
+
+/* Cloud-Sync: Ordner-Browser */
+.cloud-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); font-size: 13.5px; cursor: pointer;
+}
+.cloud-item + .cloud-item { margin-top: 6px; }
+.cloud-item:hover { background: var(--surface-2); }
+.cloud-item.sel { border-color: var(--primary); background: var(--yes-bg); }
 .schicht-fixed { display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; border-radius: var(--radius); background: var(--surface-2); font-size: 14px; }
 .schicht-fixed b { display: inline-block; min-width: 96px; font-variant-numeric: tabular-nums; }
 .schicht-fixed em { color: var(--muted); font-style: normal; font-size: 13px; }
@@ -616,6 +626,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 
     <div class="lock-links">
       <button type="button" class="link only-setup" id="lockRestore">Vorhandene Sicherung laden …</button>
+      <button type="button" class="link only-setup" id="lockCloud">Aus Cloud-Sync laden …</button>
       <button type="button" class="link only-login" id="lockReset">Passwort vergessen? Alle Daten löschen und neu beginnen</button>
     </div>
   </form>
@@ -644,6 +655,10 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
       <button id="btnRueck" class="linkbtn" type="button" data-borist data-act="rueck-export" title="Ihre Eintragungen als Datei für den Administrator speichern">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/></svg>
         Rückmeldung senden
+      </button>
+      <button id="btnCloud" class="linkbtn" type="button" title="Automatische Synchronisierung über OneDrive/SharePoint einrichten">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.7A4.5 4.5 0 0 0 6.5 19h11z"/></svg>
+        <span id="cloudNavLabel">Cloud-Sync</span>
       </button>
       <div class="menu-wrap">
         <button id="btnPdf" class="linkbtn" type="button" aria-haspopup="true" aria-expanded="false" data-menu="menuPdf">
@@ -771,6 +786,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 <!--INLINE:src/pile-dialog.html-->
 <!--INLINE:src/import-dialog.html-->
 <!--INLINE:src/users-dialog.html-->
+<!--INLINE:src/cloud-dialog.html-->
 
 <!-- ============ Zugangsdaten ändern ============ -->
 <dialog id="pwDialog" aria-labelledby="pwTitle">
@@ -801,6 +817,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 <script><!--INLINE:vendor/xlsx.full.min.js--></script>
 <script><!--INLINE:vendor/proj4.js--></script>
 <script><!--INLINE:vendor/leaflet.js--></script>
+<script><!--INLINE:vendor/msal-browser.min.js--></script>
 <script><!--INLINE:vendor/jspdf.umd.min.js--></script>
 <script><!--INLINE:vendor/jspdf.plugin.autotable.min.js--></script>
 <script><!--INLINE:src/protokoll.js--></script>

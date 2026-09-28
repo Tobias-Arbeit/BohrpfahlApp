@@ -181,6 +181,7 @@ function persist() {
     if (!key) return;
     const blob = await seal(key, state);
     localStorage.setItem(LS_DATA, JSON.stringify(blob));
+    scheduleCloudSync();
   }).catch(e => toast(e && e.name === 'QuotaExceededError'
     ? 'Speichern fehlgeschlagen: Der Speicher des Browsers ist voll. Bitte Fotos entfernen.'
     : 'Speichern fehlgeschlagen: ' + (e && e.message ? e.message : e)));
@@ -445,7 +446,7 @@ async function newUserRecord(name, role, password, master) {
   const uk = await deriveKey(password, salt, PBKDF2_ITER);
   return { id: uid(), name, role, salt: toB64(salt), iter: PBKDF2_ITER, wk: await wrapMaster(master, uk) };
 }
-const saveMeta = () => localStorage.setItem(LS_META, JSON.stringify(meta));
+const saveMeta = () => { localStorage.setItem(LS_META, JSON.stringify(meta)); scheduleCloudSync(); };
 
 async function startSession() {
   sessionStorage.setItem(SS_KEY, JSON.stringify({ k: toB64(await crypto.subtle.exportKey('raw', key)), u: me.id }));
@@ -587,6 +588,7 @@ function showApp() {
   lastActivity = Date.now();
   applyRole();
   render();
+  scheduleCloudSync(500);
 }
 
 function visiblePiles() {
@@ -1674,16 +1676,20 @@ $('#btnCsv').addEventListener('click', exportCsv);
 /* =====================================================================
    Sicherung (verschlüsselt, nur mit Passwort lesbar)
    ===================================================================== */
-async function exportBackup() {
+async function buildBackupPayload() {
   await persist();
-  const payload = { app: APP_ID, version: 1, created: new Date().toISOString(), meta, data: readJSON(LS_DATA) };
+  return { app: APP_ID, version: 1, created: new Date().toISOString(), meta, data: readJSON(LS_DATA) };
+}
+
+async function exportBackup() {
+  const payload = await buildBackupPayload();
   download(JSON.stringify(payload), `Bohrpfahl-Sicherung_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
   toast('Sicherung gespeichert. Sie ist nur mit dem Passwort lesbar.');
 }
 
-async function restoreFromFile(file) {
-  let o;
-  try { o = JSON.parse(await file.text()); } catch { return toast('Die Datei ist keine gültige Sicherung.'); }
+/** Prüft eine Sicherung (Datei oder aus der Cloud) auf Gültigkeit; liefert das lokal speicherbare
+    meta-Objekt und den Daten-Blob, oder null bei ungültiger Struktur. */
+function parseSicherung(o) {
   const iterOk = n => Number.isInteger(n) && n >= 100000 && n <= 5000000;
   const b64 = s => typeof s === 'string' && s.length > 0 && s.length < 1e6;
   const okV1 = o && o.meta && typeof o.meta.user === 'string' && b64(o.meta.salt) && iterOk(o.meta.iter);
@@ -1691,16 +1697,22 @@ async function restoreFromFile(file) {
     u && typeof u.id === 'string' && typeof u.name === 'string' && (u.role === 'admin' || u.role === 'borist') &&
     b64(u.salt) && iterOk(u.iter) && u.wk && b64(u.wk.iv) && b64(u.wk.ct));
   const okData = o && o.data && typeof o.data.iv === 'string' && typeof o.data.ct === 'string';
-  if (!o || o.app !== APP_ID || !(okV1 || okV2) || !okData) return toast('Die Datei ist keine gültige Sicherung.');
+  if (!o || o.app !== APP_ID || !(okV1 || okV2) || !okData) return null;
+  return {
+    metaToStore: okV2
+      ? { v: 2, users: o.meta.users.map(u => ({ id: u.id, name: u.name, role: u.role, salt: u.salt, iter: u.iter, wk: { iv: u.wk.iv, ct: u.wk.ct } })) }
+      : { v: 1, user: o.meta.user, salt: o.meta.salt, iter: o.meta.iter },
+    dataBlob: { iv: o.data.iv, ct: o.data.ct },
+  };
+}
+
+async function restoreFromFile(file) {
+  let o;
+  try { o = JSON.parse(await file.text()); } catch { return toast('Die Datei ist keine gültige Sicherung.'); }
+  const parsed = parseSicherung(o);
+  if (!parsed) return toast('Die Datei ist keine gültige Sicherung.');
   if (!isAdmin() && key) return toast('Nur der Administrator kann eine Sicherung laden.');
-  if (localStorage.getItem(LS_DATA) &&
-    !confirm('Die Sicherung ersetzt alle aktuellen Daten und die Zugangsdaten auf diesem Gerät.\n\nFortfahren?')) return;
-  localStorage.setItem(LS_META, JSON.stringify(okV2
-    ? { v: 2, users: o.meta.users.map(u => ({ id: u.id, name: u.name, role: u.role, salt: u.salt, iter: u.iter, wk: { iv: u.wk.iv, ct: u.wk.ct } })) }
-    : { v: 1, user: o.meta.user, salt: o.meta.salt, iter: o.meta.iter }));
-  localStorage.setItem(LS_DATA, JSON.stringify({ iv: o.data.iv, ct: o.data.ct }));
-  lock();
-  toast('Sicherung geladen – bitte mit den Zugangsdaten der Sicherung anmelden.');
+  if (applyIncomingSicherungFresh(parsed)) toast('Sicherung geladen – bitte mit den Zugangsdaten der Sicherung anmelden.');
 }
 
 const restoreInput = $('#restoreFile');
@@ -1858,28 +1870,32 @@ async function togglePruefung(p) {
    Rückmeldung: Borist → Administrator (wenn beide auf verschiedenen Geräten arbeiten)
    Enthält nur die vom Borist geänderten Pfähle und ist mit dem Datenschlüssel verschlüsselt.
    ===================================================================== */
-async function exportRueckmeldung() {
-  const mine = state.piles.filter(p => p.updatedRole === 'borist');
-  if (!mine.length) return toast('Es gibt noch keine geänderten Pfähle zum Melden.');
-  const items = mine.map(p => ({
+function rueckmeldungItems() {
+  return state.piles.filter(p => p.updatedRole === 'borist').map(p => ({
     id: p.id, nr: p.nr, updatedAt: p.updatedAt, updatedBy: p.updatedBy,
     fields: p.quelle === 'borist' ? structuredClone(p) : pickAllowed(p),   // eigene Pfähle vollständig, sonst nur erlaubte Felder
     neu: p.quelle === 'borist',
   }));
-  const payload = { app: APP_ID, type: 'rueckmeldung', version: 1, created: new Date().toISOString(), by: me.name, data: await seal(key, { items }) };
-  download(JSON.stringify(payload), `Rueckmeldung_${me.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
-  toast(`Rückmeldung mit ${plural(items.length)} gespeichert.`);
 }
 
-async function importRueckmeldung(file) {
-  if (!isAdmin()) return;
-  let o;
-  try { o = JSON.parse(await file.text()); } catch { return toast('Die Datei ist keine gültige Rückmeldung.'); }
-  if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data || typeof o.data.iv !== 'string') return toast('Die Datei ist keine gültige Rückmeldung.');
-  let items;
-  try { items = JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(o.data.iv) }, key, fromB64(o.data.ct)))).items; }
-  catch { return toast('Die Rückmeldung passt nicht zu diesen Daten (anderer Datenschlüssel).'); }
-  if (!Array.isArray(items)) return toast('Die Rückmeldung ist leer.');
+/** Baut die Rückmeldung-Nutzlast (verschlüsselt); null, wenn es nichts zu melden gibt. */
+async function buildRueckmeldungPayload() {
+  const items = rueckmeldungItems();
+  if (!items.length) return null;
+  return { app: APP_ID, type: 'rueckmeldung', version: 1, created: new Date().toISOString(), by: me.name, data: await seal(key, { items }) };
+}
+
+async function exportRueckmeldung() {
+  const count = rueckmeldungItems().length;
+  const payload = await buildRueckmeldungPayload();
+  if (!payload) return toast('Es gibt noch keine geänderten Pfähle zum Melden.');
+  download(JSON.stringify(payload), `Rueckmeldung_${me.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
+  toast(`Rückmeldung mit ${plural(count)} gespeichert.`);
+}
+
+/** Übernimmt die Einträge einer entschlüsselten Rückmeldung in state.piles (Datei oder Cloud). */
+async function applyRueckmeldungItems(items) {
+  if (!Array.isArray(items)) return null;
   const res = { neu: 0, upd: 0, geprueft: 0, aelter: 0, unbekannt: 0 };
   for (const it of items) {
     const p = state.piles.find(x => x.id === it.id) || state.piles.find(x => String(x.nr).toLowerCase() === String(it.nr).toLowerCase());
@@ -1894,12 +1910,334 @@ async function importRueckmeldung(file) {
   }
   render();
   await persist();
-  toast([`${res.upd} aktualisiert`, res.neu && `${res.neu} neu`, res.geprueft && `${res.geprueft} übersprungen (bereits geprüft)`, res.aelter && `${res.aelter} übersprungen (Ihre Daten sind neuer)`, res.unbekannt && `${res.unbekannt} unbekannt`].filter(Boolean).join(', ') + '.');
+  return res;
+}
+
+const rueckmeldungSummary = res => [`${res.upd} aktualisiert`, res.neu && `${res.neu} neu`, res.geprueft && `${res.geprueft} übersprungen (bereits geprüft)`, res.aelter && `${res.aelter} übersprungen (Ihre Daten sind neuer)`, res.unbekannt && `${res.unbekannt} unbekannt`].filter(Boolean).join(', ') + '.';
+
+async function importRueckmeldung(file) {
+  if (!isAdmin()) return;
+  let o;
+  try { o = JSON.parse(await file.text()); } catch { return toast('Die Datei ist keine gültige Rückmeldung.'); }
+  if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data || typeof o.data.iv !== 'string') return toast('Die Datei ist keine gültige Rückmeldung.');
+  let items;
+  try { items = JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(o.data.iv) }, key, fromB64(o.data.ct)))).items; }
+  catch { return toast('Die Rückmeldung passt nicht zu diesen Daten (anderer Datenschlüssel).'); }
+  if (!Array.isArray(items)) return toast('Die Rückmeldung ist leer.');
+  const res = await applyRueckmeldungItems(items);
+  toast(rueckmeldungSummary(res));
 }
 const rueckInput = document.createElement('input');
 rueckInput.type = 'file'; rueckInput.accept = '.json,application/json'; rueckInput.hidden = true;
 document.body.appendChild(rueckInput);
 rueckInput.addEventListener('change', () => { const f = rueckInput.files[0]; rueckInput.value = ''; if (f) importRueckmeldung(f); });
+
+/* =====================================================================
+   Cloud-Sync (Microsoft Graph: OneDrive/SharePoint)
+   Automatisiert nur den Dateitransport von Sicherung und Rückmeldung über
+   einen gemeinsamen Cloud-Ordner; die eigentliche Logik (Verschlüsselung,
+   Gültigkeitsprüfung, feldweises Zusammenführen) ist dieselbe wie oben.
+   Administrator: legt laufend die aktuelle Sicherung ab und liest
+   Rückmeldungen der Boristen automatisch ein. Borist: legt seine
+   Rückmeldung automatisch ab und übernimmt automatisch die neueste
+   Sicherung (eigene, noch nicht vom Admin übernommene Änderungen bleiben
+   dabei erhalten, siehe mergeIncomingState). Die Einrichtung (Client-ID,
+   Anmeldung, Ordner) gilt jeweils nur für das aktuelle Gerät.
+   ===================================================================== */
+const LS_CLOUD = 'bohrpfahl.cloud';
+const CLOUD_SICHERUNG = 'Bohrpfahl-Sicherung.json';
+const GRAPH_SCOPES = ['Files.ReadWrite.All', 'Sites.Read.All'];
+const cloud = { ...(readJSON(LS_CLOUD) || {}) };   // {clientId, tenantId, account, connected, driveId, itemId, folderLabel, lastSync}
+const saveCloud = () => localStorage.setItem(LS_CLOUD, JSON.stringify(cloud));
+const cloudRueckName = () => `Rueckmeldung_${(me?.name || 'borist').replace(/[^\wäöüÄÖÜß-]+/g, '_')}.json`;
+
+let msalApp = null, msalReady = null;
+function ensureMsal() {
+  if (!cloud.clientId) return null;
+  if (!msalApp) {
+    msalApp = new msal.PublicClientApplication({
+      auth: { clientId: cloud.clientId, authority: `https://login.microsoftonline.com/${cloud.tenantId || 'common'}`, redirectUri: location.href.split('#')[0] },
+      cache: { cacheLocation: 'localStorage' },
+    });
+    msalReady = msalApp.initialize();
+  }
+  return msalApp;
+}
+
+async function graphToken(interactive) {
+  const app = ensureMsal();
+  if (!app) throw new Error('Cloud-Sync ist nicht eingerichtet.');
+  await msalReady;
+  const account = app.getAllAccounts()[0];
+  try {
+    if (!account) throw new Error('keine Anmeldung');
+    return (await app.acquireTokenSilent({ scopes: GRAPH_SCOPES, account })).accessToken;
+  } catch (e) {
+    if (!interactive) throw e;
+    const r = await app.loginPopup({ scopes: GRAPH_SCOPES });
+    cloud.account = r.account.username; saveCloud();
+    return r.accessToken;
+  }
+}
+
+async function graphFetch(path, opts = {}) {
+  const token = await graphToken(!!opts.interactive);
+  const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, { method: opts.method || 'GET', headers: { Authorization: `Bearer ${token}`, ...(opts.headers || {}) }, body: opts.body });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    let msg = res.statusText;
+    try { msg = (await res.json()).error?.message || msg; } catch { /* keine JSON-Fehlermeldung */ }
+    throw new Error(`Graph-Fehler ${res.status}: ${msg}`);
+  }
+  return res;
+}
+
+const cloudDriveBase = driveId => driveId ? `/drives/${driveId}` : '/me/drive';
+const cloudFolderBase = () => `${cloudDriveBase(cloud.driveId)}/items/${cloud.itemId || 'root'}`;
+
+async function cloudPutJson(name, obj) {
+  await graphFetch(`${cloudFolderBase()}:/${encodeURIComponent(name)}:/content`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
+}
+async function cloudGetJson(name) {
+  const r = await graphFetch(`${cloudFolderBase()}:/${encodeURIComponent(name)}:/content`);
+  return r ? r.json() : null;
+}
+async function cloudListFiles() {
+  const r = await graphFetch(`${cloudFolderBase()}/children?$select=id,name,lastModifiedDateTime&$top=200`);
+  return r ? (await r.json()).value || [] : [];
+}
+async function cloudDeleteFile(itemId) {
+  await graphFetch(`${cloudDriveBase(cloud.driveId)}/items/${itemId}`, { method: 'DELETE' });
+}
+
+/* --- Ordner-Browser (Dialog) --- */
+const cloudDlg = $('#cloudDlg');
+let browse = { driveId: null, itemId: null, path: [] };
+
+async function browseList() {
+  const r = await graphFetch(`${cloudDriveBase(browse.driveId)}/items/${browse.itemId || 'root'}/children?$select=id,name,folder&$top=200`, { interactive: true });
+  const items = r ? (await r.json()).value || [] : [];
+  return items.filter(it => it.folder).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+function cloudMsg(msg, isErr = false) { $('#cloudMsgs').innerHTML = msg ? `<div class="${isErr ? 'e' : 'w'}">${esc(msg)}</div>` : ''; }
+
+async function renderCloudList() {
+  $('#cloudPath').textContent = browse.path.length ? browse.path.map(p => p.name).join(' / ') : (browse.driveId ? 'Freigegebene Dokumente' : 'Mein OneDrive');
+  $('#btnCloudUp').disabled = !browse.path.length;
+  $('#cloudList').innerHTML = '<p class="sub">Lade …</p>';
+  try {
+    const items = await browseList();
+    $('#cloudList').innerHTML = items.length
+      ? items.map(it => `<button type="button" class="cloud-item" data-folder-id="${esc(it.id)}" data-folder-name="${esc(it.name)}">📁 ${esc(it.name)}</button>`).join('')
+      : '<p class="sub">Keine Unterordner.</p>';
+  } catch (e) {
+    $('#cloudList').innerHTML = '';
+    cloudMsg('Ordner konnten nicht geladen werden: ' + e.message, true);
+  }
+}
+
+async function resolveSharePointUrl(url) {
+  const u = new URL(url);
+  const m = u.pathname.match(/^(\/(?:sites|teams)\/[^/]+)/);
+  const r = await graphFetch(m ? `/sites/${u.hostname}:${m[1]}` : `/sites/${u.hostname}`, { interactive: true });
+  if (!r) throw new Error('Seite nicht gefunden.');
+  const site = await r.json();
+  const dr = await graphFetch(`/sites/${site.id}/drive`, { interactive: true });
+  const drive = await dr.json();
+  return { driveId: drive.id, name: site.displayName };
+}
+
+/** Übernimmt eine gültige Sicherung wie beim manuellen Laden (ersetzt lokale Zugangsdaten und
+    Daten vollständig, verlangt anschließend eine neue Anmeldung) – für frische Geräte ohne
+    bestehende lokale Sitzung (siehe restoreFromFile und cloudBootstrapLoad). */
+function applyIncomingSicherungFresh(parsed) {
+  if (localStorage.getItem(LS_DATA) &&
+    !confirm('Die Sicherung ersetzt alle aktuellen Daten und die Zugangsdaten auf diesem Gerät.\n\nFortfahren?')) return false;
+  localStorage.setItem(LS_META, JSON.stringify(parsed.metaToStore));
+  localStorage.setItem(LS_DATA, JSON.stringify(parsed.dataBlob));
+  lock();
+  return true;
+}
+
+async function cloudBootstrapLoad() {
+  cloudMsg('Suche Sicherung im gewählten Ordner …');
+  try {
+    const o = await cloudGetJson(CLOUD_SICHERUNG);
+    if (!o) return cloudMsg('Im gewählten Ordner wurde noch keine Sicherung gefunden.', true);
+    const parsed = parseSicherung(o);
+    if (!parsed) return cloudMsg('Die Datei im Cloud-Ordner ist keine gültige Sicherung.', true);
+    if (applyIncomingSicherungFresh(parsed)) {
+      cloudDlg.close();
+      toast('Sicherung aus der Cloud geladen – bitte mit den Zugangsdaten der Sicherung anmelden.');
+    }
+  } catch (e) { cloudMsg('Fehler beim Laden: ' + e.message, true); }
+}
+
+function openCloud() {
+  cloudMsg('');
+  $('#cl_clientId').value = cloud.clientId || '';
+  $('#cl_tenantId').value = cloud.tenantId || '';
+  $('#cloudSetup').hidden = !!cloud.connected;
+  $('#cloudBrowse').hidden = true;
+  $('#cloudConnected').hidden = !cloud.connected;
+  if (cloud.connected) renderCloudStatus();
+  cloudDlg.showModal();
+}
+
+function renderCloudStatus() {
+  $('#cloudFolderLabel').textContent = `Ordner: ${cloud.folderLabel || '–'} · angemeldet als ${cloud.account || '–'}` +
+    (cloud.lastSync ? ` · zuletzt synchronisiert: ${new Date(cloud.lastSync).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : '');
+}
+
+$('#btnCloud').addEventListener('click', openCloud);
+$('#lockCloud').addEventListener('click', openCloud);
+
+$('#btnCloudLogin').addEventListener('click', async () => {
+  cloud.clientId = $('#cl_clientId').value.trim();
+  cloud.tenantId = $('#cl_tenantId').value.trim();
+  if (!cloud.clientId) return cloudMsg('Bitte die Anwendungs-ID (Client-ID) eingeben.', true);
+  saveCloud();
+  msalApp = null; msalReady = null;
+  cloudMsg('Anmeldung läuft …');
+  try {
+    await graphToken(true);
+    cloudMsg('');
+    $('#cloudSetup').hidden = true;
+    $('#cloudBrowse').hidden = false;
+    browse = { driveId: null, itemId: null, path: [] };
+    renderCloudList();
+  } catch (e) { cloudMsg('Anmeldung fehlgeschlagen: ' + e.message, true); }
+});
+
+$('#cloudList').addEventListener('click', e => {
+  const b = e.target.closest('[data-folder-id]');
+  if (!b) return;
+  browse.path.push({ id: b.dataset.folderId, name: b.dataset.folderName });
+  browse.itemId = b.dataset.folderId;
+  renderCloudList();
+});
+$('#btnCloudUp').addEventListener('click', () => {
+  browse.path.pop();
+  browse.itemId = browse.path.length ? browse.path[browse.path.length - 1].id : null;
+  renderCloudList();
+});
+$('#btnCloudSpGo').addEventListener('click', async () => {
+  const url = $('#cl_spUrl').value.trim();
+  if (!url) return;
+  cloudMsg('');
+  try {
+    const site = await resolveSharePointUrl(url);
+    browse = { driveId: site.driveId, itemId: null, path: [{ id: null, name: site.name }] };
+    renderCloudList();
+  } catch (e) { cloudMsg('SharePoint-Link konnte nicht geöffnet werden: ' + e.message, true); }
+});
+$('#btnCloudUseFolder').addEventListener('click', async () => {
+  cloud.driveId = browse.driveId;
+  cloud.itemId = browse.itemId;
+  cloud.folderLabel = browse.path.length ? browse.path.map(p => p.name).join(' / ') : (browse.driveId ? 'Freigegebene Dokumente' : 'Mein OneDrive');
+  cloud.connected = true;
+  saveCloud();
+  $('#cloudBrowse').hidden = true;
+  $('#cloudConnected').hidden = false;
+  renderCloudStatus();
+  if (!me) {
+    await cloudBootstrapLoad();
+  } else {
+    cloudMsg('Ordner verbunden. Die Synchronisierung läuft ab jetzt automatisch im Hintergrund.');
+    scheduleCloudSync(200);
+  }
+});
+$('#btnCloudSyncNow').addEventListener('click', async () => {
+  cloudMsg('Synchronisiere …');
+  await cloudSyncTick({ interactive: true });
+  cloudMsg('Synchronisierung abgeschlossen.');
+  renderCloudStatus();
+});
+$('#btnCloudDisconnect').addEventListener('click', () => {
+  if (!confirm('Cloud-Sync auf diesem Gerät trennen? Die Dateien im Cloud-Ordner bleiben erhalten.')) return;
+  cloud.connected = false; delete cloud.driveId; delete cloud.itemId; delete cloud.folderLabel;
+  saveCloud();
+  $('#cloudConnected').hidden = true;
+  $('#cloudSetup').hidden = false;
+});
+
+/** Führt eine vom Administrator empfangene Sicherung mit dem lokalen Stand zusammen: eigene, vom
+    Admin noch nicht übernommene Änderungen (updatedRole „borist“, neuer als die eingehende Version)
+    bleiben erhalten; alles andere (Grunddaten, neue/geänderte Pfähle des Admins) wird übernommen. */
+function mergeIncomingState(newState) {
+  state.projekt = newState.projekt;
+  const local = new Map(state.piles.map(p => [p.id, p]));
+  const merged = [];
+  for (const np of newState.piles) {
+    const lp = local.get(np.id);
+    if (lp && lp.updatedRole === 'borist' && (lp.updatedAt || 0) > (np.updatedAt || 0)) merged.push(lp);
+    else merged.push(np);
+    local.delete(np.id);
+  }
+  for (const lp of local.values()) if (lp.quelle === 'borist') merged.push(lp);
+  state.piles = merged;
+}
+
+/** Übernimmt eine aus der Cloud gelesene Sicherung in eine laufende Sitzung, ohne Neuanmeldung zu
+    erzwingen, solange der aktuelle Sitzungsschlüssel sie noch entschlüsseln kann. */
+async function applyCloudSicherung(o) {
+  const parsed = parseSicherung(o);
+  if (!parsed) return;
+  try {
+    mergeIncomingState(await unseal(key, parsed.dataBlob));
+    meta = parsed.metaToStore;
+    localStorage.setItem(LS_META, JSON.stringify(meta));
+    render();
+    await persist();
+  } catch {
+    applyIncomingSicherungFresh(parsed);
+    toast('Neue Sicherung aus der Cloud geladen – bitte erneut anmelden.');
+  }
+}
+
+let cloudSyncing = false;
+async function cloudSyncTick({ interactive = false } = {}) {
+  if (!cloud.connected || !key || cloudSyncing) return;
+  cloudSyncing = true;
+  try {
+    if (isAdmin()) {
+      await cloudPutJson(CLOUD_SICHERUNG, await buildBackupPayload());
+      const files = await cloudListFiles();
+      let mergedAny = false;
+      for (const f of files.filter(x => /^Rueckmeldung_.*\.json$/i.test(x.name))) {
+        const o = await cloudGetJson(f.name);
+        if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data) continue;
+        let items;
+        try { items = JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(o.data.iv) }, key, fromB64(o.data.ct)))).items; }
+        catch { continue; }
+        if (await applyRueckmeldungItems(items)) { await cloudDeleteFile(f.id); mergedAny = true; }
+      }
+      if (mergedAny) await cloudPutJson(CLOUD_SICHERUNG, await buildBackupPayload());
+    } else {
+      const rp = await buildRueckmeldungPayload();
+      if (rp) await cloudPutJson(cloudRueckName(), rp);
+      const o = await cloudGetJson(CLOUD_SICHERUNG);
+      if (o) await applyCloudSicherung(o);
+    }
+    cloud.lastSync = Date.now(); saveCloud();
+    if (cloudDlg.open || interactive) renderCloudStatus();
+  } catch (e) {
+    console.warn('Cloud-Sync fehlgeschlagen:', e);
+    if (interactive) cloudMsg('Synchronisierung fehlgeschlagen: ' + e.message, true);
+  } finally {
+    cloudSyncing = false;
+  }
+}
+
+let cloudSyncTimer = null;
+function scheduleCloudSync(delay = 2500) {
+  if (!cloud.connected) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => cloudSyncTick(), delay);
+}
+setInterval(() => scheduleCloudSync(0), 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleCloudSync(500); });
 
 /* =====================================================================
    Start
