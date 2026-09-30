@@ -1683,6 +1683,13 @@ function exportPdf() {
 
 $('#btnCsv').addEventListener('click', exportCsv);
 
+/** Liest eine vom Nutzer ausgewählte JSON-Datei; entfernt ein evtl. vorangestelltes Byte-Order-Mark
+    (BOM), das manche Editoren/Cloud-Dienste beim Weiterreichen einer Textdatei ergänzen und das
+    JSON.parse sonst mit einem irreführenden „ungültige Datei“-Fehler scheitern lässt. */
+async function readJsonFile(file) {
+  return JSON.parse((await file.text()).replace(/^﻿/, ''));
+}
+
 /* =====================================================================
    Sicherung (verschlüsselt, nur mit Passwort lesbar)
    ===================================================================== */
@@ -1718,9 +1725,9 @@ function parseSicherung(o) {
 
 async function restoreFromFile(file) {
   let o;
-  try { o = JSON.parse(await file.text()); } catch { return toast('Die Datei ist keine gültige Sicherung.'); }
+  try { o = await readJsonFile(file); } catch { return toast('Die Datei konnte nicht gelesen werden (leer, beschädigt oder kein Text). Erneut aus der Quelle herunterladen und noch einmal versuchen.'); }
   const parsed = parseSicherung(o);
-  if (!parsed) return toast('Die Datei ist keine gültige Sicherung.');
+  if (!parsed) return toast('Die Datei ist keine gültige Sicherung (falsches Format).');
   if (!isAdmin() && key) return toast('Nur der Administrator kann eine Sicherung laden.');
   if (applyIncomingSicherungFresh(parsed)) toast('Sicherung geladen – bitte mit den Zugangsdaten der Sicherung anmelden.');
 }
@@ -1928,8 +1935,8 @@ const rueckmeldungSummary = res => [`${res.upd} aktualisiert`, res.neu && `${res
 async function importRueckmeldung(file) {
   if (!isAdmin()) return;
   let o;
-  try { o = JSON.parse(await file.text()); } catch { return toast('Die Datei ist keine gültige Rückmeldung.'); }
-  if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data || typeof o.data.iv !== 'string') return toast('Die Datei ist keine gültige Rückmeldung.');
+  try { o = await readJsonFile(file); } catch { return toast('Die Datei konnte nicht gelesen werden (leer, beschädigt oder kein Text). Erneut aus der Quelle herunterladen und noch einmal versuchen.'); }
+  if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data || typeof o.data.iv !== 'string') return toast('Die Datei ist keine gültige Rückmeldung (falsches Format).');
   let items;
   try { items = JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(o.data.iv) }, key, fromB64(o.data.ct)))).items; }
   catch { return toast('Die Rückmeldung passt nicht zu diesen Daten (anderer Datenschlüssel).'); }
