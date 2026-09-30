@@ -379,13 +379,21 @@ const plural = n => `${nf0.format(n)} ${n === 1 ? 'Pfahl' : 'Pfähle'}`;
    Toast
    ===================================================================== */
 let toastTimer;
-function toast(msg) {
+/** sticky: bleibt mit Schließen-Kreuz stehen statt nach 3,8 s zu verschwinden (für Fehlermeldungen,
+    die zum Ablesen/Melden Zeit brauchen, z. B. lange Diagnosetexte beim Laden einer Sicherung). */
+function toast(msg, { sticky = false } = {}) {
   const t = $('#toast');
-  t.textContent = msg;
-  t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 3800);
+  t.classList.toggle('sticky', sticky);
+  if (sticky) {
+    t.innerHTML = `<span>${esc(msg)}</span><button type="button" class="toast-close" aria-label="Meldung schließen">✕</button>`;
+  } else {
+    t.textContent = msg;
+    toastTimer = setTimeout(() => { t.hidden = true; }, 3800);
+  }
+  t.hidden = false;
 }
+$('#toast').addEventListener('click', e => { if (e.target.closest('.toast-close')) $('#toast').hidden = true; });
 
 /* =====================================================================
    Sperrbildschirm / Anmeldung
@@ -1692,7 +1700,11 @@ async function readJsonFile(file) {
   const text = (await file.text()).replace(/^﻿/, '').trim();
   if (!text) throw new Error(`Datei ist leer (${file.size} Bytes) – vermutlich noch nicht vollständig heruntergeladen`);
   try { return JSON.parse(text); }
-  catch (e) { throw new Error(`${file.size} Bytes gelesen, aber kein gültiges JSON (${e.message})`); }
+  catch (e) {
+    const head = JSON.stringify(text.slice(0, 60));
+    const tail = text.length > 120 ? `, Ende: ${JSON.stringify(text.slice(-60))}` : '';
+    throw new Error(`${file.size} Bytes gelesen, aber kein gültiges JSON (${e.message}). Anfang: ${head}${tail}`);
+  }
 }
 
 /* =====================================================================
@@ -1730,9 +1742,9 @@ function parseSicherung(o) {
 
 async function restoreFromFile(file) {
   let o;
-  try { o = await readJsonFile(file); } catch (e) { return toast(`Die Datei konnte nicht gelesen werden: ${e.message}. Erneut aus der Quelle herunterladen und noch einmal versuchen.`); }
+  try { o = await readJsonFile(file); } catch (e) { return toast(`Die Datei konnte nicht gelesen werden: ${e.message}. Erneut aus der Quelle herunterladen und noch einmal versuchen.`, { sticky: true }); }
   const parsed = parseSicherung(o);
-  if (!parsed) return toast('Die Datei ist keine gültige Sicherung (falsches Format).');
+  if (!parsed) return toast('Die Datei ist keine gültige Sicherung (falsches Format).', { sticky: true });
   if (!isAdmin() && key) return toast('Nur der Administrator kann eine Sicherung laden.');
   if (applyIncomingSicherungFresh(parsed)) toast('Sicherung geladen – bitte mit den Zugangsdaten der Sicherung anmelden.');
 }
@@ -1940,8 +1952,8 @@ const rueckmeldungSummary = res => [`${res.upd} aktualisiert`, res.neu && `${res
 async function importRueckmeldung(file) {
   if (!isAdmin()) return;
   let o;
-  try { o = await readJsonFile(file); } catch (e) { return toast(`Die Datei konnte nicht gelesen werden: ${e.message}. Erneut aus der Quelle herunterladen und noch einmal versuchen.`); }
-  if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data || typeof o.data.iv !== 'string') return toast('Die Datei ist keine gültige Rückmeldung (falsches Format).');
+  try { o = await readJsonFile(file); } catch (e) { return toast(`Die Datei konnte nicht gelesen werden: ${e.message}. Erneut aus der Quelle herunterladen und noch einmal versuchen.`, { sticky: true }); }
+  if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data || typeof o.data.iv !== 'string') return toast('Die Datei ist keine gültige Rückmeldung (falsches Format).', { sticky: true });
   let items;
   try { items = JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(o.data.iv) }, key, fromB64(o.data.ct)))).items; }
   catch { return toast('Die Rückmeldung passt nicht zu diesen Daten (anderer Datenschlüssel).'); }
