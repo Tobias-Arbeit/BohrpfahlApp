@@ -817,7 +817,6 @@ $$('.menu').forEach(m => m.addEventListener('click', e => {
   closeMenus();
   if (act === 'backup') exportBackup();
   else if (act === 'restore') { if (isAdmin()) $('#restoreFile').click(); }
-  else if (act === 'restore-paste') { if (isAdmin()) openPasteRestore(); }
   else if (act === 'password') openPassword();
   else if (act === 'users') openUsers();
   else if (act === 'rueck-export') exportRueckmeldung();
@@ -1771,14 +1770,6 @@ async function restoreFromFile(file) {
   applyParsedSicherung(o);
 }
 
-/** Übernimmt eine Sicherung aus eingefügtem Text statt aus einer Datei – Umgehung für Geräte, auf
-    denen das Speichern/Öffnen von Dateien durch eine App-Schutzrichtlinie blockiert ist. */
-function restoreFromText(text) {
-  let o;
-  try { o = readJsonText(text); } catch (e) { return toast(`Der eingefügte Text konnte nicht gelesen werden: ${e.message}.`, { sticky: true }); }
-  applyParsedSicherung(o);
-}
-
 const restoreInput = $('#restoreFile');
 restoreInput.addEventListener('change', () => {
   const f = restoreInput.files[0];
@@ -1996,7 +1987,7 @@ async function importRueckmeldung(file) {
   applyParsedRueckmeldung(o);
 }
 
-/** Übernimmt eine Rückmeldung aus eingefügtem Text statt aus einer Datei (siehe restoreFromText). */
+/** Übernimmt eine Rückmeldung aus eingefügtem Text statt aus einer Datei. */
 function importRueckmeldungFromText(text) {
   if (!isAdmin()) return;
   let o;
@@ -2014,7 +2005,7 @@ rueckInput.addEventListener('change', () => { const f = rueckInput.files[0]; rue
    Alternative zum Datei-Dialog für Geräte, auf denen eine App-Schutzrichtlinie
    (Intune/MDM) das Öffnen/Speichern von Dateien blockiert oder nur noch
    verschlüsselte Kopien liefert (siehe parseJsonText). Ein gemeinsamer Dialog
-   für „Text einfügen“ (Sicherung/Rückmeldung laden) und „Text anzeigen zum
+   für „Text einfügen“ (Rückmeldung einlesen) und „Text anzeigen zum
    Kopieren“ (Rückmeldung senden).
    ===================================================================== */
 const pasteDlg = $('#pasteDlg');
@@ -2055,11 +2046,6 @@ $('#pasteCopyBtn').addEventListener('click', async () => {
     $('#pasteMsgs').innerHTML = '<div class="e">Automatisches Kopieren nicht möglich – Text ist markiert, bitte manuell kopieren.</div>';
   }
 });
-
-function openPasteRestore() {
-  openPasteImport('Öffnen Sie die Sicherungsdatei als Text (z. B. die Rohdaten-Ansicht im Browser), markieren Sie den gesamten Inhalt und fügen Sie ihn hier ein.', text => { pasteDlg.close(); restoreFromText(text); });
-}
-$('#lockPaste').addEventListener('click', openPasteRestore);
 
 function openPasteRueckImport() {
   openPasteImport('Fügen Sie den Inhalt der Rückmeldung (vom Boristen als Text übermittelt) hier ein.', text => { pasteDlg.close(); importRueckmeldungFromText(text); });
