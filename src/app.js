@@ -820,9 +820,7 @@ $$('.menu').forEach(m => m.addEventListener('click', e => {
   else if (act === 'password') openPassword();
   else if (act === 'users') openUsers();
   else if (act === 'rueck-export') exportRueckmeldung();
-  else if (act === 'rueck-export-copy') exportRueckmeldungAsText();
   else if (act === 'rueck-import') { if (isAdmin()) rueckInput.click(); }
-  else if (act === 'rueck-import-paste') { if (isAdmin()) openPasteRueckImport(); }
   else if (act === 'pdf-proto') exportProtokolle(visiblePiles());
   else if (act === 'pdf-proto-nofoto') exportProtokolle(visiblePiles(), { fotos: false });
   else if (act === 'pdf-list') exportPdf();
@@ -1698,30 +1696,22 @@ $('#btnCsv').addEventListener('click', exportCsv);
     JSON.parse sonst mit einem irreführenden „ungültige Datei“-Fehler scheitern lässt. Meldet leere
     Dateien (z. B. eine noch nicht vollständig heruntergeladene Cloud-Datei) als eigenen Fehler,
     statt sie als kryptischen JSON-Syntaxfehler durchzureichen. */
-/** Kern der Text-zu-JSON-Prüfung, gemeinsam für Datei-Auswahl und Text-Einfügen genutzt.
-    sizeLabel dient nur der Fehlermeldung (z. B. "1234 Bytes" oder "1234 Zeichen"). */
-function parseJsonText(raw, sizeLabel) {
-  const text = raw.replace(/^﻿/, '').trim();
-  if (!text) throw new Error(`Inhalt ist leer (${sizeLabel}) – vermutlich noch nicht vollständig heruntergeladen`);
+async function readJsonFile(file) {
+  const text = (await file.text()).replace(/^﻿/, '').trim();
+  if (!text) throw new Error(`Datei ist leer (${file.size} Bytes) – vermutlich noch nicht vollständig heruntergeladen`);
   // Echte JSON-Sicherungen sind reiner Text; Steuerzeichen (insbesondere \u0000) deuten auf eine noch
   // verschlüsselte/binäre Kopie hin, z. B. wenn eine App-Schutzrichtlinie (Intune/MDM) für OneDrive
   // auf diesem Gerät die Datei nicht entschlüsselt an andere Apps weitergibt.
   const controlChars = (text.slice(0, 200).match(/[\x00-\x08\x0e-\x1f]/g) || []).length;
   if (controlChars > 3) {
-    throw new Error(`Inhalt enthält keinen lesbaren Text, sondern offenbar verschlüsselte/binäre Daten (${sizeLabel}) – vermutlich eine noch verschlüsselte Kopie (z. B. durch eine App-Schutzrichtlinie für OneDrive auf diesem Gerät). Die Datei zuerst in der OneDrive-App öffnen und über „Teilen → In Dateien sichern” eine echte lokale Kopie anlegen, dann diese auswählen – oder den Inhalt stattdessen als Text einfügen (siehe „… als Text einfügen”)`);
+    throw new Error(`Datei enthält keinen lesbaren Text, sondern offenbar verschlüsselte/binäre Daten (${file.size} Bytes) – vermutlich eine noch verschlüsselte Kopie (z. B. durch eine App-Schutzrichtlinie für OneDrive auf diesem Gerät). Die Datei zuerst in der OneDrive-App öffnen und über „Teilen → In Dateien sichern” eine echte lokale Kopie anlegen, dann diese auswählen`);
   }
   try { return JSON.parse(text); }
   catch (e) {
     const head = JSON.stringify(text.slice(0, 60));
     const tail = text.length > 120 ? `, Ende: ${JSON.stringify(text.slice(-60))}` : '';
-    throw new Error(`${sizeLabel} gelesen, aber kein gültiges JSON (${e.message}). Anfang: ${head}${tail}`);
+    throw new Error(`${file.size} Bytes gelesen, aber kein gültiges JSON (${e.message}). Anfang: ${head}${tail}`);
   }
-}
-async function readJsonFile(file) {
-  return parseJsonText(await file.text(), `${file.size} Bytes`);
-}
-function readJsonText(text) {
-  return parseJsonText(text, `${text.length} Zeichen`);
 }
 
 /* =====================================================================
@@ -1757,17 +1747,13 @@ function parseSicherung(o) {
   };
 }
 
-function applyParsedSicherung(o) {
+async function restoreFromFile(file) {
+  let o;
+  try { o = await readJsonFile(file); } catch (e) { return toast(`Die Datei konnte nicht gelesen werden: ${e.message}. Erneut aus der Quelle herunterladen und noch einmal versuchen.`, { sticky: true }); }
   const parsed = parseSicherung(o);
   if (!parsed) return toast('Die Datei ist keine gültige Sicherung (falsches Format).', { sticky: true });
   if (!isAdmin() && key) return toast('Nur der Administrator kann eine Sicherung laden.');
   if (applyIncomingSicherungFresh(parsed)) toast('Sicherung geladen – bitte mit den Zugangsdaten der Sicherung anmelden.');
-}
-
-async function restoreFromFile(file) {
-  let o;
-  try { o = await readJsonFile(file); } catch (e) { return toast(`Die Datei konnte nicht gelesen werden: ${e.message}. Erneut aus der Quelle herunterladen und noch einmal versuchen.`, { sticky: true }); }
-  applyParsedSicherung(o);
 }
 
 const restoreInput = $('#restoreFile');
@@ -1970,7 +1956,10 @@ async function applyRueckmeldungItems(items) {
 
 const rueckmeldungSummary = res => [`${res.upd} aktualisiert`, res.neu && `${res.neu} neu`, res.geprueft && `${res.geprueft} übersprungen (bereits geprüft)`, res.aelter && `${res.aelter} übersprungen (Ihre Daten sind neuer)`, res.unbekannt && `${res.unbekannt} unbekannt`].filter(Boolean).join(', ') + '.';
 
-async function applyParsedRueckmeldung(o) {
+async function importRueckmeldung(file) {
+  if (!isAdmin()) return;
+  let o;
+  try { o = await readJsonFile(file); } catch (e) { return toast(`Die Datei konnte nicht gelesen werden: ${e.message}. Erneut aus der Quelle herunterladen und noch einmal versuchen.`, { sticky: true }); }
   if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data || typeof o.data.iv !== 'string') return toast('Die Datei ist keine gültige Rückmeldung (falsches Format).', { sticky: true });
   let items;
   try { items = JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(o.data.iv) }, key, fromB64(o.data.ct)))).items; }
@@ -1979,84 +1968,10 @@ async function applyParsedRueckmeldung(o) {
   const res = await applyRueckmeldungItems(items);
   toast(rueckmeldungSummary(res));
 }
-
-async function importRueckmeldung(file) {
-  if (!isAdmin()) return;
-  let o;
-  try { o = await readJsonFile(file); } catch (e) { return toast(`Die Datei konnte nicht gelesen werden: ${e.message}. Erneut aus der Quelle herunterladen und noch einmal versuchen.`, { sticky: true }); }
-  applyParsedRueckmeldung(o);
-}
-
-/** Übernimmt eine Rückmeldung aus eingefügtem Text statt aus einer Datei. */
-function importRueckmeldungFromText(text) {
-  if (!isAdmin()) return;
-  let o;
-  try { o = readJsonText(text); } catch (e) { return toast(`Der eingefügte Text konnte nicht gelesen werden: ${e.message}.`, { sticky: true }); }
-  applyParsedRueckmeldung(o);
-}
-
 const rueckInput = document.createElement('input');
 rueckInput.type = 'file'; rueckInput.accept = '.json,application/json'; rueckInput.hidden = true;
 document.body.appendChild(rueckInput);
 rueckInput.addEventListener('change', () => { const f = rueckInput.files[0]; rueckInput.value = ''; if (f) importRueckmeldung(f); });
-
-/* =====================================================================
-   Text einfügen/kopieren statt Datei
-   Alternative zum Datei-Dialog für Geräte, auf denen eine App-Schutzrichtlinie
-   (Intune/MDM) das Öffnen/Speichern von Dateien blockiert oder nur noch
-   verschlüsselte Kopien liefert (siehe parseJsonText). Ein gemeinsamer Dialog
-   für „Text einfügen“ (Rückmeldung einlesen) und „Text anzeigen zum
-   Kopieren“ (Rückmeldung senden).
-   ===================================================================== */
-const pasteDlg = $('#pasteDlg');
-let pasteSubmitHandler = null;
-
-function openPasteImport(hint, handler) {
-  $('#pasteHint').textContent = hint;
-  $('#pasteArea').value = '';
-  $('#pasteArea').readOnly = false;
-  $('#pasteMsgs').innerHTML = '';
-  $('#pasteCopyBtn').hidden = true;
-  $('#pasteSubmitBtn').hidden = false;
-  pasteSubmitHandler = handler;
-  pasteDlg.showModal();
-  setTimeout(() => $('#pasteArea').focus(), 50);
-}
-function openPasteCopy(hint, text) {
-  $('#pasteHint').textContent = hint;
-  $('#pasteArea').value = text;
-  $('#pasteArea').readOnly = true;
-  $('#pasteMsgs').innerHTML = '';
-  $('#pasteCopyBtn').hidden = false;
-  $('#pasteSubmitBtn').hidden = true;
-  pasteDlg.showModal();
-  setTimeout(() => { $('#pasteArea').focus(); $('#pasteArea').select(); }, 50);
-}
-$('#pasteSubmitBtn').addEventListener('click', () => {
-  const text = $('#pasteArea').value;
-  if (!text.trim()) return;
-  pasteSubmitHandler?.(text);
-});
-$('#pasteCopyBtn').addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText($('#pasteArea').value);
-    $('#pasteMsgs').innerHTML = '<div class="w">In die Zwischenablage kopiert.</div>';
-  } catch {
-    $('#pasteArea').select();
-    $('#pasteMsgs').innerHTML = '<div class="e">Automatisches Kopieren nicht möglich – Text ist markiert, bitte manuell kopieren.</div>';
-  }
-});
-
-function openPasteRueckImport() {
-  openPasteImport('Fügen Sie den Inhalt der Rückmeldung (vom Boristen als Text übermittelt) hier ein.', text => { pasteDlg.close(); importRueckmeldungFromText(text); });
-}
-
-async function exportRueckmeldungAsText() {
-  const count = rueckmeldungItems().length;
-  const payload = await buildRueckmeldungPayload();
-  if (!payload) return toast('Es gibt noch keine geänderten Pfähle zum Melden.');
-  openPasteCopy(`Rückmeldung mit ${plural(count)}. Text markieren/kopieren und dem Administrator übermitteln (z. B. per E-Mail oder als neue Datei im privaten Sicherungs-Repo).`, JSON.stringify(payload));
-}
 
 /* =====================================================================
    Cloud-Sync (Microsoft Graph: OneDrive/SharePoint)
