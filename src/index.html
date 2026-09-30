@@ -634,6 +634,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 
     <div class="lock-links">
       <button type="button" class="link only-setup" id="lockRestore">Vorhandene Sicherung laden …</button>
+      <button type="button" class="link only-setup" id="lockPaste">Sicherung als Text einfügen …</button>
       <button type="button" class="link only-setup" id="lockCloud">Aus Cloud-Sync laden …</button>
       <button type="button" class="link only-login" id="lockReset">Passwort vergessen? Alle Daten löschen und neu beginnen</button>
     </div>
@@ -660,10 +661,16 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
         CSV-Export
       </button>
-      <button id="btnRueck" class="linkbtn" type="button" data-borist data-act="rueck-export" title="Ihre Eintragungen als Datei für den Administrator speichern">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/></svg>
-        Rückmeldung senden
-      </button>
+      <div class="menu-wrap" data-borist>
+        <button id="btnRueck" class="linkbtn" type="button" aria-haspopup="true" aria-expanded="false" data-menu="menuRueck" title="Ihre Eintragungen für den Administrator übermitteln">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/></svg>
+          Rückmeldung senden
+        </button>
+        <div id="menuRueck" class="menu" hidden>
+          <button type="button" data-act="rueck-export">Als Datei herunterladen</button>
+          <button type="button" data-act="rueck-export-copy" title="Alternative, falls auf diesem Gerät keine Datei gespeichert werden kann">Als Text anzeigen zum Kopieren</button>
+        </div>
+      </div>
       <button id="btnCloud" class="linkbtn" type="button" title="Automatische Synchronisierung über OneDrive/SharePoint einrichten">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.7A4.5 4.5 0 0 0 6.5 19h11z"/></svg>
         <span id="cloudNavLabel">Cloud-Sync</span>
@@ -714,7 +721,9 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <button type="button" data-nav="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14c2.7 0 4.5 1.9 4.5 4.5"/></svg>Benutzer und Passwörter</button>
         <button type="button" data-act="backup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M8 20v-6h8v6"/></svg>Sicherung speichern</button>
         <button type="button" data-act="restore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Sicherung laden …</button>
+        <button type="button" data-act="restore-paste" title="Alternative, falls auf dem Gerät keine Datei geöffnet/gespeichert werden kann"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 2h6v4H9z"/></svg>Sicherung als Text einfügen …</button>
         <button type="button" data-act="rueck-import" title="Übernimmt die Eintragungen, die der Borist auf seinem Gerät gemacht und als Datei gespeichert hat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v6h16v-6"/><path d="M12 3v11"/><path d="M8 10l4 4 4-4"/></svg>Eintragungen vom Borist einlesen …</button>
+        <button type="button" data-act="rueck-import-paste" title="Alternative, falls auf dem Gerät des Boristen keine Datei geöffnet/gespeichert werden kann"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 2h6v4H9z"/></svg>Rückmeldung als Text einfügen …</button>
         <button type="button" data-nav="konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>Mein Konto</button>
       </div>
     </div>
@@ -811,6 +820,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 <!--INLINE:src/import-dialog.html-->
 <!--INLINE:src/users-dialog.html-->
 <!--INLINE:src/cloud-dialog.html-->
+<!--INLINE:src/paste-dialog.html-->
 
 <!-- ============ Zugangsdaten ändern ============ -->
 <dialog id="pwDialog" aria-labelledby="pwTitle">
