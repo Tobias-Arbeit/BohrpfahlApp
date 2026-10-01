@@ -36,7 +36,7 @@ function customSoils() {
 }
 /** Alle Bodenarten: Standardliste (SOILS) + vom Administrator angelegte zusätzliche. */
 function allSoils() { return [...SOILS, ...customSoils()]; }
-/** Für den Borist freigegebene Bodenarten (Projektdaten "Bodenarten für den Borist");
+/** Für den Bohrist freigegebene Bodenarten (Projektdaten "Bodenarten für den Bohrist");
     ohne Einschränkung (bodenartenAktiv nicht gesetzt) stehen alle Standard-Bodenarten zur Verfügung. */
 function enabledSoils() {
   const aktiv = state.projekt.bodenartenAktiv;
@@ -47,7 +47,7 @@ function enabledSoils() {
 const normSoil = s => String(s ?? '').toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss').replace(/[^a-z0-9]/g, '');
 
 /** Bodenart zu einem Text finden (Name, Symbol oder Anfang des Namens); sonst null.
-    Bei mehreren, kommagetrennten Bodenarten (Borist-Checkboxen) zählt für Farbe/Zeichen
+    Bei mehreren, kommagetrennten Bodenarten (Bohrist-Checkboxen) zählt für Farbe/Zeichen
     die zuerst genannte (Haupt-)Bodenart. Berücksichtigt auch vom Administrator angelegte Bodenarten. */
 function soilOf(text) {
   const n = normSoil(String(text ?? '').split(',')[0]);
@@ -149,17 +149,19 @@ function pileGraphicSvg(p) {
       if (l.art === 'hindernis') { base = null; pattern = 'url(#pgHind)'; used.set('hindernis', { label: 'Bohrhindernis', sw: soilSwatch('hindernis') }); }
       else if (l.art === 'hart') { base = null; pattern = 'url(#pgHart)'; used.set('hart', { label: 'harte Bodenschicht', sw: soilSwatch('hart') }); }
       else if (alleSoils.length > 1) {
-        // Mehrere Bodenarten in einer Schicht: gleich hohe Unterbänder je Bodenart, statt nur die
-        // erste (Hauptanteil) farblich darzustellen – so unterscheidet sich die Grafik je Zusammensetzung.
-        const bh = h / alleSoils.length;
+        // Mehrere Bodenarten in einer Schicht: gleich breite Spalten nebeneinander (volle Breite bei
+        // einer Bodenart, halbe Breite bei zweien usw.), statt nur die erste (Hauptanteil) farblich
+        // darzustellen – so unterscheidet sich die Grafik je Zusammensetzung.
+        const bw = sx.w / alleSoils.length;
         alleSoils.forEach((sl, si) => {
-          const by = y1 + si * bh;
-          o.push(`<rect x="${sx.x}" y="${by}" width="${sx.w}" height="${bh}" fill="${sl.color}"/>`);
-          o.push(`<rect x="${sx.x}" y="${by}" width="${sx.w}" height="${bh}" fill="url(#pgs-${sl.pat})"/>`);
+          const bx = sx.x + si * bw;
+          o.push(`<rect x="${bx}" y="${y1}" width="${bw}" height="${h}" fill="${sl.color}"/>`);
+          o.push(`<rect x="${bx}" y="${y1}" width="${bw}" height="${h}" fill="url(#pgs-${sl.pat})"/>`);
           used.set(sl.sym, { label: soilLabel(sl), sw: soilSwatch('boden', sl.name) });
         });
         for (let si = 1; si < alleSoils.length; si++) {
-          o.push(`<line x1="${sx.x}" y1="${y1 + si * bh}" x2="${sx.x + sx.w}" y2="${y1 + si * bh}" stroke="#7a6a45" stroke-width=".4" stroke-dasharray="2 2"/>`);
+          const bx = sx.x + si * bw;
+          o.push(`<line x1="${bx}" y1="${y1}" x2="${bx}" y2="${y2}" stroke="#7a6a45" stroke-width=".4" stroke-dasharray="2 2"/>`);
         }
       }
       else if (soil) { base = soil.color; pattern = `url(#pgs-${soil.pat})`; used.set(soil.sym, { label: soilLabel(soil), sw: soilSwatch('boden', soil.name) }); }

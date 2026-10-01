@@ -214,9 +214,28 @@ function drawProtokoll(doc, p, proj) {
       y = yb;
       // Farbe und Zeichen der Bodenart (wie in der Grafik) in der Spalte „Bodenart“
       const soil = l.art === 'boden' ? soilOf(l.boden) : null;
+      const alleSoils = l.art === 'boden' ? soilsIn(l.boden) : [];
       let rgb = null, pat = null, ink;
       if (l.art === 'hindernis') { rgb = [169, 116, 74]; pat = 'hatch'; ink = [91, 58, 31]; }
       else if (l.art === 'hart') { rgb = [154, 161, 171]; pat = 'hatchR'; ink = [75, 82, 92]; }
+      else if (alleSoils.length > 1) {
+        // Mehrere Bodenarten in einer Schicht: gleich breite Spalten nebeneinander (wie in der Grafik),
+        // statt nur die erste (Hauptanteil) farblich darzustellen.
+        const colW = 142.5 / alleSoils.length;
+        alleSoils.forEach((sl, si) => {
+          const cx = 122.8 + si * colW;
+          doc.setFillColor(...hexRgb(sl.color));
+          doc.rect(X(cx), Y(yt), colW, yb - yt, 'F');
+          if (sl.pat !== 'coal' && yb - yt > 12) drawSoilMarks(doc, sl.pat, X(cx) + 1, Y(yt) + 1, colW - 2, yb - yt - 2, [43, 43, 43]);
+        });
+        doc.setLineWidth(0.3); doc.setLineDashPattern([1, 1], 0);
+        for (let si = 1; si < alleSoils.length; si++) {
+          const cx = X(122.8 + si * colW);
+          doc.setDrawColor(122, 106, 69); doc.line(cx, Y(yt), cx, Y(yb));
+        }
+        doc.setLineDashPattern([], 0);
+        doc.setDrawColor(0); doc.setFillColor(0); doc.setTextColor(0);
+      }
       else if (soil) { rgb = hexRgb(soil.color); pat = soil.pat; ink = soil.pat === 'coal' ? null : [43, 43, 43]; }
       else if (l.boden) rgb = [231, 227, 218];
       if (rgb) {

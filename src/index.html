@@ -104,7 +104,7 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .field .hint:empty { display: none; }
 .field.invalid input { border-color: var(--danger); }
 
-/* Pflichtfelder des Borists: gelb hinterlegt, solange sie leer sind */
+/* Pflichtfelder des Bohrists: gelb hinterlegt, solange sie leer sind */
 :root { --need-bg: #fff2b8; --need-line: #d99a00; }
 @media (prefers-color-scheme: dark) { :root { --need-bg: #4a3f0c; --need-line: #e6b400; } }
 .need { background: var(--need-bg) !important; border-color: var(--need-line) !important; box-shadow: inset 5px 0 0 var(--need-line); }
@@ -233,9 +233,9 @@ td.actions { padding: 4px 8px; text-align: right; }
 .placeholder { padding: 48px 20px; text-align: center; color: var(--muted); }
 .placeholder h2 { margin: 0 0 6px; color: var(--ink); font-size: 18px; }
 
-/* Kompakte Pfahlliste für den Borist: weniger Spalten (siehe BORIST_TABLE_KEYS) und dichter. */
-body.is-borist th, body.is-borist td { padding: 6px 10px; font-size: 13.5px; }
-body.is-borist thead th { font-size: 12px; }
+/* Kompakte Pfahlliste für den Bohrist: weniger Spalten (siehe BOHRIST_TABLE_KEYS) und dichter. */
+body.is-bohrist th, body.is-bohrist td { padding: 6px 10px; font-size: 13.5px; }
+body.is-bohrist thead th { font-size: 12px; }
 
 /* ---------- Dialog ---------- */
 dialog {
@@ -377,7 +377,7 @@ svg.chart { display: block; }
 .soil-chk span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Pflichtfeld-Markierung (.need landet auf dem unsichtbaren data-s=boden-Feld) am Toggle-Button sichtbar machen */
 input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: var(--need-bg); box-shadow: inset 4px 0 0 var(--need-line); }
-/* Projektdaten: Vorauswahl der Bodenarten für den Borist */
+/* Projektdaten: Vorauswahl der Bodenarten für den Bohrist */
 .boden-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 10px; }
 .boden-check-grid label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 400; margin: 0; }
 .boden-check-grid input { width: 16px; height: 16px; flex: none; }
@@ -406,24 +406,24 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 .zeile .btn { width: 100%; justify-content: center; padding: 0; }
 .zeit-head { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
 
-/* Borist: Start/Stopp statt "Jetzt", Datum/Uhrzeit erst nach dem Start klein sichtbar (siehe data-zstate) */
-.zeile-borist {
+/* Bohrist: Start/Stopp statt "Jetzt", Datum/Uhrzeit erst nach dem Start klein sichtbar (siehe data-zstate) */
+.zeile-bohrist {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
   padding: 6px 0; border-bottom: 1px dashed var(--line);
 }
-.zeile-borist .zl { flex: 1 1 100px; }
-.zeile-borist .btn { width: auto; }
-.zeile-borist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
-.zeile-borist[data-zstate="bearbeiten"] input[data-z] { display: block; }
-.zeile-borist [data-start], .zeile-borist [data-stop], .zeile-borist [data-edit-zeit], .zeile-borist .zeit-anzeige { display: none; }
-.zeile-borist[data-zstate="leer"] [data-start] { display: inline-flex; }
-.zeile-borist[data-zstate="laeuft"] [data-stop],
-.zeile-borist[data-zstate="laeuft"] [data-edit-zeit],
-.zeile-borist[data-zstate="laeuft"] .zeit-anzeige,
-.zeile-borist[data-zstate="fertig"] [data-edit-zeit],
-.zeile-borist[data-zstate="fertig"] .zeit-anzeige,
-.zeile-borist[data-zstate="bearbeiten"] [data-edit-zeit] { display: inline-flex; }
-.zeile-borist .zeit-anzeige { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.zeile-bohrist .zl { flex: 1 1 100px; }
+.zeile-bohrist .btn { width: auto; }
+.zeile-bohrist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
+.zeile-bohrist[data-zstate="bearbeiten"] input[data-z] { display: block; }
+.zeile-bohrist [data-start], .zeile-bohrist [data-stop], .zeile-bohrist [data-edit-zeit], .zeile-bohrist .zeit-anzeige { display: none; }
+.zeile-bohrist[data-zstate="leer"] [data-start] { display: inline-flex; }
+.zeile-bohrist[data-zstate="laeuft"] [data-stop],
+.zeile-bohrist[data-zstate="laeuft"] [data-edit-zeit],
+.zeile-bohrist[data-zstate="laeuft"] .zeit-anzeige,
+.zeile-bohrist[data-zstate="fertig"] [data-edit-zeit],
+.zeile-bohrist[data-zstate="fertig"] .zeit-anzeige,
+.zeile-bohrist[data-zstate="bearbeiten"] [data-edit-zeit] { display: inline-flex; }
+.zeile-bohrist .zeit-anzeige { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .zeile .zl { font-weight: 600; font-size: 14px; }
 .zeile .zl.more { font-weight: 400; color: var(--muted); }
 .logo-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -433,15 +433,15 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 }
 .logo-prev img { max-height: 46px; max-width: 160px; }
 
-/* ---------- Kompaktes Pfahlformular (Admin und Borist) ---------- */
-/* Grunddaten-Leiste: fasst Nr./Soll-Maße/Betongüte/Verbrauch Soll kompakt zusammen. Für den Borist
+/* ---------- Kompaktes Pfahlformular (Admin und Bohrist) ---------- */
+/* Grunddaten-Leiste: fasst Nr./Soll-Maße/Betongüte/Verbrauch Soll kompakt zusammen. Für den Bohrist
    bei fremden Pfählen ersetzt sie die (ohnehin gesperrten) Fieldsets "Pfahl" und "Lage" (siehe
    .nur-voll unten); bei eigenen/neuen Pfählen (voller Zugriff) bleibt es beim vollständigen
    Formular, die Leiste ist dann per JS ausgeblendet. Beim Admin bleiben "Pfahl" und "Lage" zusätzlich
-   zur Leiste sichtbar und bearbeitbar (siehe body.is-borist-Einschränkung bei .nur-voll). */
+   zur Leiste sichtbar und bearbeitbar (siehe body.is-bohrist-Einschränkung bei .nur-voll). */
 .grunddaten { display: none; }
 dialog.kompakt .grunddaten { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: flex-end; padding: 10px 12px; margin-bottom: 4px; background: var(--surface-2); border-radius: var(--radius); }
-body.is-borist dialog.kompakt .nur-voll { display: none; }
+body.is-bohrist dialog.kompakt .nur-voll { display: none; }
 .gd-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gd-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .gd-item strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -450,23 +450,23 @@ body.is-borist dialog.kompakt .nur-voll { display: none; }
 dialog.kompakt .geraet-feld { max-width: 220px; margin: -4px 0 10px; }
 dialog.kompakt .geraet-feld select { height: 34px; }
 
-/* Höhen und Längen: für den Borist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben);
+/* Höhen und Längen: für den Bohrist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben);
    der Admin sieht weiterhin beide Spalten. */
-body.is-borist dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
-body.is-borist dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
-/* Auf Wunsch komplett entfernt: für den Borist bleiben in "Höhen und Längen" nur noch
+body.is-bohrist dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
+body.is-bohrist dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
+/* Auf Wunsch komplett entfernt: für den Bohrist bleiben in "Höhen und Längen" nur noch
    Wasserauflast und Grundwasser ab übrig (siehe pile-dialog.html). Der Admin behält den
    gesamten Block wie bisher dauerhaft sichtbar (kein i-Button, kein Einklappen). */
-body.is-borist dialog.kompakt [data-info-toggle="hoehen"],
-body.is-borist dialog.kompakt [data-info-panel="hoehen"] { display: none !important; }
-body:not(.is-borist) dialog.kompakt [data-info-toggle="hoehen"] { display: none; }
-body:not(.is-borist) dialog.kompakt [data-info-panel="hoehen"] { display: block !important; }
-/* Pfahlbewehrung entfällt nur für den Borist (siehe Round-3-Anforderung); der Admin behält den
+body.is-bohrist dialog.kompakt [data-info-toggle="hoehen"],
+body.is-bohrist dialog.kompakt [data-info-panel="hoehen"] { display: none !important; }
+body:not(.is-bohrist) dialog.kompakt [data-info-toggle="hoehen"] { display: none; }
+body:not(.is-bohrist) dialog.kompakt [data-info-panel="hoehen"] { display: block !important; }
+/* Pfahlbewehrung entfällt nur für den Bohrist (siehe Round-3-Anforderung); der Admin behält den
    Block, eingeordnet unterhalb von Bodenaufschluss/Zeiten (siehe .zwei-spalten-Platzierung unten). */
-body.is-borist dialog.kompakt #fsBewehrung { display: none; }
+body.is-bohrist dialog.kompakt #fsBewehrung { display: none; }
 
 /* "i"-Button: blendet Höhen/Grundwasser bzw. Erklärtexte erst auf Wunsch ein, statt sie dauerhaft
-   Platz wegnehmen zu lassen (jetzt für Admin und Borist gleich, außer beim Höhen-Block s. o.). */
+   Platz wegnehmen zu lassen (jetzt für Admin und Bohrist gleich, außer beim Höhen-Block s. o.). */
 .btn-info { display: none; }
 dialog.kompakt .btn-info {
   display: inline-flex; align-items: center; justify-content: center;
@@ -492,8 +492,8 @@ dialog.kompakt .zwei-spalten fieldset { margin-top: 0; }
 dialog.kompakt #fsBoden { grid-column: 1; grid-row: 1; }
 dialog.kompakt #fsZeiten { grid-column: 2; grid-row: 1; }
 dialog.kompakt #fsBeton { grid-column: 1 / -1; grid-row: 2; }
-body:not(.is-borist) dialog.kompakt #fsBewehrung { grid-column: 1 / -1; grid-row: 2; }
-body:not(.is-borist) dialog.kompakt #fsBeton { grid-row: 3; }
+body:not(.is-bohrist) dialog.kompakt #fsBewehrung { grid-column: 1 / -1; grid-row: 2; }
+body:not(.is-bohrist) dialog.kompakt #fsBeton { grid-row: 3; }
 @media (max-width: 900px) { dialog.kompakt .zwei-spalten { display: block; } }
 
 /* ---------- Ansicht: Reiter und Karte ---------- */
@@ -726,7 +726,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
         CSV-Export
       </button>
-      <button id="btnRueck" class="linkbtn" type="button" data-borist data-act="rueck-export" title="Ihre Eintragungen als Datei für den Administrator speichern">
+      <button id="btnRueck" class="linkbtn" type="button" data-bohrist data-act="rueck-export" title="Ihre Eintragungen als Datei für den Administrator speichern">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/></svg>
         Rückmeldung senden
       </button>
@@ -784,7 +784,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <button type="button" data-nav="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14c2.7 0 4.5 1.9 4.5 4.5"/></svg>Benutzer und Passwörter</button>
         <button type="button" data-act="backup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M8 20v-6h8v6"/></svg>Sicherung speichern</button>
         <button type="button" data-act="restore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Sicherung laden …</button>
-        <button type="button" data-act="rueck-import" title="Übernimmt die Eintragungen, die der Borist auf seinem Gerät gemacht und als Datei gespeichert hat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v6h16v-6"/><path d="M12 3v11"/><path d="M8 10l4 4 4-4"/></svg>Eintragungen vom Borist einlesen …</button>
+        <button type="button" data-act="rueck-import" title="Übernimmt die Eintragungen, die der Bohrist auf seinem Gerät gemacht und als Datei gespeichert hat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v6h16v-6"/><path d="M12 3v11"/><path d="M8 10l4 4 4-4"/></svg>Eintragungen vom Bohrist einlesen …</button>
         <button type="button" data-nav="konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>Mein Konto</button>
       </div>
     </div>

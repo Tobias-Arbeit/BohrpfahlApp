@@ -104,7 +104,7 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .field .hint:empty { display: none; }
 .field.invalid input { border-color: var(--danger); }
 
-/* Pflichtfelder des Borists: gelb hinterlegt, solange sie leer sind */
+/* Pflichtfelder des Bohrists: gelb hinterlegt, solange sie leer sind */
 :root { --need-bg: #fff2b8; --need-line: #d99a00; }
 @media (prefers-color-scheme: dark) { :root { --need-bg: #4a3f0c; --need-line: #e6b400; } }
 .need { background: var(--need-bg) !important; border-color: var(--need-line) !important; box-shadow: inset 5px 0 0 var(--need-line); }
@@ -233,9 +233,9 @@ td.actions { padding: 4px 8px; text-align: right; }
 .placeholder { padding: 48px 20px; text-align: center; color: var(--muted); }
 .placeholder h2 { margin: 0 0 6px; color: var(--ink); font-size: 18px; }
 
-/* Kompakte Pfahlliste für den Borist: weniger Spalten (siehe BORIST_TABLE_KEYS) und dichter. */
-body.is-borist th, body.is-borist td { padding: 6px 10px; font-size: 13.5px; }
-body.is-borist thead th { font-size: 12px; }
+/* Kompakte Pfahlliste für den Bohrist: weniger Spalten (siehe BOHRIST_TABLE_KEYS) und dichter. */
+body.is-bohrist th, body.is-bohrist td { padding: 6px 10px; font-size: 13.5px; }
+body.is-bohrist thead th { font-size: 12px; }
 
 /* ---------- Dialog ---------- */
 dialog {
@@ -377,7 +377,7 @@ svg.chart { display: block; }
 .soil-chk span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Pflichtfeld-Markierung (.need landet auf dem unsichtbaren data-s=boden-Feld) am Toggle-Button sichtbar machen */
 input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: var(--need-bg); box-shadow: inset 4px 0 0 var(--need-line); }
-/* Projektdaten: Vorauswahl der Bodenarten für den Borist */
+/* Projektdaten: Vorauswahl der Bodenarten für den Bohrist */
 .boden-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 10px; }
 .boden-check-grid label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 400; margin: 0; }
 .boden-check-grid input { width: 16px; height: 16px; flex: none; }
@@ -406,24 +406,24 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 .zeile .btn { width: 100%; justify-content: center; padding: 0; }
 .zeit-head { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
 
-/* Borist: Start/Stopp statt "Jetzt", Datum/Uhrzeit erst nach dem Start klein sichtbar (siehe data-zstate) */
-.zeile-borist {
+/* Bohrist: Start/Stopp statt "Jetzt", Datum/Uhrzeit erst nach dem Start klein sichtbar (siehe data-zstate) */
+.zeile-bohrist {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
   padding: 6px 0; border-bottom: 1px dashed var(--line);
 }
-.zeile-borist .zl { flex: 1 1 100px; }
-.zeile-borist .btn { width: auto; }
-.zeile-borist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
-.zeile-borist[data-zstate="bearbeiten"] input[data-z] { display: block; }
-.zeile-borist [data-start], .zeile-borist [data-stop], .zeile-borist [data-edit-zeit], .zeile-borist .zeit-anzeige { display: none; }
-.zeile-borist[data-zstate="leer"] [data-start] { display: inline-flex; }
-.zeile-borist[data-zstate="laeuft"] [data-stop],
-.zeile-borist[data-zstate="laeuft"] [data-edit-zeit],
-.zeile-borist[data-zstate="laeuft"] .zeit-anzeige,
-.zeile-borist[data-zstate="fertig"] [data-edit-zeit],
-.zeile-borist[data-zstate="fertig"] .zeit-anzeige,
-.zeile-borist[data-zstate="bearbeiten"] [data-edit-zeit] { display: inline-flex; }
-.zeile-borist .zeit-anzeige { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.zeile-bohrist .zl { flex: 1 1 100px; }
+.zeile-bohrist .btn { width: auto; }
+.zeile-bohrist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
+.zeile-bohrist[data-zstate="bearbeiten"] input[data-z] { display: block; }
+.zeile-bohrist [data-start], .zeile-bohrist [data-stop], .zeile-bohrist [data-edit-zeit], .zeile-bohrist .zeit-anzeige { display: none; }
+.zeile-bohrist[data-zstate="leer"] [data-start] { display: inline-flex; }
+.zeile-bohrist[data-zstate="laeuft"] [data-stop],
+.zeile-bohrist[data-zstate="laeuft"] [data-edit-zeit],
+.zeile-bohrist[data-zstate="laeuft"] .zeit-anzeige,
+.zeile-bohrist[data-zstate="fertig"] [data-edit-zeit],
+.zeile-bohrist[data-zstate="fertig"] .zeit-anzeige,
+.zeile-bohrist[data-zstate="bearbeiten"] [data-edit-zeit] { display: inline-flex; }
+.zeile-bohrist .zeit-anzeige { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .zeile .zl { font-weight: 600; font-size: 14px; }
 .zeile .zl.more { font-weight: 400; color: var(--muted); }
 .logo-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -433,15 +433,15 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 }
 .logo-prev img { max-height: 46px; max-width: 160px; }
 
-/* ---------- Kompaktes Pfahlformular (Admin und Borist) ---------- */
-/* Grunddaten-Leiste: fasst Nr./Soll-Maße/Betongüte/Verbrauch Soll kompakt zusammen. Für den Borist
+/* ---------- Kompaktes Pfahlformular (Admin und Bohrist) ---------- */
+/* Grunddaten-Leiste: fasst Nr./Soll-Maße/Betongüte/Verbrauch Soll kompakt zusammen. Für den Bohrist
    bei fremden Pfählen ersetzt sie die (ohnehin gesperrten) Fieldsets "Pfahl" und "Lage" (siehe
    .nur-voll unten); bei eigenen/neuen Pfählen (voller Zugriff) bleibt es beim vollständigen
    Formular, die Leiste ist dann per JS ausgeblendet. Beim Admin bleiben "Pfahl" und "Lage" zusätzlich
-   zur Leiste sichtbar und bearbeitbar (siehe body.is-borist-Einschränkung bei .nur-voll). */
+   zur Leiste sichtbar und bearbeitbar (siehe body.is-bohrist-Einschränkung bei .nur-voll). */
 .grunddaten { display: none; }
 dialog.kompakt .grunddaten { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: flex-end; padding: 10px 12px; margin-bottom: 4px; background: var(--surface-2); border-radius: var(--radius); }
-body.is-borist dialog.kompakt .nur-voll { display: none; }
+body.is-bohrist dialog.kompakt .nur-voll { display: none; }
 .gd-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gd-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .gd-item strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -450,23 +450,23 @@ body.is-borist dialog.kompakt .nur-voll { display: none; }
 dialog.kompakt .geraet-feld { max-width: 220px; margin: -4px 0 10px; }
 dialog.kompakt .geraet-feld select { height: 34px; }
 
-/* Höhen und Längen: für den Borist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben);
+/* Höhen und Längen: für den Bohrist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben);
    der Admin sieht weiterhin beide Spalten. */
-body.is-borist dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
-body.is-borist dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
-/* Auf Wunsch komplett entfernt: für den Borist bleiben in "Höhen und Längen" nur noch
+body.is-bohrist dialog.kompakt .soll-ist > :nth-child(odd) { display: none; }
+body.is-bohrist dialog.kompakt .soll-ist { grid-template-columns: 1fr; }
+/* Auf Wunsch komplett entfernt: für den Bohrist bleiben in "Höhen und Längen" nur noch
    Wasserauflast und Grundwasser ab übrig (siehe pile-dialog.html). Der Admin behält den
    gesamten Block wie bisher dauerhaft sichtbar (kein i-Button, kein Einklappen). */
-body.is-borist dialog.kompakt [data-info-toggle="hoehen"],
-body.is-borist dialog.kompakt [data-info-panel="hoehen"] { display: none !important; }
-body:not(.is-borist) dialog.kompakt [data-info-toggle="hoehen"] { display: none; }
-body:not(.is-borist) dialog.kompakt [data-info-panel="hoehen"] { display: block !important; }
-/* Pfahlbewehrung entfällt nur für den Borist (siehe Round-3-Anforderung); der Admin behält den
+body.is-bohrist dialog.kompakt [data-info-toggle="hoehen"],
+body.is-bohrist dialog.kompakt [data-info-panel="hoehen"] { display: none !important; }
+body:not(.is-bohrist) dialog.kompakt [data-info-toggle="hoehen"] { display: none; }
+body:not(.is-bohrist) dialog.kompakt [data-info-panel="hoehen"] { display: block !important; }
+/* Pfahlbewehrung entfällt nur für den Bohrist (siehe Round-3-Anforderung); der Admin behält den
    Block, eingeordnet unterhalb von Bodenaufschluss/Zeiten (siehe .zwei-spalten-Platzierung unten). */
-body.is-borist dialog.kompakt #fsBewehrung { display: none; }
+body.is-bohrist dialog.kompakt #fsBewehrung { display: none; }
 
 /* "i"-Button: blendet Höhen/Grundwasser bzw. Erklärtexte erst auf Wunsch ein, statt sie dauerhaft
-   Platz wegnehmen zu lassen (jetzt für Admin und Borist gleich, außer beim Höhen-Block s. o.). */
+   Platz wegnehmen zu lassen (jetzt für Admin und Bohrist gleich, außer beim Höhen-Block s. o.). */
 .btn-info { display: none; }
 dialog.kompakt .btn-info {
   display: inline-flex; align-items: center; justify-content: center;
@@ -492,8 +492,8 @@ dialog.kompakt .zwei-spalten fieldset { margin-top: 0; }
 dialog.kompakt #fsBoden { grid-column: 1; grid-row: 1; }
 dialog.kompakt #fsZeiten { grid-column: 2; grid-row: 1; }
 dialog.kompakt #fsBeton { grid-column: 1 / -1; grid-row: 2; }
-body:not(.is-borist) dialog.kompakt #fsBewehrung { grid-column: 1 / -1; grid-row: 2; }
-body:not(.is-borist) dialog.kompakt #fsBeton { grid-row: 3; }
+body:not(.is-bohrist) dialog.kompakt #fsBewehrung { grid-column: 1 / -1; grid-row: 2; }
+body:not(.is-bohrist) dialog.kompakt #fsBeton { grid-row: 3; }
 @media (max-width: 900px) { dialog.kompakt .zwei-spalten { display: block; } }
 
 /* ---------- Ansicht: Reiter und Karte ---------- */
@@ -726,7 +726,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
         CSV-Export
       </button>
-      <button id="btnRueck" class="linkbtn" type="button" data-borist data-act="rueck-export" title="Ihre Eintragungen als Datei für den Administrator speichern">
+      <button id="btnRueck" class="linkbtn" type="button" data-bohrist data-act="rueck-export" title="Ihre Eintragungen als Datei für den Administrator speichern">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/></svg>
         Rückmeldung senden
       </button>
@@ -784,7 +784,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <button type="button" data-nav="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14c2.7 0 4.5 1.9 4.5 4.5"/></svg>Benutzer und Passwörter</button>
         <button type="button" data-act="backup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M8 20v-6h8v6"/></svg>Sicherung speichern</button>
         <button type="button" data-act="restore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Sicherung laden …</button>
-        <button type="button" data-act="rueck-import" title="Übernimmt die Eintragungen, die der Borist auf seinem Gerät gemacht und als Datei gespeichert hat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v6h16v-6"/><path d="M12 3v11"/><path d="M8 10l4 4 4-4"/></svg>Eintragungen vom Borist einlesen …</button>
+        <button type="button" data-act="rueck-import" title="Übernimmt die Eintragungen, die der Bohrist auf seinem Gerät gemacht und als Datei gespeichert hat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v6h16v-6"/><path d="M12 3v11"/><path d="M8 10l4 4 4-4"/></svg>Eintragungen vom Bohrist einlesen …</button>
         <button type="button" data-nav="konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>Mein Konto</button>
       </div>
     </div>
@@ -1155,7 +1155,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
           <div class="field">
             <label>Abstichmaß Überbeton SOLL <span class="unit">[cm]</span></label>
             <div class="readout" id="abstichSollOut">–</div>
-            <span class="hint">(Arbeitsebene − Pfahl-OK, Soll) × 100 + notwendiger Überbeton</span>
+            <span class="hint">(Arbeitsebene − Pfahl-OK, Soll) × 100 − notwendiger Überbeton</span>
           </div>
           <div class="field">
             <label for="f_abstich">Abstichmaß Überbeton IST <span class="unit">[cm]</span></label>
@@ -1266,8 +1266,8 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
           <span class="hint">Gerätetyp, Inventarnummer, Verfahren und Kommentar. Beim Pfahl wird das Gerät ausgewählt; Typ, Inventarnummer und Verfahren erscheinen im Bohrprotokoll.</span>
         </div>
         <div class="field span3">
-          <label>Bodenarten für den Borist</label>
-          <span class="hint" style="margin:0 0 8px;display:block">Auswahl, welche Bodenarten dem Borist beim Bodenaufschluss als Checkboxen angeboten werden. Der Administrator sieht im eigenen Formular weiterhin alle Bodenarten.</span>
+          <label>Bodenarten für den Bohrist</label>
+          <span class="hint" style="margin:0 0 8px;display:block">Auswahl, welche Bodenarten dem Bohrist beim Bodenaufschluss als Checkboxen angeboten werden. Der Administrator sieht im eigenen Formular weiterhin alle Bodenarten.</span>
           <div id="bodenartRows" class="boden-check-grid"></div>
           <p style="margin:12px 0 0"><strong style="font-size:13px">Zusätzliche Bodenarten</strong></p>
           <div id="bodenartCustomRows" class="rows" style="margin-top:6px"></div>
@@ -1367,7 +1367,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
     <div class="dlg-body">
       <p class="sub" style="margin-top:0">
         <strong>Administrator:</strong> alles (Import, Projektdaten, Planwerte, Löschen, Prüfen, Benutzer).<br>
-        <strong>Borist:</strong> ergänzt Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos (Pflichtfelder, ohne die er nicht speichern kann). Er sieht nur „Pfähle“ und „Karte“ und hat kein „Mein Konto“: Passwörter vergibt und ändert ausschließlich der Administrator hier. Importierte und vom Administrator angelegte Pfähle kann er weder löschen noch kopieren, geprüfte Pfähle sind für ihn gesperrt.
+        <strong>Bohrist:</strong> ergänzt Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos (Pflichtfelder, ohne die er nicht speichern kann). Er sieht nur „Pfähle“ und „Karte“ und hat kein „Mein Konto“: Passwörter vergibt und ändert ausschließlich der Administrator hier. Importierte und vom Administrator angelegte Pfähle kann er weder löschen noch kopieren, geprüfte Pfähle sind für ihn gesperrt.
       </p>
 
       <table class="users-table">
@@ -1383,7 +1383,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         </div>
         <div class="field">
           <label for="u_role">Rolle</label>
-          <select id="u_role"><option value="borist">Borist</option><option value="admin">Administrator</option></select>
+          <select id="u_role"><option value="borist">Bohrist</option><option value="admin">Administrator</option></select>
         </div>
         <div class="field">
           <label for="u_pass">Passwort <span class="unit">(mind. 8 Zeichen)</span></label>
@@ -1422,8 +1422,8 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
   <div class="dlg-body">
     <p class="sub" style="margin-top:0">
       Überträgt die verschlüsselte Sicherung automatisch über einen gemeinsamen OneDrive-/SharePoint-Ordner an dieses Gerät.
-      Als Administrator wird hier laufend die aktuelle Sicherung abgelegt und Rückmeldungen der Boristen werden automatisch eingelesen.
-      Als Borist wird Ihre Rückmeldung automatisch abgelegt und die neueste Sicherung des Administrators automatisch übernommen.
+      Als Administrator wird hier laufend die aktuelle Sicherung abgelegt und Rückmeldungen der Bohristen werden automatisch eingelesen.
+      Als Bohrist wird Ihre Rückmeldung automatisch abgelegt und die neueste Sicherung des Administrators automatisch übernommen.
       Diese Einrichtung gilt nur für dieses Gerät.
     </p>
 
@@ -3276,9 +3276,28 @@ function drawProtokoll(doc, p, proj) {
       y = yb;
       // Farbe und Zeichen der Bodenart (wie in der Grafik) in der Spalte „Bodenart“
       const soil = l.art === 'boden' ? soilOf(l.boden) : null;
+      const alleSoils = l.art === 'boden' ? soilsIn(l.boden) : [];
       let rgb = null, pat = null, ink;
       if (l.art === 'hindernis') { rgb = [169, 116, 74]; pat = 'hatch'; ink = [91, 58, 31]; }
       else if (l.art === 'hart') { rgb = [154, 161, 171]; pat = 'hatchR'; ink = [75, 82, 92]; }
+      else if (alleSoils.length > 1) {
+        // Mehrere Bodenarten in einer Schicht: gleich breite Spalten nebeneinander (wie in der Grafik),
+        // statt nur die erste (Hauptanteil) farblich darzustellen.
+        const colW = 142.5 / alleSoils.length;
+        alleSoils.forEach((sl, si) => {
+          const cx = 122.8 + si * colW;
+          doc.setFillColor(...hexRgb(sl.color));
+          doc.rect(X(cx), Y(yt), colW, yb - yt, 'F');
+          if (sl.pat !== 'coal' && yb - yt > 12) drawSoilMarks(doc, sl.pat, X(cx) + 1, Y(yt) + 1, colW - 2, yb - yt - 2, [43, 43, 43]);
+        });
+        doc.setLineWidth(0.3); doc.setLineDashPattern([1, 1], 0);
+        for (let si = 1; si < alleSoils.length; si++) {
+          const cx = X(122.8 + si * colW);
+          doc.setDrawColor(122, 106, 69); doc.line(cx, Y(yt), cx, Y(yb));
+        }
+        doc.setLineDashPattern([], 0);
+        doc.setDrawColor(0); doc.setFillColor(0); doc.setTextColor(0);
+      }
       else if (soil) { rgb = hexRgb(soil.color); pat = soil.pat; ink = soil.pat === 'coal' ? null : [43, 43, 43]; }
       else if (l.boden) rgb = [231, 227, 218];
       if (rgb) {
@@ -3598,7 +3617,7 @@ function customSoils() {
 }
 /** Alle Bodenarten: Standardliste (SOILS) + vom Administrator angelegte zusätzliche. */
 function allSoils() { return [...SOILS, ...customSoils()]; }
-/** Für den Borist freigegebene Bodenarten (Projektdaten "Bodenarten für den Borist");
+/** Für den Bohrist freigegebene Bodenarten (Projektdaten "Bodenarten für den Bohrist");
     ohne Einschränkung (bodenartenAktiv nicht gesetzt) stehen alle Standard-Bodenarten zur Verfügung. */
 function enabledSoils() {
   const aktiv = state.projekt.bodenartenAktiv;
@@ -3609,7 +3628,7 @@ function enabledSoils() {
 const normSoil = s => String(s ?? '').toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss').replace(/[^a-z0-9]/g, '');
 
 /** Bodenart zu einem Text finden (Name, Symbol oder Anfang des Namens); sonst null.
-    Bei mehreren, kommagetrennten Bodenarten (Borist-Checkboxen) zählt für Farbe/Zeichen
+    Bei mehreren, kommagetrennten Bodenarten (Bohrist-Checkboxen) zählt für Farbe/Zeichen
     die zuerst genannte (Haupt-)Bodenart. Berücksichtigt auch vom Administrator angelegte Bodenarten. */
 function soilOf(text) {
   const n = normSoil(String(text ?? '').split(',')[0]);
@@ -3711,17 +3730,19 @@ function pileGraphicSvg(p) {
       if (l.art === 'hindernis') { base = null; pattern = 'url(#pgHind)'; used.set('hindernis', { label: 'Bohrhindernis', sw: soilSwatch('hindernis') }); }
       else if (l.art === 'hart') { base = null; pattern = 'url(#pgHart)'; used.set('hart', { label: 'harte Bodenschicht', sw: soilSwatch('hart') }); }
       else if (alleSoils.length > 1) {
-        // Mehrere Bodenarten in einer Schicht: gleich hohe Unterbänder je Bodenart, statt nur die
-        // erste (Hauptanteil) farblich darzustellen – so unterscheidet sich die Grafik je Zusammensetzung.
-        const bh = h / alleSoils.length;
+        // Mehrere Bodenarten in einer Schicht: gleich breite Spalten nebeneinander (volle Breite bei
+        // einer Bodenart, halbe Breite bei zweien usw.), statt nur die erste (Hauptanteil) farblich
+        // darzustellen – so unterscheidet sich die Grafik je Zusammensetzung.
+        const bw = sx.w / alleSoils.length;
         alleSoils.forEach((sl, si) => {
-          const by = y1 + si * bh;
-          o.push(`<rect x="${sx.x}" y="${by}" width="${sx.w}" height="${bh}" fill="${sl.color}"/>`);
-          o.push(`<rect x="${sx.x}" y="${by}" width="${sx.w}" height="${bh}" fill="url(#pgs-${sl.pat})"/>`);
+          const bx = sx.x + si * bw;
+          o.push(`<rect x="${bx}" y="${y1}" width="${bw}" height="${h}" fill="${sl.color}"/>`);
+          o.push(`<rect x="${bx}" y="${y1}" width="${bw}" height="${h}" fill="url(#pgs-${sl.pat})"/>`);
           used.set(sl.sym, { label: soilLabel(sl), sw: soilSwatch('boden', sl.name) });
         });
         for (let si = 1; si < alleSoils.length; si++) {
-          o.push(`<line x1="${sx.x}" y1="${y1 + si * bh}" x2="${sx.x + sx.w}" y2="${y1 + si * bh}" stroke="#7a6a45" stroke-width=".4" stroke-dasharray="2 2"/>`);
+          const bx = sx.x + si * bw;
+          o.push(`<line x1="${bx}" y1="${y1}" x2="${bx}" y2="${y2}" stroke="#7a6a45" stroke-width=".4" stroke-dasharray="2 2"/>`);
         }
       }
       else if (soil) { base = soil.color; pattern = `url(#pgs-${soil.pat})`; used.set(soil.sym, { label: soilLabel(soil), sw: soilSwatch('boden', soil.name) }); }
@@ -3898,11 +3919,11 @@ const ZEIT_GROUPS = [
   { k: 'betonieren', label: 'Betonieren' },
 ];
 
-/* Was der Borist bei importierten bzw. vom Administrator angelegten Pfählen ergänzen darf:
+/* Was der Bohrist bei importierten bzw. vom Administrator angelegten Pfählen ergänzen darf:
    Ist-Werte, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Bodenaufschluss, Zeiten,
    Bemerkungen (extern und intern) */
-const BORIST_NUM = ['arbeitsebene', 'oberkante', 'unterkante', 'bohrlaenge', 'pfahllaenge', 'leerbohrung', 'gwTiefe', 'grundwasser', 'abstich', 'verbrauchIst'];
-const BORIST_KEYS = [...BORIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'schichten', 'zeiten', 'geraet', 'geraetInfo', 'fotos'];
+const BOHRIST_NUM = ['arbeitsebene', 'oberkante', 'unterkante', 'bohrlaenge', 'pfahllaenge', 'leerbohrung', 'gwTiefe', 'grundwasser', 'abstich', 'verbrauchIst'];
+const BOHRIST_KEYS = [...BOHRIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'schichten', 'zeiten', 'geraet', 'geraetInfo', 'fotos'];
 
 /** Bohrgerät als Text („Typ · Inv.-Nr. …“); nutzt die Projektliste, sonst die gespeicherte Kopie am Pfahl */
 const geraetText = (g, fallback) => {
@@ -3917,7 +3938,7 @@ function pileTyp(p) {
   const d = (p.geraet && list.find(x => x.id === p.geraet)) || p.geraetInfo;
   return (d && d.verfahren) || '';
 }
-const pickAllowed = p => Object.fromEntries(BORIST_KEYS.filter(k => k in p).map(k => [k, structuredClone(p[k])]));
+const pickAllowed = p => Object.fromEntries(BOHRIST_KEYS.filter(k => k in p).map(k => [k, structuredClone(p[k])]));
 
 /* Berechtigungen je Pfahl. quelle: 'import' | 'admin' | 'borist' (fehlt bei älteren Pfählen = 'admin') */
 const canFullEdit = p => isAdmin() || p.quelle === 'borist';
@@ -3973,7 +3994,7 @@ const defaultProjekt = () => ({
   crs: 'EPSG:25832',   // Koordinatensystem der Pfahl-Koordinaten
   geraete: [{ id: uid(), typ: 'BG30', inv: '', kommentar: '', verfahren: '' }],   // Bohrgeräte: { id, typ, inv, kommentar, verfahren }
   ueberbetonSoll: null,    // notwendiger Überbeton [cm], Grundlage für das Abstichmaß SOLL
-  bodenartenAktiv: null,   // für den Borist freigegebene Standard-Bodenarten (Namen); null = alle
+  bodenartenAktiv: null,   // für den Bohrist freigegebene Standard-Bodenarten (Namen); null = alle
   bodenartenCustom: [],    // zusätzliche, selbst angelegte Bodenarten: { id, name, sym }
 });
 
@@ -4171,11 +4192,11 @@ const soll = p => {
   const len = isNum(p.sPfahllaenge) ? p.sPfahllaenge : p.pfahllaenge;
   return (isNum(len) && isNum(p.durchmesser)) ? rd(len * Math.PI * (p.durchmesser / 200) ** 2, 1) : null;
 };
-/** Abstichmaß Überbeton SOLL [cm] = (Arbeitsebene Soll − Pfahl-OK Soll) × 100 + notwendiger Überbeton
+/** Abstichmaß Überbeton SOLL [cm] = (Arbeitsebene Soll − Pfahl-OK Soll) × 100 − notwendiger Überbeton
     [cm] (Projektdaten). Rein informativer Wert (wie Verbrauch SOLL), nicht editierbar/gespeichert. */
 const abstichSoll = p => {
   if (!isNum(p.sArbeitsebene) || !isNum(p.sOberkante) || !isNum(state.projekt.ueberbetonSoll)) return null;
-  return rd((p.sArbeitsebene - p.sOberkante) * 100 + state.projekt.ueberbetonSoll, 1);
+  return rd((p.sArbeitsebene - p.sOberkante) * 100 - state.projekt.ueberbetonSoll, 1);
 };
 
 /* =====================================================================
@@ -4227,9 +4248,9 @@ const COLS = [
   { k: 'bemerkungIntern', label: 'Bemerkung (intern)',  unit: '',        kind: 'text' },
 ];
 const TCOLS = COLS.filter(c => c.t);
-/* Kompakte Tabelle für den Borist: weniger Spalten, dafür der Bewehrungstyp dabei (sonst nur im CSV). */
-const BORIST_TABLE_KEYS = ['nr', 'bewTyp', 'typ', 'durchmesser', 'pfahllaenge', 'wasserauflast', 'verbrauchIst', 'status'];
-const tableCols = () => isAdmin() ? TCOLS : COLS.filter(c => BORIST_TABLE_KEYS.includes(c.k));
+/* Kompakte Tabelle für den Bohrist: weniger Spalten, dafür der Bewehrungstyp dabei (sonst nur im CSV). */
+const BOHRIST_TABLE_KEYS = ['nr', 'bewTyp', 'typ', 'durchmesser', 'pfahllaenge', 'wasserauflast', 'verbrauchIst', 'status'];
+const tableCols = () => isAdmin() ? TCOLS : COLS.filter(c => BOHRIST_TABLE_KEYS.includes(c.k));
 const unitOf = c => c.unit === '@H' ? hoehenbezug() : c.unit === '@C' ? coordLabels().unit : c.unit;
 
 function getVal(p, k) {
@@ -4338,7 +4359,7 @@ function showLock() {
    Ältere Sicherungen/Daten (v1: ein Benutzer, Schlüssel direkt aus dem Passwort) werden beim
    ersten Login automatisch umgestellt; der bisherige Benutzer wird Administrator.
    --------------------------------------------------------------------- */
-const ROLES = { admin: 'Administrator', borist: 'Borist' };
+const ROLES = { admin: 'Administrator', borist: 'Bohrist' };
 let me = null;                                             // { id, name, role }
 const isAdmin = () => !!me && me.role === 'admin';
 const userList = () => (meta && Array.isArray(meta.users)) ? meta.users : [];
@@ -4487,12 +4508,12 @@ const ui = { q: '', typ: '', status: '', sort: { k: 'nr', dir: 1 }, view: 'dashb
 function setView(v) { ui.view = v; render(); }
 $$('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
-/** Bedienelemente je nach Rolle ein-/ausblenden (data-admin = nur Administrator, data-borist = nur Borist) */
+/** Bedienelemente je nach Rolle ein-/ausblenden (data-admin = nur Administrator, data-bohrist = nur Bohrist) */
 function applyRole() {
-  document.body.classList.toggle('is-borist', !isAdmin());
+  document.body.classList.toggle('is-bohrist', !isAdmin());
   if (!isAdmin() && ui.view === 'stats') ui.view = 'table';
   $$('[data-admin]').forEach(el => { el.hidden = !isAdmin(); });
-  $$('[data-borist]').forEach(el => { el.hidden = isAdmin(); });
+  $$('[data-bohrist]').forEach(el => { el.hidden = isAdmin(); });
   $('#whoami').textContent = me ? `${me.name} · ${ROLES[me.role]}` : '';
 }
 
@@ -4935,7 +4956,7 @@ function soilsIn(cur) {
   return allSoils().filter(s => parts.includes(normSoil(s.name)));
 }
 /** Checkboxen für mehrere Bodenbestandteile (siehe schichtRowHTML). Admin sieht alle Bodenarten,
-    der Borist nur die in den Projektdaten freigegebenen; bereits gesetzte, inzwischen nicht mehr
+    der Bohrist nur die in den Projektdaten freigegebenen; bereits gesetzte, inzwischen nicht mehr
     freigegebene Bodenarten bleiben zusätzlich sichtbar, damit keine Angaben stillschweigend
     verschwinden. Das erste angehakte gilt für Grafik/Protokoll als Hauptanteil (soilOf). */
 const soilChecksHtml = cur => {
@@ -4984,7 +5005,7 @@ function zeitRowsFor(g, entries) {
 
 function buildZeitRows(z) {
   $('#zeitRows').innerHTML = ZEIT_GROUPS.map(g =>
-    zeitRowsFor(g, z?.[g.k]).map((e, i) => zeitZeileBorist(g, i, e)).join('')
+    zeitRowsFor(g, z?.[g.k]).map((e, i) => zeitZeileBohrist(g, i, e)).join('')
   ).join('');
 }
 
@@ -4998,10 +5019,10 @@ function maybeGrowZeitGroup(row) {
   const e = readZeileZeit(row);
   if (!(e.von && e.bis)) return;
   const i = rows.length;
-  row.insertAdjacentHTML('afterend', zeitZeileBorist(g, i, {}));
+  row.insertAdjacentHTML('afterend', zeitZeileBohrist(g, i, {}));
 }
 
-/* Zeit-Zeile mit Start-/Stopp-Button (für Admin und Borist gleich). Datum/Uhrzeit erscheinen erst
+/* Zeit-Zeile mit Start-/Stopp-Button (für Admin und Bohrist gleich). Datum/Uhrzeit erscheinen erst
    nach dem Start, klein, mit einem Bearbeiten-Button für die manuelle Korrektur (z. B. wenn das
    Tippen vergessen wurde). */
 const zeitZustand = e => !e.von ? 'leer' : !e.bis ? 'laeuft' : 'fertig';
@@ -5013,8 +5034,8 @@ function setZeitZustand(row) {
   $('[data-anzeige]', row).textContent = zeitAnzeigeText(e);
 }
 
-function zeitZeileBorist(g, i, e) {
-  return `<div class="zeile zeile-borist" data-g="${g.k}" data-i="${i}" data-zstate="${zeitZustand(e)}">
+function zeitZeileBohrist(g, i, e) {
+  return `<div class="zeile zeile-bohrist" data-g="${g.k}" data-i="${i}" data-zstate="${zeitZustand(e)}">
     <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
     <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
     <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
@@ -5206,7 +5227,7 @@ let editingGeprueft = null;
 function applyPileLock(p, isNew) {
   const full = isNew || canFullEdit(p);
   const locked = !isNew && isLocked(p);
-  const open = new Set([...BORIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'geraet']);
+  const open = new Set([...BOHRIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'geraet']);
   for (const el of form.elements) if (el.name) el.disabled = locked || (!full && !open.has(el.name));
   $$('#schichtRows input, #schichtRows select, #schichtRows button, #zeitRows input, #zeitRows button, #btnAddSchicht, #btnCopySoll').forEach(el => { el.disabled = locked; });
   $('#btnSave').hidden = locked;
@@ -5215,8 +5236,8 @@ function applyPileLock(p, isNew) {
   note.textContent = locked
     ? 'Dieser Pfahl wurde vom Administrator geprüft und ist gesperrt.'
     : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos ergänzen (gelb markierte Pflichtfelder müssen ausgefüllt sein). Planwerte und Stammdaten sind gesperrt.';
-  // Kompaktes Formular für den Admin immer, für den Borist außer bei eigenen/neuen Pfählen
-  // (dort sieht auch der Borist weiterhin das vollständige, unkompaktierte Formular).
+  // Kompaktes Formular für den Admin immer, für den Bohrist außer bei eigenen/neuen Pfählen
+  // (dort sieht auch der Bohrist weiterhin das vollständige, unkompaktierte Formular).
   pileDlg.classList.toggle('kompakt', isAdmin() || !full);
   fillGrunddaten(p);
 }
@@ -5233,9 +5254,9 @@ function fillGrunddaten(p) {
   $('#gdSoll').textContent = s == null ? '–' : `${fmtFlex(s)} m³`;
 }
 
-/* --- Pflichtfelder des Borists ---
-   Ohne diese Angaben kann der Borist einen Pfahl nicht speichern; leere Pflichtfelder sind gelb markiert.
-   Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Borist bei fremden Pfählen
+/* --- Pflichtfelder des Bohrists ---
+   Ohne diese Angaben kann der Bohrist einen Pfahl nicht speichern; leere Pflichtfelder sind gelb markiert.
+   Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Bohrist bei fremden Pfählen
    nicht mehr zugänglich (siehe "i"-Panel-Entfernung in pile-dialog.html) und deshalb nicht mehr Pflicht.
    Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkungen, Fotos. */
 const REQ_NUM = ['verbrauchIst'];
@@ -5259,7 +5280,7 @@ function requiredEls() {
   return out;
 }
 
-/** Markiert leere Pflichtfelder (nur Borist) und schaltet „Speichern“ entsprechend; liefert die fehlenden Angaben */
+/** Markiert leere Pflichtfelder (nur Bohrist) und schaltet „Speichern“ entsprechend; liefert die fehlenden Angaben */
 function updateRequired() {
   $$('.need', form).forEach(el => el.classList.remove('need'));
   const note = $('#reqNote'), btn = $('#btnSave');
@@ -5348,7 +5369,7 @@ form.addEventListener('input', e => {
   if (e.target === $$('.schicht [data-s=bis]', form).at(-1)) autoEnd = e.target.value.trim() === '';
   recalc();
 });
-/* Borist-Checkboxen (mehrere Bodenarten je Schicht) im gemeinsamen Feld data-s=boden zusammenführen,
+/* Bohrist-Checkboxen (mehrere Bodenarten je Schicht) im gemeinsamen Feld data-s=boden zusammenführen,
    in SOILS-Reihenfolge (die erste zählt in Grafik/Protokoll als Hauptanteil, siehe soilOf). Läuft vor dem
    generischen recalc-Listener, damit der zusammengeführte Wert schon beim Neuzeichnen vorliegt. */
 form.addEventListener('change', e => {
@@ -5467,7 +5488,7 @@ form.addEventListener('submit', async e => {
     if (i >= 0) {
       const old = state.piles[i];
       if (isLocked(old)) return toast('Dieser Pfahl ist geprüft und gesperrt.');
-      // Rechte auch hier durchsetzen: der Borist übernimmt nur die ihm erlaubten Felder
+      // Rechte auch hier durchsetzen: der Bohrist übernimmt nur die ihm erlaubten Felder
       const upd = canFullEdit(old) ? p : pickAllowed(p);
       state.piles[i] = { ...old, ...upd, ...stamp, ...(isAdmin() ? { geprueft: editingGeprueft } : {}) };
     }
@@ -5509,7 +5530,7 @@ $('#btnAddGeraet').addEventListener('click', () => {
 });
 $('#gerRows').addEventListener('click', e => { const b = e.target.closest('[data-grm]'); if (b) b.closest('.ger-row').remove(); });
 
-/** Checkboxen der Standard-Bodenarten (Vorauswahl für den Borist) */
+/** Checkboxen der Standard-Bodenarten (Vorauswahl für den Bohrist) */
 function bodenartRowsHTML(aktiv) {
   const set = Array.isArray(aktiv) ? new Set(aktiv) : null;   // null = alle aktiv (noch nicht eingeschränkt)
   return SOILS.map(s => `<label>
@@ -5929,8 +5950,8 @@ async function togglePruefung(p) {
 }
 
 /* =====================================================================
-   Rückmeldung: Borist → Administrator (wenn beide auf verschiedenen Geräten arbeiten)
-   Enthält nur die vom Borist geänderten Pfähle und ist mit dem Datenschlüssel verschlüsselt.
+   Rückmeldung: Bohrist → Administrator (wenn beide auf verschiedenen Geräten arbeiten)
+   Enthält nur die vom Bohrist geänderten Pfähle und ist mit dem Datenschlüssel verschlüsselt.
    ===================================================================== */
 function rueckmeldungItems() {
   return state.piles.filter(p => p.updatedRole === 'borist').map(p => ({
@@ -6000,7 +6021,7 @@ rueckInput.addEventListener('change', () => { const f = rueckInput.files[0]; rue
    einen gemeinsamen Cloud-Ordner; die eigentliche Logik (Verschlüsselung,
    Gültigkeitsprüfung, feldweises Zusammenführen) ist dieselbe wie oben.
    Administrator: legt laufend die aktuelle Sicherung ab und liest
-   Rückmeldungen der Boristen automatisch ein. Borist: legt seine
+   Rückmeldungen der Bohristen automatisch ein. Bohrist: legt seine
    Rückmeldung automatisch ab und übernimmt automatisch die neueste
    Sicherung (eigene, noch nicht vom Admin übernommene Änderungen bleiben
    dabei erhalten, siehe mergeIncomingState). Die Einrichtung (Client-ID,
@@ -6011,7 +6032,7 @@ const CLOUD_SICHERUNG = 'Bohrpfahl-Sicherung.json';
 const GRAPH_SCOPES = ['Files.ReadWrite.All', 'Sites.Read.All'];
 const cloud = { ...(readJSON(LS_CLOUD) || {}) };   // {clientId, tenantId, account, connected, driveId, itemId, folderLabel, lastSync}
 const saveCloud = () => localStorage.setItem(LS_CLOUD, JSON.stringify(cloud));
-const cloudRueckName = () => `Rueckmeldung_${(me?.name || 'borist').replace(/[^\wäöüÄÖÜß-]+/g, '_')}.json`;
+const cloudRueckName = () => `Rueckmeldung_${(me?.name || 'bohrist').replace(/[^\wäöüÄÖÜß-]+/g, '_')}.json`;
 
 let msalApp = null, msalReady = null;
 function ensureMsal() {

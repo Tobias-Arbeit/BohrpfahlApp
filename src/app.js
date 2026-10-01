@@ -38,11 +38,11 @@ const ZEIT_GROUPS = [
   { k: 'betonieren', label: 'Betonieren' },
 ];
 
-/* Was der Borist bei importierten bzw. vom Administrator angelegten Pfählen ergänzen darf:
+/* Was der Bohrist bei importierten bzw. vom Administrator angelegten Pfählen ergänzen darf:
    Ist-Werte, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Bodenaufschluss, Zeiten,
    Bemerkungen (extern und intern) */
-const BORIST_NUM = ['arbeitsebene', 'oberkante', 'unterkante', 'bohrlaenge', 'pfahllaenge', 'leerbohrung', 'gwTiefe', 'grundwasser', 'abstich', 'verbrauchIst'];
-const BORIST_KEYS = [...BORIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'schichten', 'zeiten', 'geraet', 'geraetInfo', 'fotos'];
+const BOHRIST_NUM = ['arbeitsebene', 'oberkante', 'unterkante', 'bohrlaenge', 'pfahllaenge', 'leerbohrung', 'gwTiefe', 'grundwasser', 'abstich', 'verbrauchIst'];
+const BOHRIST_KEYS = [...BOHRIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'schichten', 'zeiten', 'geraet', 'geraetInfo', 'fotos'];
 
 /** Bohrgerät als Text („Typ · Inv.-Nr. …“); nutzt die Projektliste, sonst die gespeicherte Kopie am Pfahl */
 const geraetText = (g, fallback) => {
@@ -57,7 +57,7 @@ function pileTyp(p) {
   const d = (p.geraet && list.find(x => x.id === p.geraet)) || p.geraetInfo;
   return (d && d.verfahren) || '';
 }
-const pickAllowed = p => Object.fromEntries(BORIST_KEYS.filter(k => k in p).map(k => [k, structuredClone(p[k])]));
+const pickAllowed = p => Object.fromEntries(BOHRIST_KEYS.filter(k => k in p).map(k => [k, structuredClone(p[k])]));
 
 /* Berechtigungen je Pfahl. quelle: 'import' | 'admin' | 'borist' (fehlt bei älteren Pfählen = 'admin') */
 const canFullEdit = p => isAdmin() || p.quelle === 'borist';
@@ -113,7 +113,7 @@ const defaultProjekt = () => ({
   crs: 'EPSG:25832',   // Koordinatensystem der Pfahl-Koordinaten
   geraete: [{ id: uid(), typ: 'BG30', inv: '', kommentar: '', verfahren: '' }],   // Bohrgeräte: { id, typ, inv, kommentar, verfahren }
   ueberbetonSoll: null,    // notwendiger Überbeton [cm], Grundlage für das Abstichmaß SOLL
-  bodenartenAktiv: null,   // für den Borist freigegebene Standard-Bodenarten (Namen); null = alle
+  bodenartenAktiv: null,   // für den Bohrist freigegebene Standard-Bodenarten (Namen); null = alle
   bodenartenCustom: [],    // zusätzliche, selbst angelegte Bodenarten: { id, name, sym }
 });
 
@@ -311,11 +311,11 @@ const soll = p => {
   const len = isNum(p.sPfahllaenge) ? p.sPfahllaenge : p.pfahllaenge;
   return (isNum(len) && isNum(p.durchmesser)) ? rd(len * Math.PI * (p.durchmesser / 200) ** 2, 1) : null;
 };
-/** Abstichmaß Überbeton SOLL [cm] = (Arbeitsebene Soll − Pfahl-OK Soll) × 100 + notwendiger Überbeton
+/** Abstichmaß Überbeton SOLL [cm] = (Arbeitsebene Soll − Pfahl-OK Soll) × 100 − notwendiger Überbeton
     [cm] (Projektdaten). Rein informativer Wert (wie Verbrauch SOLL), nicht editierbar/gespeichert. */
 const abstichSoll = p => {
   if (!isNum(p.sArbeitsebene) || !isNum(p.sOberkante) || !isNum(state.projekt.ueberbetonSoll)) return null;
-  return rd((p.sArbeitsebene - p.sOberkante) * 100 + state.projekt.ueberbetonSoll, 1);
+  return rd((p.sArbeitsebene - p.sOberkante) * 100 - state.projekt.ueberbetonSoll, 1);
 };
 
 /* =====================================================================
@@ -367,9 +367,9 @@ const COLS = [
   { k: 'bemerkungIntern', label: 'Bemerkung (intern)',  unit: '',        kind: 'text' },
 ];
 const TCOLS = COLS.filter(c => c.t);
-/* Kompakte Tabelle für den Borist: weniger Spalten, dafür der Bewehrungstyp dabei (sonst nur im CSV). */
-const BORIST_TABLE_KEYS = ['nr', 'bewTyp', 'typ', 'durchmesser', 'pfahllaenge', 'wasserauflast', 'verbrauchIst', 'status'];
-const tableCols = () => isAdmin() ? TCOLS : COLS.filter(c => BORIST_TABLE_KEYS.includes(c.k));
+/* Kompakte Tabelle für den Bohrist: weniger Spalten, dafür der Bewehrungstyp dabei (sonst nur im CSV). */
+const BOHRIST_TABLE_KEYS = ['nr', 'bewTyp', 'typ', 'durchmesser', 'pfahllaenge', 'wasserauflast', 'verbrauchIst', 'status'];
+const tableCols = () => isAdmin() ? TCOLS : COLS.filter(c => BOHRIST_TABLE_KEYS.includes(c.k));
 const unitOf = c => c.unit === '@H' ? hoehenbezug() : c.unit === '@C' ? coordLabels().unit : c.unit;
 
 function getVal(p, k) {
@@ -478,7 +478,7 @@ function showLock() {
    Ältere Sicherungen/Daten (v1: ein Benutzer, Schlüssel direkt aus dem Passwort) werden beim
    ersten Login automatisch umgestellt; der bisherige Benutzer wird Administrator.
    --------------------------------------------------------------------- */
-const ROLES = { admin: 'Administrator', borist: 'Borist' };
+const ROLES = { admin: 'Administrator', borist: 'Bohrist' };
 let me = null;                                             // { id, name, role }
 const isAdmin = () => !!me && me.role === 'admin';
 const userList = () => (meta && Array.isArray(meta.users)) ? meta.users : [];
@@ -627,12 +627,12 @@ const ui = { q: '', typ: '', status: '', sort: { k: 'nr', dir: 1 }, view: 'dashb
 function setView(v) { ui.view = v; render(); }
 $$('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
-/** Bedienelemente je nach Rolle ein-/ausblenden (data-admin = nur Administrator, data-borist = nur Borist) */
+/** Bedienelemente je nach Rolle ein-/ausblenden (data-admin = nur Administrator, data-bohrist = nur Bohrist) */
 function applyRole() {
-  document.body.classList.toggle('is-borist', !isAdmin());
+  document.body.classList.toggle('is-bohrist', !isAdmin());
   if (!isAdmin() && ui.view === 'stats') ui.view = 'table';
   $$('[data-admin]').forEach(el => { el.hidden = !isAdmin(); });
-  $$('[data-borist]').forEach(el => { el.hidden = isAdmin(); });
+  $$('[data-bohrist]').forEach(el => { el.hidden = isAdmin(); });
   $('#whoami').textContent = me ? `${me.name} · ${ROLES[me.role]}` : '';
 }
 
@@ -1075,7 +1075,7 @@ function soilsIn(cur) {
   return allSoils().filter(s => parts.includes(normSoil(s.name)));
 }
 /** Checkboxen für mehrere Bodenbestandteile (siehe schichtRowHTML). Admin sieht alle Bodenarten,
-    der Borist nur die in den Projektdaten freigegebenen; bereits gesetzte, inzwischen nicht mehr
+    der Bohrist nur die in den Projektdaten freigegebenen; bereits gesetzte, inzwischen nicht mehr
     freigegebene Bodenarten bleiben zusätzlich sichtbar, damit keine Angaben stillschweigend
     verschwinden. Das erste angehakte gilt für Grafik/Protokoll als Hauptanteil (soilOf). */
 const soilChecksHtml = cur => {
@@ -1124,7 +1124,7 @@ function zeitRowsFor(g, entries) {
 
 function buildZeitRows(z) {
   $('#zeitRows').innerHTML = ZEIT_GROUPS.map(g =>
-    zeitRowsFor(g, z?.[g.k]).map((e, i) => zeitZeileBorist(g, i, e)).join('')
+    zeitRowsFor(g, z?.[g.k]).map((e, i) => zeitZeileBohrist(g, i, e)).join('')
   ).join('');
 }
 
@@ -1138,10 +1138,10 @@ function maybeGrowZeitGroup(row) {
   const e = readZeileZeit(row);
   if (!(e.von && e.bis)) return;
   const i = rows.length;
-  row.insertAdjacentHTML('afterend', zeitZeileBorist(g, i, {}));
+  row.insertAdjacentHTML('afterend', zeitZeileBohrist(g, i, {}));
 }
 
-/* Zeit-Zeile mit Start-/Stopp-Button (für Admin und Borist gleich). Datum/Uhrzeit erscheinen erst
+/* Zeit-Zeile mit Start-/Stopp-Button (für Admin und Bohrist gleich). Datum/Uhrzeit erscheinen erst
    nach dem Start, klein, mit einem Bearbeiten-Button für die manuelle Korrektur (z. B. wenn das
    Tippen vergessen wurde). */
 const zeitZustand = e => !e.von ? 'leer' : !e.bis ? 'laeuft' : 'fertig';
@@ -1153,8 +1153,8 @@ function setZeitZustand(row) {
   $('[data-anzeige]', row).textContent = zeitAnzeigeText(e);
 }
 
-function zeitZeileBorist(g, i, e) {
-  return `<div class="zeile zeile-borist" data-g="${g.k}" data-i="${i}" data-zstate="${zeitZustand(e)}">
+function zeitZeileBohrist(g, i, e) {
+  return `<div class="zeile zeile-bohrist" data-g="${g.k}" data-i="${i}" data-zstate="${zeitZustand(e)}">
     <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
     <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
     <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
@@ -1346,7 +1346,7 @@ let editingGeprueft = null;
 function applyPileLock(p, isNew) {
   const full = isNew || canFullEdit(p);
   const locked = !isNew && isLocked(p);
-  const open = new Set([...BORIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'geraet']);
+  const open = new Set([...BOHRIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'geraet']);
   for (const el of form.elements) if (el.name) el.disabled = locked || (!full && !open.has(el.name));
   $$('#schichtRows input, #schichtRows select, #schichtRows button, #zeitRows input, #zeitRows button, #btnAddSchicht, #btnCopySoll').forEach(el => { el.disabled = locked; });
   $('#btnSave').hidden = locked;
@@ -1355,8 +1355,8 @@ function applyPileLock(p, isNew) {
   note.textContent = locked
     ? 'Dieser Pfahl wurde vom Administrator geprüft und ist gesperrt.'
     : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos ergänzen (gelb markierte Pflichtfelder müssen ausgefüllt sein). Planwerte und Stammdaten sind gesperrt.';
-  // Kompaktes Formular für den Admin immer, für den Borist außer bei eigenen/neuen Pfählen
-  // (dort sieht auch der Borist weiterhin das vollständige, unkompaktierte Formular).
+  // Kompaktes Formular für den Admin immer, für den Bohrist außer bei eigenen/neuen Pfählen
+  // (dort sieht auch der Bohrist weiterhin das vollständige, unkompaktierte Formular).
   pileDlg.classList.toggle('kompakt', isAdmin() || !full);
   fillGrunddaten(p);
 }
@@ -1373,9 +1373,9 @@ function fillGrunddaten(p) {
   $('#gdSoll').textContent = s == null ? '–' : `${fmtFlex(s)} m³`;
 }
 
-/* --- Pflichtfelder des Borists ---
-   Ohne diese Angaben kann der Borist einen Pfahl nicht speichern; leere Pflichtfelder sind gelb markiert.
-   Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Borist bei fremden Pfählen
+/* --- Pflichtfelder des Bohrists ---
+   Ohne diese Angaben kann der Bohrist einen Pfahl nicht speichern; leere Pflichtfelder sind gelb markiert.
+   Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Bohrist bei fremden Pfählen
    nicht mehr zugänglich (siehe "i"-Panel-Entfernung in pile-dialog.html) und deshalb nicht mehr Pflicht.
    Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkungen, Fotos. */
 const REQ_NUM = ['verbrauchIst'];
@@ -1399,7 +1399,7 @@ function requiredEls() {
   return out;
 }
 
-/** Markiert leere Pflichtfelder (nur Borist) und schaltet „Speichern“ entsprechend; liefert die fehlenden Angaben */
+/** Markiert leere Pflichtfelder (nur Bohrist) und schaltet „Speichern“ entsprechend; liefert die fehlenden Angaben */
 function updateRequired() {
   $$('.need', form).forEach(el => el.classList.remove('need'));
   const note = $('#reqNote'), btn = $('#btnSave');
@@ -1488,7 +1488,7 @@ form.addEventListener('input', e => {
   if (e.target === $$('.schicht [data-s=bis]', form).at(-1)) autoEnd = e.target.value.trim() === '';
   recalc();
 });
-/* Borist-Checkboxen (mehrere Bodenarten je Schicht) im gemeinsamen Feld data-s=boden zusammenführen,
+/* Bohrist-Checkboxen (mehrere Bodenarten je Schicht) im gemeinsamen Feld data-s=boden zusammenführen,
    in SOILS-Reihenfolge (die erste zählt in Grafik/Protokoll als Hauptanteil, siehe soilOf). Läuft vor dem
    generischen recalc-Listener, damit der zusammengeführte Wert schon beim Neuzeichnen vorliegt. */
 form.addEventListener('change', e => {
@@ -1607,7 +1607,7 @@ form.addEventListener('submit', async e => {
     if (i >= 0) {
       const old = state.piles[i];
       if (isLocked(old)) return toast('Dieser Pfahl ist geprüft und gesperrt.');
-      // Rechte auch hier durchsetzen: der Borist übernimmt nur die ihm erlaubten Felder
+      // Rechte auch hier durchsetzen: der Bohrist übernimmt nur die ihm erlaubten Felder
       const upd = canFullEdit(old) ? p : pickAllowed(p);
       state.piles[i] = { ...old, ...upd, ...stamp, ...(isAdmin() ? { geprueft: editingGeprueft } : {}) };
     }
@@ -1649,7 +1649,7 @@ $('#btnAddGeraet').addEventListener('click', () => {
 });
 $('#gerRows').addEventListener('click', e => { const b = e.target.closest('[data-grm]'); if (b) b.closest('.ger-row').remove(); });
 
-/** Checkboxen der Standard-Bodenarten (Vorauswahl für den Borist) */
+/** Checkboxen der Standard-Bodenarten (Vorauswahl für den Bohrist) */
 function bodenartRowsHTML(aktiv) {
   const set = Array.isArray(aktiv) ? new Set(aktiv) : null;   // null = alle aktiv (noch nicht eingeschränkt)
   return SOILS.map(s => `<label>
@@ -2069,8 +2069,8 @@ async function togglePruefung(p) {
 }
 
 /* =====================================================================
-   Rückmeldung: Borist → Administrator (wenn beide auf verschiedenen Geräten arbeiten)
-   Enthält nur die vom Borist geänderten Pfähle und ist mit dem Datenschlüssel verschlüsselt.
+   Rückmeldung: Bohrist → Administrator (wenn beide auf verschiedenen Geräten arbeiten)
+   Enthält nur die vom Bohrist geänderten Pfähle und ist mit dem Datenschlüssel verschlüsselt.
    ===================================================================== */
 function rueckmeldungItems() {
   return state.piles.filter(p => p.updatedRole === 'borist').map(p => ({
@@ -2140,7 +2140,7 @@ rueckInput.addEventListener('change', () => { const f = rueckInput.files[0]; rue
    einen gemeinsamen Cloud-Ordner; die eigentliche Logik (Verschlüsselung,
    Gültigkeitsprüfung, feldweises Zusammenführen) ist dieselbe wie oben.
    Administrator: legt laufend die aktuelle Sicherung ab und liest
-   Rückmeldungen der Boristen automatisch ein. Borist: legt seine
+   Rückmeldungen der Bohristen automatisch ein. Bohrist: legt seine
    Rückmeldung automatisch ab und übernimmt automatisch die neueste
    Sicherung (eigene, noch nicht vom Admin übernommene Änderungen bleiben
    dabei erhalten, siehe mergeIncomingState). Die Einrichtung (Client-ID,
@@ -2151,7 +2151,7 @@ const CLOUD_SICHERUNG = 'Bohrpfahl-Sicherung.json';
 const GRAPH_SCOPES = ['Files.ReadWrite.All', 'Sites.Read.All'];
 const cloud = { ...(readJSON(LS_CLOUD) || {}) };   // {clientId, tenantId, account, connected, driveId, itemId, folderLabel, lastSync}
 const saveCloud = () => localStorage.setItem(LS_CLOUD, JSON.stringify(cloud));
-const cloudRueckName = () => `Rueckmeldung_${(me?.name || 'borist').replace(/[^\wäöüÄÖÜß-]+/g, '_')}.json`;
+const cloudRueckName = () => `Rueckmeldung_${(me?.name || 'bohrist').replace(/[^\wäöüÄÖÜß-]+/g, '_')}.json`;
 
 let msalApp = null, msalReady = null;
 function ensureMsal() {
