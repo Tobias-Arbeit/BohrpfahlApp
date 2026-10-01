@@ -593,6 +593,7 @@ function lock() {
   ui.q = ''; ui.typ = ''; ui.status = ''; ui.view = 'dashboard';
   $('#q').value = ''; $('#statusFilter').value = '';
   clearMap();
+  clearDashMap();
   clear3D();
   showLock();
 }
@@ -847,6 +848,21 @@ function renderDashboard() {
         <span class="dash-recent-when">${esc(p.updatedBy || '')} · ${fmtDT(toLocalInput(new Date(p.updatedAt)))}</span>
       </button>`).join('')
     : '<p class="sub">Noch keine Bearbeitungen.</p>';
+
+  renderDashMap(list);
+  renderDashProjekt();
+}
+
+/** Projektdaten-Kachel auf dem Dashboard (Kurzübersicht, Bearbeiten über „Projektdaten“). */
+function renderDashProjekt() {
+  const pr = state.projekt;
+  const rows = [
+    ['Projekt', pr.name], ['Baustelle Nr.', pr.nr], ['Ort', pr.ort], ['Titel', pr.titel], ['Norm', pr.norm],
+    ['Höhenbezug', pr.hoehenbezug], ['Koordinatensystem', crsInfo(pr.crs).label],
+    ['Bohrgeräte', (pr.geraete || []).map(g => g.typ).filter(Boolean).join(', ')],
+  ];
+  $('#dashProjekt').innerHTML = rows.map(([k, v]) =>
+    `<dt>${esc(k)}</dt><dd>${v ? esc(v) : '<span class="empty">–</span>'}</dd>`).join('');
 }
 $('#btnDashNew').addEventListener('click', () => openPile());
 $('#btnDashImport').addEventListener('click', () => { if (isAdmin()) openImport(); });

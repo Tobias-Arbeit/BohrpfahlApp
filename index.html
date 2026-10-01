@@ -305,6 +305,18 @@ input[type=date], input[type=time] {
 .dash-recent-row:hover { background: var(--surface-2); }
 .dash-recent-nr { font-weight: 700; min-width: 90px; }
 .dash-recent-when { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+.dash-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 22px; align-items: start; }
+@media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
+.dash-panel { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.dash-panel-head h3 { margin: 0; font-size: 14.5px; }
+.dash-map-wrap { position: relative; }
+.dash-map { height: 260px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--surface-2); z-index: 0; }
+.dash-map .leaflet-control-zoom { margin: 8px; }
+.dash-projekt { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13.5px; }
+.dash-projekt dt { color: var(--muted); }
+.dash-projekt dd { margin: 0; font-weight: 600; text-align: right; }
+.dash-projekt dd .empty { font-weight: 400; color: var(--muted); }
 
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .stat-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
@@ -778,6 +790,25 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <p id="dashEmptyText"></p>
       </div>
       <div class="dash-cards" id="dashCards"></div>
+      <div class="dash-grid">
+        <div class="dash-panel">
+          <div class="dash-panel-head">
+            <h3>Kartenausschnitt</h3>
+            <button type="button" class="btn small" data-view="map">Zur Karte</button>
+          </div>
+          <div class="dash-map-wrap">
+            <div id="dashMap" class="dash-map" role="application" aria-label="Kartenausschnitt mit Bohrpfählen"></div>
+            <div id="dashMapEmpty" class="map-empty" hidden></div>
+          </div>
+        </div>
+        <div class="dash-panel">
+          <div class="dash-panel-head">
+            <h3>Projektdaten</h3>
+            <button type="button" class="btn small" data-admin data-nav="projekt">Bearbeiten</button>
+          </div>
+          <dl id="dashProjekt" class="dash-projekt"></dl>
+        </div>
+      </div>
       <div class="dash-actions">
         <button type="button" class="btn primary" id="btnDashNew">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -4416,6 +4447,7 @@ function lock() {
   ui.q = ''; ui.typ = ''; ui.status = ''; ui.view = 'dashboard';
   $('#q').value = ''; $('#statusFilter').value = '';
   clearMap();
+  clearDashMap();
   clear3D();
   showLock();
 }
@@ -4670,6 +4702,21 @@ function renderDashboard() {
         <span class="dash-recent-when">${esc(p.updatedBy || '')} · ${fmtDT(toLocalInput(new Date(p.updatedAt)))}</span>
       </button>`).join('')
     : '<p class="sub">Noch keine Bearbeitungen.</p>';
+
+  renderDashMap(list);
+  renderDashProjekt();
+}
+
+/** Projektdaten-Kachel auf dem Dashboard (Kurzübersicht, Bearbeiten über „Projektdaten“). */
+function renderDashProjekt() {
+  const pr = state.projekt;
+  const rows = [
+    ['Projekt', pr.name], ['Baustelle Nr.', pr.nr], ['Ort', pr.ort], ['Titel', pr.titel], ['Norm', pr.norm],
+    ['Höhenbezug', pr.hoehenbezug], ['Koordinatensystem', crsInfo(pr.crs).label],
+    ['Bohrgeräte', (pr.geraete || []).map(g => g.typ).filter(Boolean).join(', ')],
+  ];
+  $('#dashProjekt').innerHTML = rows.map(([k, v]) =>
+    `<dt>${esc(k)}</dt><dd>${v ? esc(v) : '<span class="empty">–</span>'}</dd>`).join('');
 }
 $('#btnDashNew').addEventListener('click', () => openPile());
 $('#btnDashImport').addEventListener('click', () => { if (isAdmin()) openImport(); });
@@ -6532,6 +6579,61 @@ function clearMap() {
 
 $('#mapBase').addEventListener('change', e => setBase(e.target.value));
 $('#btnMapFit').addEventListener('click', () => fitMap());
+
+/* =====================================================================
+   Dashboard: kompakter, schreibgeschützter Kartenausschnitt
+   (eigene, kleinere Karteninstanz; Klick auf einen Pfahl wechselt zur vollen Karte)
+   ===================================================================== */
+const DMAP = { map: null, group: null, fitKey: '' };
+
+function initDashMap() {
+  if (DMAP.map) return;
+  DMAP.map = L.map('dashMap', {
+    preferCanvas: true, maxZoom: 21, minZoom: 2, worldCopyJump: false,
+    attributionControl: false, zoomControl: false,
+  }).setView([47.5, 11], 8);
+  L.control.zoom({ position: 'bottomright' }).addTo(DMAP.map);
+  DMAP.group = L.layerGroup().addTo(DMAP.map);
+  const name = mapPref();
+  if (BASES[name]) L.tileLayer(BASES[name].url, BASES[name].opt).addTo(DMAP.map);
+}
+
+function renderDashMap(list) {
+  initDashMap();
+  const withPos = [];
+  list.forEach(p => { const ll = toLatLon(p); if (ll) withPos.push({ p, ll }); });
+
+  DMAP.group.clearLayers();
+  for (const { p, ll } of withPos) {
+    const s = pileStatus(p);
+    const m = L.circleMarker(ll, { radius: 5, weight: 1.5, color: '#ffffff', fillColor: STATUS[s].color, fillOpacity: 0.95 });
+    m.bindTooltip(p.nr);
+    m.on('click', () => { setView('map'); focusPile(p.id); });
+    m.addTo(DMAP.group);
+  }
+
+  $('#dashMapEmpty').hidden = withPos.length > 0;
+  $('#dashMapEmpty').textContent = list.length
+    ? 'Keine Pfähle mit Koordinaten in diesem Projekt.'
+    : 'Noch keine Pfähle erfasst.';
+
+  const key = withPos.map(x => x.p.id).join(',');
+  setTimeout(() => {
+    DMAP.map.invalidateSize();
+    if (key === DMAP.fitKey) return;
+    DMAP.fitKey = key;
+    const lls = withPos.map(x => x.ll);
+    if (!lls.length) return;
+    if (lls.length === 1) DMAP.map.setView(lls[0], 16);
+    else DMAP.map.fitBounds(L.latLngBounds(lls), { padding: [20, 20], maxZoom: 17 });
+  }, 0);
+}
+
+function clearDashMap() {
+  if (!DMAP.map) return;
+  DMAP.group.clearLayers();
+  DMAP.fitKey = '';
+}
 </script>
 <script>'use strict';
 

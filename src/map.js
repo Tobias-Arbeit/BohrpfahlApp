@@ -261,3 +261,58 @@ function clearMap() {
 
 $('#mapBase').addEventListener('change', e => setBase(e.target.value));
 $('#btnMapFit').addEventListener('click', () => fitMap());
+
+/* =====================================================================
+   Dashboard: kompakter, schreibgeschützter Kartenausschnitt
+   (eigene, kleinere Karteninstanz; Klick auf einen Pfahl wechselt zur vollen Karte)
+   ===================================================================== */
+const DMAP = { map: null, group: null, fitKey: '' };
+
+function initDashMap() {
+  if (DMAP.map) return;
+  DMAP.map = L.map('dashMap', {
+    preferCanvas: true, maxZoom: 21, minZoom: 2, worldCopyJump: false,
+    attributionControl: false, zoomControl: false,
+  }).setView([47.5, 11], 8);
+  L.control.zoom({ position: 'bottomright' }).addTo(DMAP.map);
+  DMAP.group = L.layerGroup().addTo(DMAP.map);
+  const name = mapPref();
+  if (BASES[name]) L.tileLayer(BASES[name].url, BASES[name].opt).addTo(DMAP.map);
+}
+
+function renderDashMap(list) {
+  initDashMap();
+  const withPos = [];
+  list.forEach(p => { const ll = toLatLon(p); if (ll) withPos.push({ p, ll }); });
+
+  DMAP.group.clearLayers();
+  for (const { p, ll } of withPos) {
+    const s = pileStatus(p);
+    const m = L.circleMarker(ll, { radius: 5, weight: 1.5, color: '#ffffff', fillColor: STATUS[s].color, fillOpacity: 0.95 });
+    m.bindTooltip(p.nr);
+    m.on('click', () => { setView('map'); focusPile(p.id); });
+    m.addTo(DMAP.group);
+  }
+
+  $('#dashMapEmpty').hidden = withPos.length > 0;
+  $('#dashMapEmpty').textContent = list.length
+    ? 'Keine Pfähle mit Koordinaten in diesem Projekt.'
+    : 'Noch keine Pfähle erfasst.';
+
+  const key = withPos.map(x => x.p.id).join(',');
+  setTimeout(() => {
+    DMAP.map.invalidateSize();
+    if (key === DMAP.fitKey) return;
+    DMAP.fitKey = key;
+    const lls = withPos.map(x => x.ll);
+    if (!lls.length) return;
+    if (lls.length === 1) DMAP.map.setView(lls[0], 16);
+    else DMAP.map.fitBounds(L.latLngBounds(lls), { padding: [20, 20], maxZoom: 17 });
+  }, 0);
+}
+
+function clearDashMap() {
+  if (!DMAP.map) return;
+  DMAP.group.clearLayers();
+  DMAP.fitKey = '';
+}

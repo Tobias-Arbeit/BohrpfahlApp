@@ -305,6 +305,18 @@ input[type=date], input[type=time] {
 .dash-recent-row:hover { background: var(--surface-2); }
 .dash-recent-nr { font-weight: 700; min-width: 90px; }
 .dash-recent-when { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+.dash-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 22px; align-items: start; }
+@media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
+.dash-panel { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.dash-panel-head h3 { margin: 0; font-size: 14.5px; }
+.dash-map-wrap { position: relative; }
+.dash-map { height: 260px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--surface-2); z-index: 0; }
+.dash-map .leaflet-control-zoom { margin: 8px; }
+.dash-projekt { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13.5px; }
+.dash-projekt dt { color: var(--muted); }
+.dash-projekt dd { margin: 0; font-weight: 600; text-align: right; }
+.dash-projekt dd .empty { font-weight: 400; color: var(--muted); }
 
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .stat-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
@@ -778,6 +790,25 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <p id="dashEmptyText"></p>
       </div>
       <div class="dash-cards" id="dashCards"></div>
+      <div class="dash-grid">
+        <div class="dash-panel">
+          <div class="dash-panel-head">
+            <h3>Kartenausschnitt</h3>
+            <button type="button" class="btn small" data-view="map">Zur Karte</button>
+          </div>
+          <div class="dash-map-wrap">
+            <div id="dashMap" class="dash-map" role="application" aria-label="Kartenausschnitt mit Bohrpfählen"></div>
+            <div id="dashMapEmpty" class="map-empty" hidden></div>
+          </div>
+        </div>
+        <div class="dash-panel">
+          <div class="dash-panel-head">
+            <h3>Projektdaten</h3>
+            <button type="button" class="btn small" data-admin data-nav="projekt">Bearbeiten</button>
+          </div>
+          <dl id="dashProjekt" class="dash-projekt"></dl>
+        </div>
+      </div>
       <div class="dash-actions">
         <button type="button" class="btn primary" id="btnDashNew">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
