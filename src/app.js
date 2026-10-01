@@ -829,7 +829,7 @@ function renderDashboard() {
   const list = state.piles;
   $('#dashEmpty').hidden = list.length > 0;
   $('#dashEmptyText').textContent = isAdmin()
-    ? 'Legen Sie den ersten Pfahl über „Neuer Pfahl“ an oder importieren Sie eine Excel-Liste.'
+    ? 'Legen Sie unter „Pfähle“ den ersten Pfahl an oder importieren Sie eine Excel-Liste.'
     : 'Der Administrator muss zuerst die Pfähle importieren. Eine Rückmeldung oder Sicherung erhalten Sie von ihm.';
 
   const counts = { offen: 0, aktiv: 0, fertig: 0, geprueft: 0 };
@@ -851,6 +851,7 @@ function renderDashboard() {
 
   renderDashMap(list);
   renderDashProjekt();
+  renderDashWoche();
 }
 
 /** Projektdaten-Kachel auf dem Dashboard (Kurzübersicht, Bearbeiten über „Projektdaten“). */
@@ -864,8 +865,6 @@ function renderDashProjekt() {
   $('#dashProjekt').innerHTML = rows.map(([k, v]) =>
     `<dt>${esc(k)}</dt><dd>${v ? esc(v) : '<span class="empty">–</span>'}</dd>`).join('');
 }
-$('#btnDashNew').addEventListener('click', () => openPile());
-$('#btnDashImport').addEventListener('click', () => { if (isAdmin()) openImport(); });
 $('#dashRecent').addEventListener('click', e => {
   const row = e.target.closest('.dash-recent-row');
   if (row) openPile({ id: row.dataset.id });
@@ -1084,9 +1083,9 @@ const soilChecksHtml = cur => {
   const checked = new Set(gewaehlt.map(s => s.name));
   const verfuegbar = isAdmin() ? allSoils() : enabledSoils();
   const fehlend = gewaehlt.filter(s => !verfuegbar.some(v => v.name === s.name));
-  return [...verfuegbar, ...fehlend].map(s => `<label class="soil-chk" title="${esc(s.name)}">
+  return [...verfuegbar, ...fehlend].map(s => `<label class="soil-chk">
     <input type="checkbox" data-soil="${esc(s.name)}"${checked.has(s.name) ? ' checked' : ''}>
-    <span>${esc(s.sym)}</span></label>`).join('');
+    ${soilSwatch('boden', s.name)}<span>${esc(s.name)}</span></label>`).join('');
 };
 /** Kurztext im geschlossenen Dropdown: Kürzel der gewählten Bodenarten, sonst Platzhalter. */
 const soilSummary = cur => { const l = soilsIn(cur); return l.length ? esc(l.map(s => s.sym).join(', ')) : '– Bodenart wählen –'; };

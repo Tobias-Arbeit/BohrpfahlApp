@@ -296,7 +296,6 @@ input[type=date], input[type=time] {
 .dash-card.c-aktiv { border-left-color: #e08600; }
 .dash-card.c-fertig { border-left-color: #2e7d32; }
 .dash-card.c-geprueft { border-left-color: #2563eb; }
-.dash-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
 .dash-recent { display: flex; flex-direction: column; gap: 6px; }
 .dash-recent-row {
   display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid var(--line);
@@ -305,17 +304,22 @@ input[type=date], input[type=time] {
 .dash-recent-row:hover { background: var(--surface-2); }
 .dash-recent-nr { font-weight: 700; min-width: 90px; }
 .dash-recent-when { margin-left: auto; color: var(--muted); font-size: 12.5px; }
-.dash-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 22px; align-items: start; }
+.dash-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 16px; align-items: start; }
 @media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
 .dash-panel { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.dash-week { margin-bottom: 16px; }
+.dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 10px; }
 .dash-panel-head h3 { margin: 0; font-size: 14.5px; }
+.dash-panel-map .dash-panel-head { margin-bottom: 8px; }
+.dash-panel-map .map-legend { margin-bottom: 10px; font-size: 12.5px; }
 .dash-map-wrap { position: relative; }
-.dash-map { height: 260px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--surface-2); z-index: 0; }
+.dash-map { height: 420px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--surface-2); z-index: 0; }
 .dash-map .leaflet-control-zoom { margin: 8px; }
 .dash-projekt { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13.5px; }
 .dash-projekt dt { color: var(--muted); }
 .dash-projekt dd { margin: 0; font-weight: 600; text-align: right; }
+.dash-week-chart { overflow-x: auto; }
+.dash-week-chart .bar.cur { fill: var(--primary); }
 .dash-projekt dd .empty { font-weight: 400; color: var(--muted); }
 
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -357,17 +361,20 @@ svg.chart { display: block; }
 .soil-dropdown-toggle svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
 .soil-dropdown-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .soil-dropdown .soil-checks {
-  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 220px; max-width: min(360px, 80vw);
-  max-height: 200px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 4px 6px; padding: 8px;
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 240px; max-width: min(320px, 80vw);
+  max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 6px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.18);
 }
 .soil-chk {
-  display: inline-flex; align-items: center; gap: 4px;
-  height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px;
-  background: var(--surface); font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  height: 32px; padding: 0 8px; border: 1px solid transparent; border-radius: 6px;
+  background: var(--surface); font-size: 13px; font-weight: 500; cursor: pointer; user-select: none;
 }
-.soil-chk:has(input:checked) { background: var(--yes-bg); border-color: var(--yes-ink); color: var(--yes-ink); }
-.soil-chk input { width: 13px; height: 13px; margin: 0; flex: none; }
+.soil-chk:hover { background: var(--surface-2); }
+.soil-chk:has(input:checked) { background: var(--yes-bg); border-color: var(--yes-ink); color: var(--yes-ink); font-weight: 600; }
+.soil-chk input { width: 15px; height: 15px; margin: 0; flex: none; }
+.soil-chk svg { flex: none; }
+.soil-chk span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Pflichtfeld-Markierung (.need landet auf dem unsichtbaren data-s=boden-Feld) am Toggle-Button sichtbar machen */
 input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: var(--need-bg); box-shadow: inset 4px 0 0 var(--need-line); }
 /* Projektdaten: Vorauswahl der Bodenarten für den Borist */
@@ -791,11 +798,12 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
       </div>
       <div class="dash-cards" id="dashCards"></div>
       <div class="dash-grid">
-        <div class="dash-panel">
+        <div class="dash-panel dash-panel-map">
           <div class="dash-panel-head">
             <h3>Kartenausschnitt</h3>
             <button type="button" class="btn small" data-view="map">Zur Karte</button>
           </div>
+          <div id="dashMapLegend" class="map-legend"></div>
           <div class="dash-map-wrap">
             <div id="dashMap" class="dash-map" role="application" aria-label="Kartenausschnitt mit Bohrpfählen"></div>
             <div id="dashMapEmpty" class="map-empty" hidden></div>
@@ -809,15 +817,13 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
           <dl id="dashProjekt" class="dash-projekt"></dl>
         </div>
       </div>
-      <div class="dash-actions">
-        <button type="button" class="btn primary" id="btnDashNew">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          Neuer Pfahl
-        </button>
-        <button type="button" class="btn" id="btnDashImport" data-admin>Aus Excel importieren …</button>
-        <button type="button" class="btn" data-view="table">Zur Pfahlliste</button>
-        <button type="button" class="btn" data-view="map">Zur Karte</button>
-        <button type="button" class="btn" data-view="3d">Zur 3D-Ansicht</button>
+      <div class="dash-panel dash-week">
+        <div class="dash-panel-head">
+          <h3>Wochenleistung</h3>
+          <button type="button" class="btn small" data-admin data-view="stats">Zur Auswertung</button>
+        </div>
+        <p class="sub" id="dashWeekSub"></p>
+        <div id="dashWeekChart" class="dash-week-chart"></div>
       </div>
       <h3 class="imp-h">Zuletzt bearbeitet</h3>
       <div id="dashRecent" class="dash-recent"></div>
@@ -4683,7 +4689,7 @@ function renderDashboard() {
   const list = state.piles;
   $('#dashEmpty').hidden = list.length > 0;
   $('#dashEmptyText').textContent = isAdmin()
-    ? 'Legen Sie den ersten Pfahl über „Neuer Pfahl“ an oder importieren Sie eine Excel-Liste.'
+    ? 'Legen Sie unter „Pfähle“ den ersten Pfahl an oder importieren Sie eine Excel-Liste.'
     : 'Der Administrator muss zuerst die Pfähle importieren. Eine Rückmeldung oder Sicherung erhalten Sie von ihm.';
 
   const counts = { offen: 0, aktiv: 0, fertig: 0, geprueft: 0 };
@@ -4705,6 +4711,7 @@ function renderDashboard() {
 
   renderDashMap(list);
   renderDashProjekt();
+  renderDashWoche();
 }
 
 /** Projektdaten-Kachel auf dem Dashboard (Kurzübersicht, Bearbeiten über „Projektdaten“). */
@@ -4718,8 +4725,6 @@ function renderDashProjekt() {
   $('#dashProjekt').innerHTML = rows.map(([k, v]) =>
     `<dt>${esc(k)}</dt><dd>${v ? esc(v) : '<span class="empty">–</span>'}</dd>`).join('');
 }
-$('#btnDashNew').addEventListener('click', () => openPile());
-$('#btnDashImport').addEventListener('click', () => { if (isAdmin()) openImport(); });
 $('#dashRecent').addEventListener('click', e => {
   const row = e.target.closest('.dash-recent-row');
   if (row) openPile({ id: row.dataset.id });
@@ -4938,9 +4943,9 @@ const soilChecksHtml = cur => {
   const checked = new Set(gewaehlt.map(s => s.name));
   const verfuegbar = isAdmin() ? allSoils() : enabledSoils();
   const fehlend = gewaehlt.filter(s => !verfuegbar.some(v => v.name === s.name));
-  return [...verfuegbar, ...fehlend].map(s => `<label class="soil-chk" title="${esc(s.name)}">
+  return [...verfuegbar, ...fehlend].map(s => `<label class="soil-chk">
     <input type="checkbox" data-soil="${esc(s.name)}"${checked.has(s.name) ? ' checked' : ''}>
-    <span>${esc(s.sym)}</span></label>`).join('');
+    ${soilSwatch('boden', s.name)}<span>${esc(s.name)}</span></label>`).join('');
 };
 /** Kurztext im geschlossenen Dropdown: Kürzel der gewählten Bodenarten, sonst Platzhalter. */
 const soilSummary = cur => { const l = soilsIn(cur); return l.length ? esc(l.map(s => s.sym).join(', ')) : '– Bodenart wählen –'; };
@@ -6604,13 +6609,20 @@ function renderDashMap(list) {
   list.forEach(p => { const ll = toLatLon(p); if (ll) withPos.push({ p, ll }); });
 
   DMAP.group.clearLayers();
+  const counts = { offen: 0, aktiv: 0, fertig: 0, geprueft: 0 };
   for (const { p, ll } of withPos) {
     const s = pileStatus(p);
+    counts[s]++;
     const m = L.circleMarker(ll, { radius: 5, weight: 1.5, color: '#ffffff', fillColor: STATUS[s].color, fillOpacity: 0.95 });
     m.bindTooltip(p.nr);
     m.on('click', () => { setView('map'); focusPile(p.id); });
     m.addTo(DMAP.group);
   }
+  // „Ausgeführt“ enthält die geprüften Pfähle (gleiche Zählweise wie auf der Hauptkarte)
+  const shown = { ...counts, fertig: counts.fertig + counts.geprueft };
+  $('#dashMapLegend').innerHTML = withPos.length
+    ? Object.entries(STATUS).map(([k, s]) => `<span class="lg"><i style="background:${s.color}"></i>${esc(s.label)} <b>${shown[k]}</b></span>`).join('')
+    : '';
 
   $('#dashMapEmpty').hidden = withPos.length > 0;
   $('#dashMapEmpty').textContent = list.length
@@ -6633,6 +6645,7 @@ function clearDashMap() {
   if (!DMAP.map) return;
   DMAP.group.clearLayers();
   DMAP.fitKey = '';
+  $('#dashMapLegend').innerHTML = '';
 }
 </script>
 <script>'use strict';
@@ -6877,10 +6890,8 @@ function statDate(p) {
   return allEntries(p).map(e => e.d).filter(Boolean).sort()[0] || null; // sonst frühestes erfasstes Datum
 }
 
-/** Periode zu einem Datum: { key, label, sub } */
-function statPeriod(d) {
-  if (STAT.group === 'day') return { key: d, label: fmtDate(d), sub: '' };
-  if (STAT.group === 'month') return { key: d.slice(0, 7), label: `${MONTHS[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`, sub: '' };
+/** Montag–Sonntag-Kalenderwoche zu einem Datum (JJJJ-MM-TT); der Donnerstag bestimmt die ISO-Jahreswoche. */
+function isoWeekInfo(d) {
   const dt = new Date(d + 'T12:00:00'), day = (dt.getDay() + 6) % 7;     // Montag = 0
   const thu = new Date(dt); thu.setDate(dt.getDate() - day + 3);          // Donnerstag der Woche bestimmt die Kalenderwoche
   const jan4 = new Date(thu.getFullYear(), 0, 4);
@@ -6888,7 +6899,15 @@ function statPeriod(d) {
   const mon = new Date(dt); mon.setDate(dt.getDate() - day);
   const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
   const f = x => `${pad2(x.getDate())}.${pad2(x.getMonth() + 1)}.`;
-  return { key: `${thu.getFullYear()}-W${pad2(week)}`, label: `KW ${week}/${thu.getFullYear()}`, sub: `${f(mon)}–${f(sun)}` };
+  return { key: `${thu.getFullYear()}-W${pad2(week)}`, week, year: thu.getFullYear(), mon, range: `${f(mon)}–${f(sun)}` };
+}
+
+/** Periode zu einem Datum: { key, label, sub } */
+function statPeriod(d) {
+  if (STAT.group === 'day') return { key: d, label: fmtDate(d), sub: '' };
+  if (STAT.group === 'month') return { key: d.slice(0, 7), label: `${MONTHS[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`, sub: '' };
+  const w = isoWeekInfo(d);
+  return { key: w.key, label: `KW ${w.week}/${w.year}`, sub: w.range };
 }
 
 const emptyAgg = () => ({ stueck: 0, fertig: 0, bohr: 0, pfahl: 0, leer: 0, gw: 0, beton: 0, sollbeton: 0, zeit: 0 });
@@ -7023,6 +7042,67 @@ $('#btnStatsCsv').addEventListener('click', () => {
   download('﻿' + lines.join('\r\n') + '\r\n', fileBase('Auswertung') + '.csv', 'text/csv;charset=utf-8');
   toast('Auswertung als CSV exportiert.');
 });
+
+/* =====================================================================
+   Dashboard: Wochenleistung (gebohrte Pfähle je Kalenderwoche, letzte 8 Wochen)
+   Unabhängig von den Filtern der Auswertung: immer Bohrdatum, immer die letzten 8 Wochen.
+   ===================================================================== */
+function dashWeekData() {
+  const byWeek = new Map();
+  for (const p of state.piles) {
+    const d = ((p.zeiten && p.zeiten.bohren) || []).map(e => e.d).filter(Boolean).sort()[0];
+    if (!d) continue;
+    const w = isoWeekInfo(d);
+    const row = byWeek.get(w.key) || { ...w, stueck: 0, bohr: 0 };
+    row.stueck++;
+    row.bohr += isNum(p.bohrlaenge) ? p.bohrlaenge : (isNum(p.sBohrlaenge) ? p.sBohrlaenge : 0);
+    byWeek.set(w.key, row);
+  }
+  const now = isoWeekInfo(toLocalInput(new Date()).slice(0, 10));
+  const weeks = [];
+  for (let i = 7; i >= 0; i--) {
+    const dt = new Date(now.mon); dt.setDate(dt.getDate() - i * 7);
+    const w = isoWeekInfo(`${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`);
+    weeks.push(byWeek.get(w.key) || { ...w, stueck: 0, bohr: 0 });
+  }
+  return weeks;
+}
+
+function dashWeekChartSvg(weeks) {
+  const max = Math.max(...weeks.map(w => w.stueck), 0);
+  if (!max) return '<div class="pg-empty">Noch keine Bohrdaten für eine Wochenauswertung.</div>';
+  const step = Math.max(1, Math.ceil(max / 4));   // Stückzahlen sind ganzzahlig: Achse ohne Nachkomma-Schritte
+  const top = Math.ceil(max / step) * step;
+  const bw = 32, gap = 14, L = 30, T = 20, B = 32, H = 190;
+  const W = Math.max(400, L + weeks.length * (bw + gap) + 10);
+  const ph = H - T - B, Yv = v => T + ph - v / top * ph;
+  const curKey = weeks[weeks.length - 1].key;
+  const o = [`<svg class="chart" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Gebohrte Pfähle je Kalenderwoche">`];
+  for (let v = 0; v <= top + 1e-9; v += step) {
+    o.push(`<line x1="${L}" x2="${W - 8}" y1="${Yv(v)}" y2="${Yv(v)}" class="grid"/><text x="${L - 6}" y="${Yv(v) + 3.5}" text-anchor="end" class="ax">${esc(nf0.format(v))}</text>`);
+  }
+  weeks.forEach((w, i) => {
+    const x = L + gap / 2 + i * (bw + gap), y = Yv(w.stueck), h = T + ph - y;
+    o.push(`<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(h, 0)}" rx="3" class="bar${w.key === curKey ? ' cur' : ''}"><title>KW ${w.week}/${w.year} (${esc(w.range)}): ${w.stueck} Pfähle, ${nf1.format(w.bohr)} m Bohrlänge</title></rect>`);
+    if (w.stueck) o.push(`<text x="${x + bw / 2}" y="${y - 5}" text-anchor="middle" class="val">${w.stueck}</text>`);
+    o.push(`<text x="${x + bw / 2}" y="${H - B + 15}" text-anchor="middle" class="ax">KW ${w.week}</text>`);
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+
+/** Wochenleistung-Kachel: gebohrte Pfähle je Kalenderwoche, letzte 8 Wochen inkl. aktueller. */
+function renderDashWoche() {
+  const weeks = dashWeekData();
+  const cur = weeks[weeks.length - 1], prev = weeks[weeks.length - 2];
+  const avg = weeks.reduce((a, w) => a + w.stueck, 0) / weeks.length;
+  const diff = cur.stueck - prev.stueck;
+  const diffTxt = diff === 0 ? '± 0 zur Vorwoche' : `${diff > 0 ? '+' : ''}${diff} zur Vorwoche`;
+  $('#dashWeekSub').textContent = weeks.some(w => w.stueck)
+    ? `Aktuelle Woche (KW ${cur.week}, ${cur.range}): ${plural(cur.stueck)} gebohrt (${diffTxt}) · Ø letzte 8 Wochen: ${nf1.format(avg)}`
+    : 'Noch keine Bohrdaten für eine Wochenauswertung.';
+  $('#dashWeekChart').innerHTML = dashWeekChartSvg(weeks);
+}
 </script>
 <script>'use strict';
 

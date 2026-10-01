@@ -286,13 +286,20 @@ function renderDashMap(list) {
   list.forEach(p => { const ll = toLatLon(p); if (ll) withPos.push({ p, ll }); });
 
   DMAP.group.clearLayers();
+  const counts = { offen: 0, aktiv: 0, fertig: 0, geprueft: 0 };
   for (const { p, ll } of withPos) {
     const s = pileStatus(p);
+    counts[s]++;
     const m = L.circleMarker(ll, { radius: 5, weight: 1.5, color: '#ffffff', fillColor: STATUS[s].color, fillOpacity: 0.95 });
     m.bindTooltip(p.nr);
     m.on('click', () => { setView('map'); focusPile(p.id); });
     m.addTo(DMAP.group);
   }
+  // „Ausgeführt“ enthält die geprüften Pfähle (gleiche Zählweise wie auf der Hauptkarte)
+  const shown = { ...counts, fertig: counts.fertig + counts.geprueft };
+  $('#dashMapLegend').innerHTML = withPos.length
+    ? Object.entries(STATUS).map(([k, s]) => `<span class="lg"><i style="background:${s.color}"></i>${esc(s.label)} <b>${shown[k]}</b></span>`).join('')
+    : '';
 
   $('#dashMapEmpty').hidden = withPos.length > 0;
   $('#dashMapEmpty').textContent = list.length
@@ -315,4 +322,5 @@ function clearDashMap() {
   if (!DMAP.map) return;
   DMAP.group.clearLayers();
   DMAP.fitKey = '';
+  $('#dashMapLegend').innerHTML = '';
 }

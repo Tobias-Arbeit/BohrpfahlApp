@@ -32,10 +32,8 @@ function statDate(p) {
   return allEntries(p).map(e => e.d).filter(Boolean).sort()[0] || null; // sonst frühestes erfasstes Datum
 }
 
-/** Periode zu einem Datum: { key, label, sub } */
-function statPeriod(d) {
-  if (STAT.group === 'day') return { key: d, label: fmtDate(d), sub: '' };
-  if (STAT.group === 'month') return { key: d.slice(0, 7), label: `${MONTHS[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`, sub: '' };
+/** Montag–Sonntag-Kalenderwoche zu einem Datum (JJJJ-MM-TT); der Donnerstag bestimmt die ISO-Jahreswoche. */
+function isoWeekInfo(d) {
   const dt = new Date(d + 'T12:00:00'), day = (dt.getDay() + 6) % 7;     // Montag = 0
   const thu = new Date(dt); thu.setDate(dt.getDate() - day + 3);          // Donnerstag der Woche bestimmt die Kalenderwoche
   const jan4 = new Date(thu.getFullYear(), 0, 4);
@@ -43,7 +41,15 @@ function statPeriod(d) {
   const mon = new Date(dt); mon.setDate(dt.getDate() - day);
   const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
   const f = x => `${pad2(x.getDate())}.${pad2(x.getMonth() + 1)}.`;
-  return { key: `${thu.getFullYear()}-W${pad2(week)}`, label: `KW ${week}/${thu.getFullYear()}`, sub: `${f(mon)}–${f(sun)}` };
+  return { key: `${thu.getFullYear()}-W${pad2(week)}`, week, year: thu.getFullYear(), mon, range: `${f(mon)}–${f(sun)}` };
+}
+
+/** Periode zu einem Datum: { key, label, sub } */
+function statPeriod(d) {
+  if (STAT.group === 'day') return { key: d, label: fmtDate(d), sub: '' };
+  if (STAT.group === 'month') return { key: d.slice(0, 7), label: `${MONTHS[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`, sub: '' };
+  const w = isoWeekInfo(d);
+  return { key: w.key, label: `KW ${w.week}/${w.year}`, sub: w.range };
 }
 
 const emptyAgg = () => ({ stueck: 0, fertig: 0, bohr: 0, pfahl: 0, leer: 0, gw: 0, beton: 0, sollbeton: 0, zeit: 0 });
@@ -178,3 +184,64 @@ $('#btnStatsCsv').addEventListener('click', () => {
   download('﻿' + lines.join('\r\n') + '\r\n', fileBase('Auswertung') + '.csv', 'text/csv;charset=utf-8');
   toast('Auswertung als CSV exportiert.');
 });
+
+/* =====================================================================
+   Dashboard: Wochenleistung (gebohrte Pfähle je Kalenderwoche, letzte 8 Wochen)
+   Unabhängig von den Filtern der Auswertung: immer Bohrdatum, immer die letzten 8 Wochen.
+   ===================================================================== */
+function dashWeekData() {
+  const byWeek = new Map();
+  for (const p of state.piles) {
+    const d = ((p.zeiten && p.zeiten.bohren) || []).map(e => e.d).filter(Boolean).sort()[0];
+    if (!d) continue;
+    const w = isoWeekInfo(d);
+    const row = byWeek.get(w.key) || { ...w, stueck: 0, bohr: 0 };
+    row.stueck++;
+    row.bohr += isNum(p.bohrlaenge) ? p.bohrlaenge : (isNum(p.sBohrlaenge) ? p.sBohrlaenge : 0);
+    byWeek.set(w.key, row);
+  }
+  const now = isoWeekInfo(toLocalInput(new Date()).slice(0, 10));
+  const weeks = [];
+  for (let i = 7; i >= 0; i--) {
+    const dt = new Date(now.mon); dt.setDate(dt.getDate() - i * 7);
+    const w = isoWeekInfo(`${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`);
+    weeks.push(byWeek.get(w.key) || { ...w, stueck: 0, bohr: 0 });
+  }
+  return weeks;
+}
+
+function dashWeekChartSvg(weeks) {
+  const max = Math.max(...weeks.map(w => w.stueck), 0);
+  if (!max) return '<div class="pg-empty">Noch keine Bohrdaten für eine Wochenauswertung.</div>';
+  const step = Math.max(1, Math.ceil(max / 4));   // Stückzahlen sind ganzzahlig: Achse ohne Nachkomma-Schritte
+  const top = Math.ceil(max / step) * step;
+  const bw = 32, gap = 14, L = 30, T = 20, B = 32, H = 190;
+  const W = Math.max(400, L + weeks.length * (bw + gap) + 10);
+  const ph = H - T - B, Yv = v => T + ph - v / top * ph;
+  const curKey = weeks[weeks.length - 1].key;
+  const o = [`<svg class="chart" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Gebohrte Pfähle je Kalenderwoche">`];
+  for (let v = 0; v <= top + 1e-9; v += step) {
+    o.push(`<line x1="${L}" x2="${W - 8}" y1="${Yv(v)}" y2="${Yv(v)}" class="grid"/><text x="${L - 6}" y="${Yv(v) + 3.5}" text-anchor="end" class="ax">${esc(nf0.format(v))}</text>`);
+  }
+  weeks.forEach((w, i) => {
+    const x = L + gap / 2 + i * (bw + gap), y = Yv(w.stueck), h = T + ph - y;
+    o.push(`<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(h, 0)}" rx="3" class="bar${w.key === curKey ? ' cur' : ''}"><title>KW ${w.week}/${w.year} (${esc(w.range)}): ${w.stueck} Pfähle, ${nf1.format(w.bohr)} m Bohrlänge</title></rect>`);
+    if (w.stueck) o.push(`<text x="${x + bw / 2}" y="${y - 5}" text-anchor="middle" class="val">${w.stueck}</text>`);
+    o.push(`<text x="${x + bw / 2}" y="${H - B + 15}" text-anchor="middle" class="ax">KW ${w.week}</text>`);
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+
+/** Wochenleistung-Kachel: gebohrte Pfähle je Kalenderwoche, letzte 8 Wochen inkl. aktueller. */
+function renderDashWoche() {
+  const weeks = dashWeekData();
+  const cur = weeks[weeks.length - 1], prev = weeks[weeks.length - 2];
+  const avg = weeks.reduce((a, w) => a + w.stueck, 0) / weeks.length;
+  const diff = cur.stueck - prev.stueck;
+  const diffTxt = diff === 0 ? '± 0 zur Vorwoche' : `${diff > 0 ? '+' : ''}${diff} zur Vorwoche`;
+  $('#dashWeekSub').textContent = weeks.some(w => w.stueck)
+    ? `Aktuelle Woche (KW ${cur.week}, ${cur.range}): ${plural(cur.stueck)} gebohrt (${diffTxt}) · Ø letzte 8 Wochen: ${nf1.format(avg)}`
+    : 'Noch keine Bohrdaten für eine Wochenauswertung.';
+  $('#dashWeekChart').innerHTML = dashWeekChartSvg(weeks);
+}

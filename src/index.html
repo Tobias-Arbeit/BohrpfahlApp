@@ -296,7 +296,6 @@ input[type=date], input[type=time] {
 .dash-card.c-aktiv { border-left-color: #e08600; }
 .dash-card.c-fertig { border-left-color: #2e7d32; }
 .dash-card.c-geprueft { border-left-color: #2563eb; }
-.dash-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
 .dash-recent { display: flex; flex-direction: column; gap: 6px; }
 .dash-recent-row {
   display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid var(--line);
@@ -305,17 +304,22 @@ input[type=date], input[type=time] {
 .dash-recent-row:hover { background: var(--surface-2); }
 .dash-recent-nr { font-weight: 700; min-width: 90px; }
 .dash-recent-when { margin-left: auto; color: var(--muted); font-size: 12.5px; }
-.dash-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 22px; align-items: start; }
+.dash-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 16px; align-items: start; }
 @media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
 .dash-panel { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.dash-week { margin-bottom: 16px; }
+.dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 10px; }
 .dash-panel-head h3 { margin: 0; font-size: 14.5px; }
+.dash-panel-map .dash-panel-head { margin-bottom: 8px; }
+.dash-panel-map .map-legend { margin-bottom: 10px; font-size: 12.5px; }
 .dash-map-wrap { position: relative; }
-.dash-map { height: 260px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--surface-2); z-index: 0; }
+.dash-map { height: 420px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--surface-2); z-index: 0; }
 .dash-map .leaflet-control-zoom { margin: 8px; }
 .dash-projekt { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13.5px; }
 .dash-projekt dt { color: var(--muted); }
 .dash-projekt dd { margin: 0; font-weight: 600; text-align: right; }
+.dash-week-chart { overflow-x: auto; }
+.dash-week-chart .bar.cur { fill: var(--primary); }
 .dash-projekt dd .empty { font-weight: 400; color: var(--muted); }
 
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -357,17 +361,20 @@ svg.chart { display: block; }
 .soil-dropdown-toggle svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
 .soil-dropdown-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .soil-dropdown .soil-checks {
-  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 220px; max-width: min(360px, 80vw);
-  max-height: 200px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 4px 6px; padding: 8px;
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 240px; max-width: min(320px, 80vw);
+  max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 6px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.18);
 }
 .soil-chk {
-  display: inline-flex; align-items: center; gap: 4px;
-  height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px;
-  background: var(--surface); font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  height: 32px; padding: 0 8px; border: 1px solid transparent; border-radius: 6px;
+  background: var(--surface); font-size: 13px; font-weight: 500; cursor: pointer; user-select: none;
 }
-.soil-chk:has(input:checked) { background: var(--yes-bg); border-color: var(--yes-ink); color: var(--yes-ink); }
-.soil-chk input { width: 13px; height: 13px; margin: 0; flex: none; }
+.soil-chk:hover { background: var(--surface-2); }
+.soil-chk:has(input:checked) { background: var(--yes-bg); border-color: var(--yes-ink); color: var(--yes-ink); font-weight: 600; }
+.soil-chk input { width: 15px; height: 15px; margin: 0; flex: none; }
+.soil-chk svg { flex: none; }
+.soil-chk span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Pflichtfeld-Markierung (.need landet auf dem unsichtbaren data-s=boden-Feld) am Toggle-Button sichtbar machen */
 input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: var(--need-bg); box-shadow: inset 4px 0 0 var(--need-line); }
 /* Projektdaten: Vorauswahl der Bodenarten für den Borist */
@@ -791,11 +798,12 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
       </div>
       <div class="dash-cards" id="dashCards"></div>
       <div class="dash-grid">
-        <div class="dash-panel">
+        <div class="dash-panel dash-panel-map">
           <div class="dash-panel-head">
             <h3>Kartenausschnitt</h3>
             <button type="button" class="btn small" data-view="map">Zur Karte</button>
           </div>
+          <div id="dashMapLegend" class="map-legend"></div>
           <div class="dash-map-wrap">
             <div id="dashMap" class="dash-map" role="application" aria-label="Kartenausschnitt mit Bohrpfählen"></div>
             <div id="dashMapEmpty" class="map-empty" hidden></div>
@@ -809,15 +817,13 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
           <dl id="dashProjekt" class="dash-projekt"></dl>
         </div>
       </div>
-      <div class="dash-actions">
-        <button type="button" class="btn primary" id="btnDashNew">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          Neuer Pfahl
-        </button>
-        <button type="button" class="btn" id="btnDashImport" data-admin>Aus Excel importieren …</button>
-        <button type="button" class="btn" data-view="table">Zur Pfahlliste</button>
-        <button type="button" class="btn" data-view="map">Zur Karte</button>
-        <button type="button" class="btn" data-view="3d">Zur 3D-Ansicht</button>
+      <div class="dash-panel dash-week">
+        <div class="dash-panel-head">
+          <h3>Wochenleistung</h3>
+          <button type="button" class="btn small" data-admin data-view="stats">Zur Auswertung</button>
+        </div>
+        <p class="sub" id="dashWeekSub"></p>
+        <div id="dashWeekChart" class="dash-week-chart"></div>
       </div>
       <h3 class="imp-h">Zuletzt bearbeitet</h3>
       <div id="dashRecent" class="dash-recent"></div>
