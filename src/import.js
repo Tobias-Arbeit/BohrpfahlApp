@@ -14,7 +14,7 @@ const IMP_MAX_COLS = 100;
 const IMP_GROUPS = [
   { label: 'Pfahl', fields: [
     ['nr', 'Pfahl-Nr.', 'text'], ['pfahlart', 'Pfahlart', 'pfahlart'],
-    ['bewTyp', 'Bew. Typ', 'text'], ['typ', 'Typ / Verfahren', 'text'], ['durchmesser', 'Pfahl-Ø', 'num', 1],
+    ['bewTyp', 'Bew. Typ', 'text'], ['durchmesser', 'Pfahl-Ø', 'num', 1],
     ['neigung', 'Neigung', 'num', 1], ['wasserauflast', 'Wasserauflast', 'bool'],
   ] },
   { label: 'Lage (Koordinaten)', fields: [
@@ -57,7 +57,6 @@ const IMP_ALIASES = (() => {
     abstich: ['abstichmassueberbeton', 'abstichmass', 'abstich', 'ueberbeton'],
     pfahlart: ['pfahlart'],
     bewTyp: ['bewtyp', 'bewehrungstyp', 'bewehrungtyp'],
-    typ: ['typ', 'verfahren', 'typverfahren', 'pfahltyp', 'bohrverfahren'],
     durchmesser: ['pfahlo', 'pfahldurchmesser', 'durchmesser', 'o', 'pfahld', 'd', 'pfahlod'],
     wasserauflast: ['wasserauflast'],
     arbeitsebene: ['arbeitsebene', 'hoehearbeitsebene', 'hoehederarbeitsebene', 'ae', 'arbeitsplanum'],

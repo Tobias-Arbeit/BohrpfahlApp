@@ -287,6 +287,25 @@ input[type=date], input[type=time] {
 .stats-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; margin-bottom: 14px; }
 .stats-bar label { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
 .stats-bar select, .stats-bar input[type=date] { display: block; width: auto; height: 36px; margin-top: 3px; font-size: 14px; color: var(--ink); }
+/* Dashboard (Startseite) */
+.dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 4px 0 18px; }
+.dash-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.dash-val { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dash-lbl { margin-top: 2px; font-size: 13px; color: var(--muted); }
+.dash-card.c-offen { border-left-color: #dc2626; }
+.dash-card.c-aktiv { border-left-color: #e08600; }
+.dash-card.c-fertig { border-left-color: #2e7d32; }
+.dash-card.c-geprueft { border-left-color: #2563eb; }
+.dash-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.dash-recent { display: flex; flex-direction: column; gap: 6px; }
+.dash-recent-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--surface); cursor: pointer; text-align: left; font: inherit;
+}
+.dash-recent-row:hover { background: var(--surface-2); }
+.dash-recent-nr { font-weight: 700; min-width: 90px; }
+.dash-recent-when { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .stat-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .stat-l { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
@@ -308,15 +327,28 @@ svg.chart { display: block; }
 .stat-table thead th, .stat-table thead th:first-child { position: static; padding: 9px 12px; background: var(--surface-2); }
 .stat-table tbody tr { cursor: default; }
 .stat-table .u { display: block; font-weight: 400; color: var(--muted); }
-.ger-row { display: grid; grid-template-columns: 1.5fr 1fr 1.6fr auto; gap: 8px; align-items: center; }
-@media (max-width: 640px) { .ger-row { grid-template-columns: 1fr auto; } .ger-row input { grid-column: 1; } .ger-row [data-grm] { grid-column: 2; grid-row: 1; } }
+.ger-row { display: grid; grid-template-columns: 1.3fr 1.2fr 1fr 1.4fr auto; gap: 8px; align-items: center; }
+@media (max-width: 640px) { .ger-row { grid-template-columns: 1fr auto; } .ger-row input, .ger-row select { grid-column: 1; } .ger-row [data-grm] { grid-column: 2; grid-row: 1; } }
 .schicht input.auto { background: var(--surface-2); font-weight: 600; }
 .soil-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .soil-cell select, .soil-cell input { flex: 1; min-width: 0; }
 .soil-cell .sw { flex: none; display: block; width: 26px; height: 18px; }
 
-/* Bodenart-Checkboxen (Borist): mehrere Bodenbestandteile je Schicht, kompakt als Chips */
-.soil-checks { display: flex; flex-wrap: wrap; gap: 4px 6px; flex: 1; min-width: 0; }
+/* Bodenart-Dropdown: ein Toggle-Button zeigt die Kürzel der gewählten Bodenarten (oder einen
+   Platzhalter), ein Klick darauf öffnet das Auswahl-Panel mit den Mehrfachauswahl-Checkboxen. */
+.soil-dropdown { position: relative; flex: 1; min-width: 0; }
+.soil-dropdown-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%;
+  height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.soil-dropdown-toggle svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
+.soil-dropdown-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.soil-dropdown .soil-checks {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 220px; max-width: min(360px, 80vw);
+  max-height: 200px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 4px 6px; padding: 8px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
 .soil-chk {
   display: inline-flex; align-items: center; gap: 4px;
   height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px;
@@ -324,8 +356,8 @@ svg.chart { display: block; }
 }
 .soil-chk:has(input:checked) { background: var(--yes-bg); border-color: var(--yes-ink); color: var(--yes-ink); }
 .soil-chk input { width: 13px; height: 13px; margin: 0; flex: none; }
-/* Pflichtfeld-Markierung (.need landet auf dem unsichtbaren data-s=boden-Feld) für die Checkboxen sichtbar machen */
-input[data-s=boden].need ~ .soil-checks { background: var(--need-bg); box-shadow: inset 4px 0 0 var(--need-line); border-radius: 8px; padding: 4px 6px; margin: -4px -6px; }
+/* Pflichtfeld-Markierung (.need landet auf dem unsichtbaren data-s=boden-Feld) am Toggle-Button sichtbar machen */
+input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: var(--need-bg); box-shadow: inset 4px 0 0 var(--need-line); }
 /* Projektdaten: Vorauswahl der Bodenarten für den Borist */
 .boden-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 10px; }
 .boden-check-grid label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 400; margin: 0; }
@@ -541,6 +573,14 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 .page-title { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .brand-logo { display: inline-flex; flex: none; }
 .brand-logo svg { display: block; height: 34px; width: auto; }
+.project-switch {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; max-width: 180px;
+}
+.project-switch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-switch svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
+.menu button.sel { background: var(--yes-bg); color: var(--yes-ink); font-weight: 700; }
+.menu-sep { border: 0; border-top: 1px solid var(--line); margin: 6px 2px; }
 .title-sep { width: 1px; align-self: stretch; margin: 2px 0; background: var(--line); }
 .page-title h1 { margin: 0; font-size: 21px; line-height: 1.2; display: flex; align-items: center; gap: 9px; }
 .page-title h1 svg { width: 22px; height: 22px; flex: none; color: var(--ink); }
@@ -645,6 +685,13 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
   <header class="page-head">
     <div class="page-title">
       <span class="brand-logo" data-brand="34"></span>
+      <div class="menu-wrap" id="projectSwitchWrap">
+        <button type="button" class="project-switch" aria-haspopup="true" aria-expanded="false" data-menu="menuProjects" title="Projekt wechseln oder anlegen">
+          <span id="projectSwitchLabel">Projekt</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="menuProjects" class="menu" hidden></div>
+      </div>
       <span class="title-sep" aria-hidden="true"></span>
       <div>
         <h1 id="pageTitle">
@@ -687,7 +734,11 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
   </header>
 
   <nav class="navtabs" aria-label="Hauptmenü">
-    <button type="button" class="navtab" data-view="table" aria-selected="true">
+    <button type="button" class="navtab" data-view="dashboard" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h8V3H3z"/><path d="M13 21h8v-7h-8z"/><path d="M13 3v7h8V3z"/><path d="M3 21h8v-5H3z"/></svg>
+      <span>Dashboard</span>
+    </button>
+    <button type="button" class="navtab" data-view="table" aria-selected="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
       <span>Pfähle</span>
     </button>
@@ -721,6 +772,26 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
   </nav>
 
   <main>
+    <div id="dashboardView" hidden>
+      <div id="dashEmpty" class="placeholder" hidden>
+        <h2>Noch keine Bohrpfähle erfasst</h2>
+        <p id="dashEmptyText"></p>
+      </div>
+      <div class="dash-cards" id="dashCards"></div>
+      <div class="dash-actions">
+        <button type="button" class="btn primary" id="btnDashNew">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Neuer Pfahl
+        </button>
+        <button type="button" class="btn" id="btnDashImport" data-admin>Aus Excel importieren …</button>
+        <button type="button" class="btn" data-view="table">Zur Pfahlliste</button>
+        <button type="button" class="btn" data-view="map">Zur Karte</button>
+        <button type="button" class="btn" data-view="3d">Zur 3D-Ansicht</button>
+      </div>
+      <h3 class="imp-h">Zuletzt bearbeitet</h3>
+      <div id="dashRecent" class="dash-recent"></div>
+    </div>
+
     <div class="toolbar">
       <button id="btnNew" class="btn primary" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>

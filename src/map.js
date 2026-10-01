@@ -185,7 +185,7 @@ function popupHtml(p) {
   const len = isNum(lenV) ? `${nf3.format(lenV)} m${isNum(p.pfahllaenge) ? '' : ' (Soll)'}` : '';
   const dia = isNum(p.durchmesser) ? `${nf1.format(p.durchmesser)} cm` : '';
   return `<div class="pop"><strong>${esc(p.nr)}</strong> <span class="pop-st" style="--c:${st.color};--ink:${st.ink}">${esc(st.label)}</span>
-    ${row('Typ', p.typ)}${row('Fotos', (p.fotos || []).length ? `${p.fotos.length} angehängt` : '')}${row('Ø / Länge', [dia, len].filter(Boolean).join(' · '))}
+    ${row('Typ', pileTyp(p))}${row('Fotos', (p.fotos || []).length ? `${p.fotos.length} angehängt` : '')}${row('Ø / Länge', [dia, len].filter(Boolean).join(' · '))}
     ${row(cl.ost.split(' ')[0], nfCoord(p.ost))}${row(cl.nord.split(' ')[0], nfCoord(p.nord))}
     <div class="pop-act"><button type="button" class="btn small" data-pop="edit" data-id="${esc(p.id)}">Bearbeiten</button>
     <button type="button" class="btn small" data-pop="pdf" data-id="${esc(p.id)}">Protokoll</button>

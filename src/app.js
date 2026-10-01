@@ -15,10 +15,6 @@ const IDLE_MS = 30 * 60 * 1000;     // automatische Sperre nach 30 Minuten Inakt
 const APP_ID = 'bohrpfahl-verwaltung';
 const DATA_VERSION = 3;
 
-const TYPE_SUGGESTIONS = [
-  'Bohrpfahl verrohrt', 'Bohrpfahl unverrohrt', 'Bohrpfahl suspensionsgestützt',
-  'Schneckenbohrpfahl (CFA)', 'Verdrängungsbohrpfahl (FDP)', 'Großbohrpfahl', 'Probepfahl',
-];
 const SOIL_SUGGESTIONS = [
   'Sauberkeitsschicht', 'Kies / Schluff', 'Kies / Sand', 'Sand', 'Schluff', 'Ton', 'Auffüllung',
   'Holz', 'Fels / Findling, Blöcke', 'Beton',
@@ -54,6 +50,13 @@ const geraetText = (g, fallback) => {
   const o = d || fallback;
   return o ? [o.typ, o.inv && `Inv.-Nr. ${o.inv}`].filter(Boolean).join(' · ') : '';
 };
+/** Typ/Verfahren eines Pfahls: ergibt sich aus dem Verfahren des zugewiesenen Bohrgeräts (siehe
+    VERFAHREN_OPTIONS) statt wie bisher frei je Pfahl eingegeben zu werden. */
+function pileTyp(p) {
+  const list = state.projekt.geraete || [];
+  const d = (p.geraet && list.find(x => x.id === p.geraet)) || p.geraetInfo;
+  return (d && d.verfahren) || '';
+}
 const pickAllowed = p => Object.fromEntries(BORIST_KEYS.filter(k => k in p).map(k => [k, structuredClone(p[k])]));
 
 /* Berechtigungen je Pfahl. quelle: 'import' | 'admin' | 'borist' (fehlt bei älteren Pfählen = 'admin') */
@@ -101,18 +104,22 @@ async function unseal(k, blob) {
    ===================================================================== */
 const emptyZeiten = () => Object.fromEntries(ZEIT_GROUPS.map(g => [g.k, [{}]]));
 
+/** Bohrverfahren: fest vorgegebene Liste, wird je Bohrgerät gewählt (nicht mehr frei je Pfahl). */
+const VERFAHREN_OPTIONS = ['Kellybohrung', 'SOB', 'VdW', 'Greiferbohrung'];
+
 const defaultProjekt = () => ({
   nr: '', name: '', ort: '', titel: 'Ortbetonbohrpfähle', norm: 'nach EN 1536',
   hoehenbezug: 'm ü. A', logo: null, logoW: 0, logoH: 0,
   crs: 'EPSG:25832',   // Koordinatensystem der Pfahl-Koordinaten
-  geraete: [],         // Bohrgeräte: { id, typ, inv, kommentar }
+  geraete: [{ id: uid(), typ: 'BG30', inv: '', kommentar: '', verfahren: '' }],   // Bohrgeräte: { id, typ, inv, kommentar, verfahren }
+  ueberbetonSoll: null,    // notwendiger Überbeton [cm], Grundlage für das Abstichmaß SOLL
   bodenartenAktiv: null,   // für den Borist freigegebene Standard-Bodenarten (Namen); null = alle
   bodenartenCustom: [],    // zusätzliche, selbst angelegte Bodenarten: { id, name, sym }
 });
 
 /* Höhen/Längen gibt es zweimal: Soll (Plan, Präfix s…) und Ist (ausgeführt) – wie im Bohrprotokoll */
 const emptyPile = () => ({
-  nr: '', pfahlart: 'bewehrt', bewTyp: '', typ: '', neigung: null,
+  nr: '', pfahlart: 'bewehrt', bewTyp: '', neigung: null,
   durchmesser: null,
   ost: null, nord: null,
   sArbeitsebene: null, sOberkante: null, sUnterkante: null, sBohrlaenge: null, sPfahllaenge: null, sLeerbohrung: null,
@@ -156,14 +163,40 @@ function migratePile(p, fromVersion) {
   return q;
 }
 
-function normalizeState(o) {
-  const v = o.v || 1;
-  const projekt = { ...defaultProjekt(), ...(typeof o.projekt === 'string' ? { name: o.projekt } : (o.projekt || {})) };
+/** Ein Eintrag in state.projects: { id, projekt, piles } – ein eigenständiges Projekt mit eigenen
+    Projektdaten und eigenen Pfählen. */
+function normalizeProjectEntry(o, v) {
   return {
-    v: DATA_VERSION,
-    projekt,
+    id: o.id || uid(),
+    projekt: { ...defaultProjekt(), ...(typeof o.projekt === 'string' ? { name: o.projekt } : (o.projekt || {})) },
     piles: Array.isArray(o.piles) ? o.piles.map(p => migratePile(p, v)) : [],
   };
+}
+
+/** Mehrere Projekte je Installation (siehe Projektauswahl oben links). state.projekt/state.piles
+    bleiben als Zugriffs-Kurzform auf das aktuell gewählte Projekt erhalten (siehe Getter/Setter
+    unten), damit der übrige, weit verzweigte Code unverändert state.projekt/state.piles lesen und
+    schreiben kann. */
+function normalizeState(o) {
+  const v = o.v || 1;
+  let projects;
+  if (Array.isArray(o.projects) && o.projects.length) {
+    projects = o.projects.map(pr => normalizeProjectEntry(pr, v));
+  } else {
+    // Migration aus dem früheren Einzelprojekt-Format (ein projekt + piles auf oberster Ebene)
+    projects = [normalizeProjectEntry({ projekt: o.projekt, piles: o.piles }, v)];
+  }
+  const currentProjectId = (o.currentProjectId && projects.some(pr => pr.id === o.currentProjectId))
+    ? o.currentProjectId : projects[0].id;
+  const state = { v: DATA_VERSION, projects, currentProjectId };
+  const current = () => state.projects.find(pr => pr.id === state.currentProjectId) || state.projects[0];
+  Object.defineProperty(state, 'projekt', {
+    get() { return current().projekt; }, set(v) { current().projekt = v; }, enumerable: false, configurable: true,
+  });
+  Object.defineProperty(state, 'piles', {
+    get() { return current().piles; }, set(v) { current().piles = v; }, enumerable: false, configurable: true,
+  });
+  return state;
 }
 
 /* =====================================================================
@@ -278,6 +311,12 @@ const soll = p => {
   const len = isNum(p.sPfahllaenge) ? p.sPfahllaenge : p.pfahllaenge;
   return (isNum(len) && isNum(p.durchmesser)) ? rd(len * Math.PI * (p.durchmesser / 200) ** 2, 1) : null;
 };
+/** Abstichmaß Überbeton SOLL [cm] = (Arbeitsebene Soll − Pfahl-OK Soll) × 100 + notwendiger Überbeton
+    [cm] (Projektdaten). Rein informativer Wert (wie Verbrauch SOLL), nicht editierbar/gespeichert. */
+const abstichSoll = p => {
+  if (!isNum(p.sArbeitsebene) || !isNum(p.sOberkante) || !isNum(state.projekt.ueberbetonSoll)) return null;
+  return rd((p.sArbeitsebene - p.sOberkante) * 100 + state.projekt.ueberbetonSoll, 1);
+};
 
 /* =====================================================================
    Spalten (Tabelle, Übersichts-PDF, CSV)
@@ -287,7 +326,7 @@ const COLS = [
   { k: 'nr',            label: 'Pfahl-Nr.',             unit: '',        kind: 'text', t: true },
   { k: 'pfahlart',      label: 'Pfahlart',              unit: '',        kind: 'text' },
   { k: 'bewTyp',        label: 'Bew. Typ',              unit: '',        kind: 'text' },
-  { k: 'typ',           label: 'Typ',                   unit: '',        kind: 'text', t: true },
+  { k: 'typ',           label: 'Typ / Verfahren',       unit: '',        kind: 'text', t: true },
   { k: 'neigung',       label: 'Neigung',               unit: '°',       kind: 'cm' },
   { k: 'durchmesser',   label: 'Pfahl-Ø',               unit: 'cm',      kind: 'cm',   t: true },
   { k: 'ost',           label: 'Rechtswert / Ost',      unit: '@C',      kind: 'coord' },
@@ -307,7 +346,8 @@ const COLS = [
   { k: 'wasserauflast', label: 'Wasserauflast',         unit: '',        kind: 'bool', t: true },
   { k: 'gwTiefe',       label: 'Grundwasser ab',        unit: 'm u. Bohrebene', kind: 'm' },
   { k: 'grundwasser',   label: 'Bohren im GW',          unit: 'm',       kind: 'h',    t: true, sum: true },
-  { k: 'abstich',       label: 'Abstichmaß Überbeton',  unit: 'm ab AE', kind: 'm' },
+  { k: 'abstichSoll',   label: 'Abstichmaß Überbeton Soll', unit: 'cm', kind: 'cm' },
+  { k: 'abstich',       label: 'Abstichmaß Überbeton Ist', unit: 'cm', kind: 'cm' },
   { k: 'hartSumme',     label: 'Durchörtern harte Bodenschichten', unit: 'm', kind: 'm' },
   { k: 'planNr',        label: 'Bewehrung lt. Plan Nr.', unit: '',       kind: 'text' },
   { k: 'masse',         label: 'Bewehrung Masse',       unit: 'kg',      kind: 'm' },
@@ -343,6 +383,8 @@ function getVal(p, k) {
     case 'geraet': return geraetText(p.geraet, p.geraetInfo);
     case 'status': return STATUS[pileStatus(p)].label;
     case 'geprueft': return p.geprueft ? `${p.geprueft.von}, ${fmtDate(String(p.geprueft.am).slice(0, 10))}` : '';
+    case 'typ': return pileTyp(p);
+    case 'abstichSoll': return abstichSoll(p);
     default: return k.startsWith('z_') ? zeitText(p, k.slice(2)) : p[k];
   }
 }
@@ -548,7 +590,7 @@ function lock() {
   $('#pageTitleText').textContent = 'Pfähle';
   $('#projektSub').textContent = '';
   $('#count').textContent = '';
-  ui.q = ''; ui.typ = ''; ui.status = ''; ui.view = 'table';
+  ui.q = ''; ui.typ = ''; ui.status = ''; ui.view = 'dashboard';
   $('#q').value = ''; $('#statusFilter').value = '';
   clearMap();
   clear3D();
@@ -579,7 +621,7 @@ addEventListener('storage', async e => {
 /* =====================================================================
    Anwendung
    ===================================================================== */
-const ui = { q: '', typ: '', status: '', sort: { k: 'nr', dir: 1 }, view: 'table' };
+const ui = { q: '', typ: '', status: '', sort: { k: 'nr', dir: 1 }, view: 'dashboard' };
 
 function setView(v) { ui.view = v; render(); }
 $$('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
@@ -605,7 +647,7 @@ function showApp() {
 function visiblePiles() {
   const q = ui.q.trim().toLowerCase();
   const list = state.piles.filter(p =>
-    (!q || `${p.nr} ${p.typ}`.toLowerCase().includes(q)) && (!ui.typ || p.typ === ui.typ) && (!ui.status || statusMatches(p, ui.status)));
+    (!q || `${p.nr} ${pileTyp(p)}`.toLowerCase().includes(q)) && (!ui.typ || pileTyp(p) === ui.typ) && (!ui.status || statusMatches(p, ui.status)));
   const col = new Intl.Collator('de', { numeric: true, sensitivity: 'base' });
   const { k, dir } = ui.sort;
   list.sort((a, b) => {
@@ -660,21 +702,53 @@ function renderProjekt() {
   const parts = [pr.name, pr.nr && `Baustelle Nr. ${pr.nr}`, pr.ort].filter(Boolean);
   $('#projektSub').textContent = parts.length ? parts.join(' · ') : (isAdmin() ? 'Projektdaten unter „Projektdaten“ festlegen' : '');
   $$('[data-hb]').forEach(s => { s.textContent = hoehenbezug(); });
+  renderProjectSwitcher();
+}
+
+/* =====================================================================
+   Mehrere Projekte (Projektauswahl oben links)
+   ===================================================================== */
+function renderProjectSwitcher() {
+  $('#projectSwitchLabel').textContent = state.projekt.name || 'Projekt ohne Namen';
+  const items = state.projects.map(pr => `<button type="button" data-act="project-switch" data-id="${esc(pr.id)}"${pr.id === state.currentProjectId ? ' class="sel"' : ''}>${esc(pr.projekt.name || 'Projekt ohne Namen')}</button>`).join('');
+  const newBtn = isAdmin() ? '<hr class="menu-sep"><button type="button" data-act="project-new">+ Neues Projekt</button>' : '';
+  $('#menuProjects').innerHTML = items + newBtn;
+}
+
+function switchProject(id) {
+  if (!state.projects.some(pr => pr.id === id) || id === state.currentProjectId) return;
+  state.currentProjectId = id;
+  ui.q = ''; ui.typ = ''; ui.status = '';
+  render();
+  persist();
+}
+
+function createProject() {
+  if (!isAdmin()) return;
+  const entry = normalizeProjectEntry({ projekt: { name: 'Neues Projekt' } }, DATA_VERSION);
+  state.projects.push(entry);
+  state.currentProjectId = entry.id;
+  ui.q = ''; ui.typ = ''; ui.status = ''; ui.view = 'table';
+  render();
+  persist();
+  openProjekt();
+  toast('Neues Projekt angelegt – bitte Projektdaten ausfüllen.');
 }
 
 /** Seitentitel wie im Vorbild: „Pfähle (295)“ bzw. „Karte (12)“ */
-const VIEW_LABEL = { table: 'Pfähle', map: 'Karte', '3d': '3D-Ansicht' };
+const VIEW_LABEL = { dashboard: 'Dashboard', table: 'Pfähle', map: 'Karte', '3d': '3D-Ansicht' };
 function renderTitle(n) {
-  $('#pageTitleText').textContent = ui.view === 'stats' ? 'Auswertung' : `${VIEW_LABEL[ui.view] || 'Pfähle'} (${nf0.format(n)})`;
+  $('#pageTitleText').textContent = ui.view === 'stats' ? 'Auswertung'
+    : ui.view === 'dashboard' ? 'Dashboard'
+    : `${VIEW_LABEL[ui.view] || 'Pfähle'} (${nf0.format(n)})`;
 }
 
 function render() {
   renderProjekt();
-  const used = [...new Set(state.piles.map(p => p.typ).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+  const used = [...new Set(state.piles.map(pileTyp).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
   if (ui.typ && !used.includes(ui.typ)) ui.typ = '';
   $('#typFilter').innerHTML = '<option value="">Alle Typen</option>' +
     used.map(t => `<option value="${esc(t)}"${t === ui.typ ? ' selected' : ''}>${esc(t)}</option>`).join('');
-  $('#typList').innerHTML = [...new Set([...TYPE_SUGGESTIONS, ...used])].map(t => `<option value="${esc(t)}">`).join('');
 
   const list = visiblePiles();
   const wrap = $('#tableWrap');
@@ -686,9 +760,11 @@ function render() {
   $('#mapView').hidden = ui.view !== 'map';
   $('#view3dView').hidden = ui.view !== '3d';
   $('#statsView').hidden = ui.view !== 'stats';
-  $('.toolbar').hidden = ui.view === 'stats';
-  count.hidden = ui.view === 'stats';
+  $('#dashboardView').hidden = ui.view !== 'dashboard';
+  $('.toolbar').hidden = ui.view === 'stats' || ui.view === 'dashboard';
+  count.hidden = ui.view === 'stats' || ui.view === 'dashboard';
   $$('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === ui.view)));
+  if (ui.view === 'dashboard') { renderDashboard(); return; }
   if (ui.view === 'stats') { renderStats(); return; }
   if (ui.view === 'map') {
     count.textContent = state.piles.length ? countText : '';
@@ -746,6 +822,38 @@ function render() {
 
   wrap.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`;
 }
+
+/** Startseite: Kennzahlen je Ausführungsstand, Schnellzugriffe und zuletzt bearbeitete Pfähle. */
+function renderDashboard() {
+  const list = state.piles;
+  $('#dashEmpty').hidden = list.length > 0;
+  $('#dashEmptyText').textContent = isAdmin()
+    ? 'Legen Sie den ersten Pfahl über „Neuer Pfahl“ an oder importieren Sie eine Excel-Liste.'
+    : 'Der Administrator muss zuerst die Pfähle importieren. Eine Rückmeldung oder Sicherung erhalten Sie von ihm.';
+
+  const counts = { offen: 0, aktiv: 0, fertig: 0, geprueft: 0 };
+  list.forEach(p => counts[pileStatus(p)]++);
+  const shown = { ...counts, fertig: counts.fertig + counts.geprueft };   // „Ausgeführt“ zählt Geprüfte mit
+  const cards = [{ k: '', label: 'Pfähle gesamt', value: list.length },
+    ...Object.entries(STATUS).map(([k, s]) => ({ k, label: s.label, value: shown[k] }))];
+  $('#dashCards').innerHTML = cards.map(c => `<div class="dash-card${c.k ? ` c-${c.k}` : ''}">
+    <div class="dash-val">${nf0.format(c.value)}</div><div class="dash-lbl">${esc(c.label)}</div></div>`).join('');
+
+  const recent = [...list].filter(p => p.updatedAt).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 8);
+  $('#dashRecent').innerHTML = recent.length
+    ? recent.map(p => `<button type="button" class="dash-recent-row" data-id="${esc(p.id)}">
+        <span class="dash-recent-nr">${esc(p.nr)}</span>
+        <span class="chip st-${pileStatus(p)}">${esc(STATUS[pileStatus(p)].label)}</span>
+        <span class="dash-recent-when">${esc(p.updatedBy || '')} · ${fmtDT(toLocalInput(new Date(p.updatedAt)))}</span>
+      </button>`).join('')
+    : '<p class="sub">Noch keine Bearbeitungen.</p>';
+}
+$('#btnDashNew').addEventListener('click', () => openPile());
+$('#btnDashImport').addEventListener('click', () => { if (isAdmin()) openImport(); });
+$('#dashRecent').addEventListener('click', e => {
+  const row = e.target.closest('.dash-recent-row');
+  if (row) openPile({ id: row.dataset.id });
+});
 
 /* Tabelle: Sortierung, Zeilenaktionen */
 $('#tableWrap').addEventListener('click', e => {
@@ -824,6 +932,8 @@ $$('.menu').forEach(m => m.addEventListener('click', e => {
   else if (act === 'pdf-proto') exportProtokolle(visiblePiles());
   else if (act === 'pdf-proto-nofoto') exportProtokolle(visiblePiles(), { fotos: false });
   else if (act === 'pdf-list') exportPdf();
+  else if (act === 'project-switch') { const id = e.target.closest('[data-id]')?.dataset.id; if (id) switchProject(id); }
+  else if (act === 'project-new') createProject();
 }));
 
 /* Dialoge schließen */
@@ -843,17 +953,17 @@ const NUM_FIELDS = {
   durchmesser: 1, neigung: 1,
   sArbeitsebene: 3, sOberkante: 3, sUnterkante: 3, sBohrlaenge: 3, sPfahllaenge: 3, sLeerbohrung: 3,
   arbeitsebene: 3, oberkante: 3, unterkante: 3, bohrlaenge: 3, pfahllaenge: 3, leerbohrung: 3,
-  gwTiefe: 2, grundwasser: 3, abstich: 2,
+  gwTiefe: 2, grundwasser: 3, abstich: 1,
   masse: 2, verbrauchIst: 2, ost: 8, nord: 8,
 };
-const TEXT_FIELDS = ['nr', 'bewTyp', 'typ', 'planNr', 'betongute', 'konsistenz', 'bemerkung', 'bemerkungIntern'];
+const TEXT_FIELDS = ['nr', 'bewTyp', 'planNr', 'betongute', 'konsistenz', 'bemerkung', 'bemerkungIntern'];
 const LABEL = {
   durchmesser: 'Pfahl-Ø', neigung: 'Neigung',
   sArbeitsebene: 'Arbeitsebene (Soll)', sOberkante: 'Pfahl-OK (Soll)', sUnterkante: 'Pfahl-UK (Soll)',
   sBohrlaenge: 'Bohrlänge (Soll)', sPfahllaenge: 'Pfahllänge (Soll)', sLeerbohrung: 'Leerbohrung (Soll)',
   arbeitsebene: 'Arbeitsebene (Ist)', oberkante: 'Pfahl-OK (Ist)', unterkante: 'Pfahl-UK (Ist)',
   bohrlaenge: 'Bohrlänge (Ist)', pfahllaenge: 'Pfahllänge (Ist)', leerbohrung: 'Leerbohrung (Ist)',
-  gwTiefe: 'Grundwasser ab', grundwasser: 'Bohren im GW', abstich: 'Abstichmaß Überbeton',
+  gwTiefe: 'Grundwasser ab', grundwasser: 'Bohren im GW', abstich: 'Abstichmaß Überbeton (Ist)',
   masse: 'Masse', verbrauchIst: 'Verbrauch IST', ost: 'Rechtswert/Ost', nord: 'Hochwert/Nord',
 };
 
@@ -926,14 +1036,14 @@ function readPile() {
   p.fotos = curFotos.slice();
   const opt = e.geraet.selectedOptions[0];
   p.geraet = e.geraet.value;
-  p.geraetInfo = p.geraet && opt ? { typ: opt.dataset.typ || '', inv: opt.dataset.inv || '', kommentar: opt.dataset.kommentar || '' } : null;
+  p.geraetInfo = p.geraet && opt ? { typ: opt.dataset.typ || '', inv: opt.dataset.inv || '', kommentar: opt.dataset.kommentar || '', verfahren: opt.dataset.verfahren || '' } : null;
   return p;
 }
 
 /** Auswahl der Bohrgeräte im Pfahlformular (Liste aus den Projektdaten); ein gelöschtes Gerät bleibt am Pfahl erhalten */
 function fillGeraetSelect(p) {
   const list = state.projekt.geraete || [];
-  const attrs = d => `data-typ="${esc(d.typ || '')}" data-inv="${esc(d.inv || '')}" data-kommentar="${esc(d.kommentar || '')}"`;
+  const attrs = d => `data-typ="${esc(d.typ || '')}" data-inv="${esc(d.inv || '')}" data-kommentar="${esc(d.kommentar || '')}" data-verfahren="${esc(d.verfahren || '')}"`;
   const opts = ['<option value="">– kein Gerät gewählt –</option>',
     ...list.map(d => `<option value="${esc(d.id)}" ${attrs(d)}${p.geraet === d.id ? ' selected' : ''}>${esc(geraetText(d.id))}${d.kommentar ? ` (${esc(d.kommentar)})` : ''}</option>`)];
   if (p.geraet && !list.some(d => d.id === p.geraet) && p.geraetInfo) {
@@ -962,12 +1072,20 @@ const soilChecksHtml = cur => {
     <input type="checkbox" data-soil="${esc(s.name)}"${checked.has(s.name) ? ' checked' : ''}>
     <span>${esc(s.sym)}</span></label>`).join('');
 };
+/** Kurztext im geschlossenen Dropdown: Kürzel der gewählten Bodenarten, sonst Platzhalter. */
+const soilSummary = cur => { const l = soilsIn(cur); return l.length ? esc(l.map(s => s.sym).join(', ')) : '– Bodenart wählen –'; };
 
 const schichtRowHTML = s => {
   const art = s.art || (s.hart ? 'hart' : 'boden');
   const bodenCur = art === 'boden' ? s.boden : '';
   const bodenHtml = `<input type="hidden" data-s="boden" value="${esc(bodenCur || '')}">
-     <div class="soil-checks" role="group" aria-label="Bodenart (mehrere möglich)"${art === 'boden' ? '' : ' hidden'}>${soilChecksHtml(bodenCur)}</div>`;
+     <div class="soil-dropdown"${art === 'boden' ? '' : ' hidden'}>
+       <button type="button" class="soil-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+         <span class="soil-dropdown-label">${soilSummary(bodenCur)}</span>
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+       </button>
+       <div class="soil-checks" role="group" aria-label="Bodenart (mehrere möglich)" hidden>${soilChecksHtml(bodenCur)}</div>
+     </div>`;
   return `<div class="schicht">
   <div class="field"><input type="text" inputmode="decimal" data-s="bis" placeholder="bis Tiefe [m]" aria-label="Schicht bis Tiefe in m unter Bohrebene" value="${s.bis != null && !Number.isNaN(s.bis) ? esc(fmtInput(s.bis)) : ''}"></div>
   <div class="soil-cell"><i class="sw" aria-hidden="true"></i>
@@ -1055,8 +1173,8 @@ function syncEndRow() {
   rows.forEach((r, i) => {
     const art = $('[data-s=art]', r).value;
     $('[data-s=boden]', r).hidden = art !== 'boden';
-    const sc = $('.soil-checks', r);
-    if (sc) sc.hidden = art !== 'boden';
+    const sd = $('.soil-dropdown', r);
+    if (sd) sd.hidden = art !== 'boden';
     $('[data-s=hinweis]', r).hidden = art === 'boden';
     $('.sw', r).innerHTML = soilSwatch(art, art === 'boden' ? $('[data-s=boden]', r).value : '');
     const bis = $('[data-s=bis]', r);
@@ -1085,6 +1203,9 @@ function recalc() {
   $('#geoHint').innerHTML = ll ? `${nf5.format(ll[0])}° N<br>${nf5.format(ll[1])}° O` : '–';
   const s = soll(p);
   $('#sollOut').textContent = s == null ? '–' : fmtFlex(s);
+  const aSoll = abstichSoll(p);
+  $('#abstichSollOut').textContent = aSoll == null ? '–' : `${fmtFlex(aSoll)} cm`;
+  $('#verfahrenOut').textContent = pileTyp(p) || '–';
   const h = hartSumme(p);
   $('#hartOut').textContent = h == null ? '–' : `${fmtPlain(h, 2)} m`;
   const sp = span(p), dm = dauerMin(p), hm = hindernisMin(p);
@@ -1360,7 +1481,25 @@ form.addEventListener('change', e => {
   if (!chk) return;
   const row = chk.closest('.schicht');
   const checked = new Set($$('.soil-checks input[data-soil]', row).filter(i => i.checked).map(i => i.dataset.soil));
-  $('[data-s=boden]', row).value = allSoils().filter(s => checked.has(s.name)).map(s => s.name).join(', ');
+  const value = allSoils().filter(s => checked.has(s.name)).map(s => s.name).join(', ');
+  $('[data-s=boden]', row).value = value;
+  $('.soil-dropdown-label', row).innerHTML = soilSummary(value);
+});
+/* Bodenart-Dropdown je Schicht auf-/zuklappen; schließt sich bei Klick außerhalb oder beim Öffnen
+   eines anderen Dropdowns (immer nur eines gleichzeitig offen). */
+form.addEventListener('click', e => {
+  const toggle = e.target.closest('.soil-dropdown-toggle');
+  if (!toggle && e.target.closest('.soil-checks')) return;   // Klick auf eine Checkbox selbst: Panel offen lassen
+  $$('.soil-dropdown .soil-checks', form).forEach(panel => {
+    const isThis = toggle && panel.previousElementSibling === toggle;
+    if (isThis) {
+      panel.hidden = !panel.hidden;
+      toggle.setAttribute('aria-expanded', String(!panel.hidden));
+    } else if (!panel.hidden) {
+      panel.hidden = true;
+      panel.previousElementSibling.setAttribute('aria-expanded', 'false');
+    }
+  });
 });
 // Manuelle Eingabe von Datum/Uhrzeit (Admin) kann eine growable-Zeile ebenfalls abschließen
 form.addEventListener('change', e => {
@@ -1480,6 +1619,10 @@ function showLogoPreview() {
 
 const gerRowHTML = d => `<div class="ger-row" data-id="${esc(d.id || '')}">
   <input type="text" data-g="typ" maxlength="60" placeholder="Gerätetyp (z. B. Bauer BG 28)" aria-label="Gerätetyp" value="${esc(d.typ || '')}">
+  <select data-g="verfahren" aria-label="Verfahren">
+    <option value="">– Verfahren wählen –</option>
+    ${VERFAHREN_OPTIONS.map(v => `<option value="${esc(v)}"${d.verfahren === v ? ' selected' : ''}>${esc(v)}</option>`).join('')}
+  </select>
   <input type="text" data-g="inv" maxlength="30" placeholder="Inventar-Nr." aria-label="Inventarnummer" value="${esc(d.inv || '')}">
   <input type="text" data-g="kommentar" maxlength="120" placeholder="Kommentar" aria-label="Kommentar" value="${esc(d.kommentar || '')}">
   <button type="button" class="icon-btn danger" data-grm title="Gerät entfernen" aria-label="Gerät entfernen">${ICON.rm}</button>
@@ -1514,6 +1657,7 @@ function openProjekt() {
   const pr = state.projekt;
   $('#pj_nr').value = pr.nr; $('#pj_name').value = pr.name; $('#pj_ort').value = pr.ort;
   $('#pj_titel').value = pr.titel; $('#pj_norm').value = pr.norm; $('#pj_hb').value = pr.hoehenbezug;
+  $('#pj_ueberbeton').value = isNum(pr.ueberbetonSoll) ? fmtInput(pr.ueberbetonSoll) : '';
   projLogo = pr.logo ? { data: pr.logo, w: pr.logoW, h: pr.logoH } : null;
   $('#pj_crs').innerHTML = CRS_LIST.map(c => `<option value="${c.id}">${esc(c.label)}</option>`).join('');
   $('#pj_crs').value = crsInfo(pr.crs).id;
@@ -1561,6 +1705,7 @@ projForm.addEventListener('submit', async e => {
   const geraete = $$('#gerRows .ger-row').map(r => ({
     id: r.dataset.id || uid(),
     typ: $('[data-g=typ]', r).value.trim(), inv: $('[data-g=inv]', r).value.trim(), kommentar: $('[data-g=kommentar]', r).value.trim(),
+    verfahren: $('[data-g=verfahren]', r).value,
   })).filter(g => g.typ || g.inv);
   const bodenartenAktivGewaehlt = $$('#bodenartRows [data-ba]').filter(i => i.checked).map(i => i.dataset.ba);
   const bodenartenAktiv = bodenartenAktivGewaehlt.length === SOILS.length ? null : bodenartenAktivGewaehlt;
@@ -1573,6 +1718,7 @@ projForm.addEventListener('submit', async e => {
     nr: $('#pj_nr').value.trim(), name: $('#pj_name').value.trim(), ort: $('#pj_ort').value.trim(),
     titel: $('#pj_titel').value.trim() || d.titel, norm: $('#pj_norm').value.trim(),
     hoehenbezug: $('#pj_hb').value.trim() || d.hoehenbezug,
+    ueberbetonSoll: parseNum($('#pj_ueberbeton').value),
     crs: $('#pj_crs').value || d.crs,
     logo: projLogo ? projLogo.data : null, logoW: projLogo ? projLogo.w : 0, logoH: projLogo ? projLogo.h : 0,
   };

@@ -125,6 +125,7 @@ function drawProtokoll(doc, p, proj) {
   T('BOHRPROTOKOLL Nr.:', 43, 40.4, { size: 18.8, style: 'bold', color: [255, 255, 255] });
   T(p.nr, 363.5, 40.4, { size: 18.8, style: 'bold', align: 'center', maxW: 96, color: YEL });
   doc.setDrawColor(...YEL); doc.setLineWidth(1.4); doc.line(X(313.7), Y(46), X(413.2), Y(46)); doc.setDrawColor(...NAVY);
+  T('P[Blocknr.]-[Pfahlnr.]', 363.5, 53.5, { size: 6.6, align: 'center', color: [190, 205, 228] });
   const titel = proj.titel || 'Ortbetonbohrpfähle';
   T(titel, 43, 63.6, { size: 18.8, style: 'bold', color: [255, 255, 255] });
   doc.setFont('helvetica', 'bold'); doc.setFontSize(18.8 * F);
@@ -332,9 +333,16 @@ function drawProtokoll(doc, p, proj) {
     T(unit, 501.2, y, { maxW: 42 });
     L(384.2, y + 4.7, 499.6, y + 4.7, 0.5, HAIR);
   };
+  const dual = (lab, s, i, y, unit, dec) => {
+    T(lab, 268.4, y);
+    T(fmtPlain(s, dec), 413.4, y, { align: 'center', maxW: 52 });
+    T(fmtPlain(i, dec), 471, y, { align: 'center', maxW: 52, style: 'bold' });
+    T(unit, 501.2, y, { maxW: 40 });
+    L(384.2, y + 4.7, 499.6, y + 4.7, 0.5, HAIR);
+  };
   single('Wasserauflast:', p.wasserauflast ? 'Ja' : 'Nein', 278.2, '');
   single('Bohren im GW', fmtPlain(p.grundwasser, 3), 294.4, 'm');
-  single('Abstichmaß Überbeton', fmtPlain(p.abstich, 2), 310.6, 'm ab AE');
+  dual('Abstichmaß Überbeton:', abstichSoll(p), p.abstich, 310.6, 'cm', 1);
   L(267.6, 315.8, 543.6, 315.8, 1.6);
   const ger = geraetText(p.geraet, p.geraetInfo);
   if (ger) { T('Bohrgerät:', 268.4, 327.6); T(ger, 322, 327.6, { size: 9.5, maxW: 218 }); }

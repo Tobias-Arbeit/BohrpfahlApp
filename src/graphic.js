@@ -144,9 +144,24 @@ function pileGraphicSvg(p) {
     layers.forEach((l, i) => {
       const y1 = Y(l.von), y2 = Y(l.bis), h = Math.max(1, y2 - y1);
       const soil = l.art === 'boden' ? soilOf(l.boden) : null;
+      const alleSoils = l.art === 'boden' ? soilsIn(l.boden) : [];
       let base, pattern;
       if (l.art === 'hindernis') { base = null; pattern = 'url(#pgHind)'; used.set('hindernis', { label: 'Bohrhindernis', sw: soilSwatch('hindernis') }); }
       else if (l.art === 'hart') { base = null; pattern = 'url(#pgHart)'; used.set('hart', { label: 'harte Bodenschicht', sw: soilSwatch('hart') }); }
+      else if (alleSoils.length > 1) {
+        // Mehrere Bodenarten in einer Schicht: gleich hohe Unterbänder je Bodenart, statt nur die
+        // erste (Hauptanteil) farblich darzustellen – so unterscheidet sich die Grafik je Zusammensetzung.
+        const bh = h / alleSoils.length;
+        alleSoils.forEach((sl, si) => {
+          const by = y1 + si * bh;
+          o.push(`<rect x="${sx.x}" y="${by}" width="${sx.w}" height="${bh}" fill="${sl.color}"/>`);
+          o.push(`<rect x="${sx.x}" y="${by}" width="${sx.w}" height="${bh}" fill="url(#pgs-${sl.pat})"/>`);
+          used.set(sl.sym, { label: soilLabel(sl), sw: soilSwatch('boden', sl.name) });
+        });
+        for (let si = 1; si < alleSoils.length; si++) {
+          o.push(`<line x1="${sx.x}" y1="${y1 + si * bh}" x2="${sx.x + sx.w}" y2="${y1 + si * bh}" stroke="#7a6a45" stroke-width=".4" stroke-dasharray="2 2"/>`);
+        }
+      }
       else if (soil) { base = soil.color; pattern = `url(#pgs-${soil.pat})`; used.set(soil.sym, { label: soilLabel(soil), sw: soilSwatch('boden', soil.name) }); }
       else { base = '#e7e3da'; pattern = null; if (l.boden) used.set('x:' + l.boden, { label: l.boden, sw: soilSwatch('boden', '') }); }
       if (base) o.push(`<rect x="${sx.x}" y="${y1}" width="${sx.w}" height="${h}" fill="${base}"/>`);

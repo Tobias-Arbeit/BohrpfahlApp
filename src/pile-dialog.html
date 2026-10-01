@@ -27,6 +27,11 @@
         <label for="f_geraet">Bohrgerät</label>
         <select id="f_geraet" name="geraet"></select>
         <span class="hint" id="geraetHint"></span>
+        <div class="field" style="margin-top:8px">
+          <label>Typ / Verfahren</label>
+          <div class="readout" id="verfahrenOut">–</div>
+          <span class="hint">ergibt sich aus dem gewählten Bohrgerät (Projektdaten)</span>
+        </div>
       </div>
       <fieldset class="nur-voll" style="margin-top:0">
         <legend>Pfahl</legend>
@@ -45,11 +50,6 @@
           <div class="field">
             <label for="f_durchmesser">Pfahl-Ø <span class="unit">[cm]</span></label>
             <input id="f_durchmesser" name="durchmesser" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-          <div class="field span2">
-            <label for="f_typ">Typ / Verfahren</label>
-            <input id="f_typ" name="typ" type="text" list="typList" maxlength="80" autocomplete="off" placeholder="Auswählen oder eingeben">
-            <datalist id="typList"></datalist>
           </div>
           <div class="field">
             <label for="f_neigung">Neigung <span class="unit">[°]</span></label>
@@ -236,7 +236,12 @@
             <input id="f_verbrauchIst" name="verbrauchIst" type="text" inputmode="decimal" autocomplete="off">
           </div>
           <div class="field">
-            <label for="f_abstich">Abstichmaß Überbeton <span class="unit">[m ab AE]</span></label>
+            <label>Abstichmaß Überbeton SOLL <span class="unit">[cm]</span></label>
+            <div class="readout" id="abstichSollOut">–</div>
+            <span class="hint">(Arbeitsebene − Pfahl-OK, Soll) × 100 + notwendiger Überbeton</span>
+          </div>
+          <div class="field">
+            <label for="f_abstich">Abstichmaß Überbeton IST <span class="unit">[cm]</span></label>
             <input id="f_abstich" name="abstich" type="text" inputmode="decimal" autocomplete="off">
           </div>
         </div>
@@ -327,6 +332,11 @@
           <input id="pj_hb" type="text" maxlength="20" autocomplete="off">
           <span class="hint">z. B. m ü. A, m ü. NN</span>
         </div>
+        <div class="field">
+          <label for="pj_ueberbeton">Notwendiger Überbeton <span class="unit">[cm]</span></label>
+          <input id="pj_ueberbeton" type="text" inputmode="decimal" autocomplete="off">
+          <span class="hint">Grundlage für Abstichmaß Überbeton SOLL am Pfahl</span>
+        </div>
         <div class="field span3">
           <label for="pj_crs">Koordinatensystem der Pfahl-Koordinaten</label>
           <select id="pj_crs"></select>
@@ -336,7 +346,7 @@
           <label>Bohrgeräte</label>
           <div id="gerRows" class="rows"></div>
           <p style="margin:8px 0 0"><button type="button" class="btn small" id="btnAddGeraet">+ Gerät</button></p>
-          <span class="hint">Gerätetyp, Inventarnummer und Kommentar. Beim Pfahl wird das Gerät ausgewählt; Typ und Inventarnummer erscheinen im Bohrprotokoll.</span>
+          <span class="hint">Gerätetyp, Inventarnummer, Verfahren und Kommentar. Beim Pfahl wird das Gerät ausgewählt; Typ, Inventarnummer und Verfahren erscheinen im Bohrprotokoll.</span>
         </div>
         <div class="field span3">
           <label>Bodenarten für den Borist</label>
