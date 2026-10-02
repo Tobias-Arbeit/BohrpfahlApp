@@ -419,7 +419,7 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 .zeile-bohrist .zb-btn.start:hover { background: #276b2a; }
 .zeile-bohrist .zb-btn.stop { background: #b01c1c; }
 .zeile-bohrist .zb-btn.stop:hover { background: #961818; }
-.zeile-bohrist .zb-zeit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.zeile-bohrist .zb-zeit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 32px; }
 .zeile-bohrist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
 .zeile-bohrist[data-zstate="bearbeiten"] input[data-z] { display: block; }
 .zeile-bohrist [data-start], .zeile-bohrist [data-stop], .zeile-bohrist [data-edit-zeit], .zeile-bohrist .zeit-anzeige { display: none; }
@@ -450,10 +450,12 @@ body.is-bohrist dialog.kompakt .nur-voll { display: none; }
 .gd-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gd-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .gd-item strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.geraet-feld { max-width: 340px; margin: 0 0 14px; }
+.geraet-feld { display: flex; gap: 14px; align-items: flex-start; max-width: 480px; margin: 0 0 14px; }
+.geraet-feld .field { flex: 1 1 0; }
 .geraet-feld label { margin-bottom: 4px; }
-dialog.kompakt .geraet-feld { max-width: 220px; margin: -4px 0 10px; }
+dialog.kompakt .geraet-feld { max-width: 420px; margin: -4px 0 10px; }
 dialog.kompakt .geraet-feld select { height: 34px; }
+@media (max-width: 480px) { .geraet-feld { flex-wrap: wrap; } }
 
 /* Höhen und Längen: für den Bohrist bei fremden Pfählen nur die Ist-Spalte zeigen (Soll steht schon oben);
    der Admin sieht weiterhin beide Spalten. */
@@ -944,10 +946,12 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <div class="gd-item"><span class="gd-label">Verbrauch Soll</span><strong id="gdSoll">–</strong></div>
       </div>
       <div class="geraet-feld">
-        <label for="f_geraet">Bohrgerät</label>
-        <select id="f_geraet" name="geraet"></select>
-        <span class="hint" id="geraetHint"></span>
-        <div class="field" style="margin-top:8px">
+        <div class="field">
+          <label for="f_geraet">Bohrgerät</label>
+          <select id="f_geraet" name="geraet"></select>
+          <span class="hint" id="geraetHint"></span>
+        </div>
+        <div class="field">
           <label>Typ / Verfahren</label>
           <div class="readout" id="verfahrenOut">–</div>
           <span class="hint">ergibt sich aus dem gewählten Bohrgerät (Projektdaten)</span>
