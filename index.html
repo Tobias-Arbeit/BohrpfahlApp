@@ -402,17 +402,24 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 .chip.st-offen { background: #dc2626; color: #fff; }
 .chip.st-aktiv { background: #e08600; color: #1a1207; }
 .chip.st-fertig { background: #2e7d32; color: #fff; }
-.zeit-head, .zeile { display: grid; grid-template-columns: 120px 1.3fr 1fr 1fr 56px; gap: 8px; align-items: center; }
-.zeile .btn { width: 100%; justify-content: center; padding: 0; }
-.zeit-head { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
-
-/* Bohrist: Start/Stopp statt "Jetzt", Datum/Uhrzeit erst nach dem Start klein sichtbar (siehe data-zstate) */
+/* Bohrist/Admin: Start/Stopp statt "Jetzt"; Datum/Uhrzeit erscheinen unterhalb der Überschrift,
+   erst nach dem Start sichtbar (siehe data-zstate). */
 .zeile-bohrist {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
-  padding: 6px 0; border-bottom: 1px dashed var(--line);
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 0; border-bottom: 1px dashed var(--line);
 }
-.zeile-bohrist .zl { flex: 1 1 100px; }
-.zeile-bohrist .btn { width: auto; }
+.zeile-bohrist .zb-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.zeile-bohrist .zl { font-weight: 600; font-size: 15px; }
+.zeile-bohrist .zl.more { font-weight: 400; color: var(--muted); }
+.zeile-bohrist .zb-btn {
+  min-width: 112px; height: 42px; padding: 0 16px; font-size: 14.5px; font-weight: 700;
+  border: 1px solid transparent; border-radius: var(--radius); color: #fff;
+}
+.zeile-bohrist .zb-btn.start { background: #2e7d32; }
+.zeile-bohrist .zb-btn.start:hover { background: #276b2a; }
+.zeile-bohrist .zb-btn.stop { background: #b01c1c; }
+.zeile-bohrist .zb-btn.stop:hover { background: #961818; }
+.zeile-bohrist .zb-zeit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .zeile-bohrist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
 .zeile-bohrist[data-zstate="bearbeiten"] input[data-z] { display: block; }
 .zeile-bohrist [data-start], .zeile-bohrist [data-stop], .zeile-bohrist [data-edit-zeit], .zeile-bohrist .zeit-anzeige { display: none; }
@@ -423,9 +430,7 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 .zeile-bohrist[data-zstate="fertig"] [data-edit-zeit],
 .zeile-bohrist[data-zstate="fertig"] .zeit-anzeige,
 .zeile-bohrist[data-zstate="bearbeiten"] [data-edit-zeit] { display: inline-flex; }
-.zeile-bohrist .zeit-anzeige { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.zeile .zl { font-weight: 600; font-size: 14px; }
-.zeile .zl.more { font-weight: 400; color: var(--muted); }
+.zeile-bohrist .zeit-anzeige { font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .logo-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .logo-prev {
   height: 56px; min-width: 120px; padding: 4px 8px; display: grid; place-items: center;
@@ -494,6 +499,9 @@ dialog.kompakt #fsZeiten { grid-column: 2; grid-row: 1; }
 dialog.kompakt #fsBeton { grid-column: 1 / -1; grid-row: 2; }
 body:not(.is-bohrist) dialog.kompakt #fsBewehrung { grid-column: 1 / -1; grid-row: 2; }
 body:not(.is-bohrist) dialog.kompakt #fsBeton { grid-row: 3; }
+/* Beim Bohrist entfallen Betongüte/Konsistenz (ohnehin nur Plan-/Admin-Angaben, siehe .nur-voll);
+   die verbleibenden zwei Felder (Verbrauch Soll/Ist) stehen dann nebeneinander. */
+body.is-bohrist dialog.kompakt #fsBeton .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 900px) { dialog.kompakt .zwei-spalten { display: block; } }
 
 /* ---------- Ansicht: Reiter und Karte ---------- */
@@ -642,11 +650,6 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 @media (max-width: 640px) {
   .map-row { grid-template-columns: 1fr; gap: 4px; }
   .schicht { grid-template-columns: 88px minmax(0, 1fr) auto; }
-  .zeit-head { display: none; }
-  .zeile { grid-template-columns: 1.4fr 1fr 1fr; gap: 6px; }
-  .zeile .zl { grid-column: 1 / 3; grid-row: 1; }
-  .zeile .btn { grid-column: 3; grid-row: 1; width: auto; justify-self: end; padding: 0 14px; }
-  .zeile + .zeile { margin-top: 4px; }
   main { padding: 12px; }
   .topbar { padding: 8px 12px; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1135,11 +1138,11 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
       <fieldset id="fsBeton">
         <legend>Pfahlbeton</legend>
         <div class="grid">
-          <div class="field">
+          <div class="field nur-voll">
             <label for="f_betongute">Betongüte</label>
             <input id="f_betongute" name="betongute" type="text" maxlength="80" autocomplete="off" placeholder="z. B. C25/30 GK32 BS-TB1">
           </div>
-          <div class="field">
+          <div class="field nur-voll">
             <label for="f_konsistenz">Konsistenz</label>
             <input id="f_konsistenz" name="konsistenz" type="text" maxlength="40" autocomplete="off" placeholder="z. B. F59">
           </div>
@@ -1166,7 +1169,6 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 
       <fieldset id="fsZeiten">
         <legend>Ausführung</legend>
-        <div class="zeit-head"><span>Arbeitsvorgang</span><span>Datum</span><span>von</span><span>bis</span><span></span></div>
         <div id="zeitRows" class="rows"></div>
         <div class="row-foot">
           <span class="sum">Beginn – Ende: <strong id="spanOut">–</strong></span>
@@ -5036,14 +5038,18 @@ function setZeitZustand(row) {
 
 function zeitZeileBohrist(g, i, e) {
   return `<div class="zeile zeile-bohrist" data-g="${g.k}" data-i="${i}" data-zstate="${zeitZustand(e)}">
-    <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
-    <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
-    <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
-    <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
-    <span class="zeit-anzeige" data-anzeige>${esc(zeitAnzeigeText(e))}</span>
-    <button type="button" class="btn small" data-start>▶ Start</button>
-    <button type="button" class="btn small danger" data-stop>■ Stopp</button>
-    <button type="button" class="icon-btn" data-edit-zeit title="Zeit bearbeiten" aria-label="${esc(g.label)}: Zeit bearbeiten">${ICON.edit}</button>
+    <div class="zb-head">
+      <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
+      <button type="button" class="btn zb-btn start" data-start>▶ Start</button>
+      <button type="button" class="btn zb-btn stop" data-stop>■ Stopp</button>
+    </div>
+    <div class="zb-zeit">
+      <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
+      <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
+      <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
+      <span class="zeit-anzeige" data-anzeige>${esc(zeitAnzeigeText(e))}</span>
+      <button type="button" class="icon-btn" data-edit-zeit title="Zeit bearbeiten" aria-label="${esc(g.label)}: Zeit bearbeiten">${ICON.edit}</button>
+    </div>
   </div>`;
 }
 

@@ -1155,14 +1155,18 @@ function setZeitZustand(row) {
 
 function zeitZeileBohrist(g, i, e) {
   return `<div class="zeile zeile-bohrist" data-g="${g.k}" data-i="${i}" data-zstate="${zeitZustand(e)}">
-    <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
-    <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
-    <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
-    <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
-    <span class="zeit-anzeige" data-anzeige>${esc(zeitAnzeigeText(e))}</span>
-    <button type="button" class="btn small" data-start>▶ Start</button>
-    <button type="button" class="btn small danger" data-stop>■ Stopp</button>
-    <button type="button" class="icon-btn" data-edit-zeit title="Zeit bearbeiten" aria-label="${esc(g.label)}: Zeit bearbeiten">${ICON.edit}</button>
+    <div class="zb-head">
+      <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
+      <button type="button" class="btn zb-btn start" data-start>▶ Start</button>
+      <button type="button" class="btn zb-btn stop" data-stop>■ Stopp</button>
+    </div>
+    <div class="zb-zeit">
+      <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
+      <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
+      <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
+      <span class="zeit-anzeige" data-anzeige>${esc(zeitAnzeigeText(e))}</span>
+      <button type="button" class="icon-btn" data-edit-zeit title="Zeit bearbeiten" aria-label="${esc(g.label)}: Zeit bearbeiten">${ICON.edit}</button>
+    </div>
   </div>`;
 }
 
