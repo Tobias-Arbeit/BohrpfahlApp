@@ -402,15 +402,16 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 .chip.st-offen { background: #dc2626; color: #fff; }
 .chip.st-aktiv { background: #e08600; color: #1a1207; }
 .chip.st-fertig { background: #2e7d32; color: #fff; }
-/* Bohrist/Admin: Start/Stopp statt "Jetzt"; Datum/Uhrzeit erscheinen unterhalb der Überschrift,
-   erst nach dem Start sichtbar (siehe data-zstate). */
+/* Bohrist/Admin: Start/Stopp statt "Jetzt". Der Start/Stopp-Button im Kopf jeder Gruppe (Bohren, …)
+   bleibt an fester Position, auch wenn weitere Einträge dazukommen (siehe data-zstate der Gruppe,
+   gespiegelt vom letzten Eintrag); Datum/Uhrzeit je Eintrag erscheinen darunter, erst nach dem
+   Start sichtbar (siehe data-estate je Eintrag in .zb-entries). */
 .zeile-bohrist {
   display: flex; flex-direction: column; gap: 6px;
   padding: 10px 0; border-bottom: 1px dashed var(--line);
 }
 .zeile-bohrist .zb-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .zeile-bohrist .zl { font-weight: 600; font-size: 15px; }
-.zeile-bohrist .zl.more { font-weight: 400; color: var(--muted); }
 .zeile-bohrist .zb-btn {
   min-width: 112px; height: 42px; padding: 0 16px; font-size: 14.5px; font-weight: 700;
   border: 1px solid transparent; border-radius: var(--radius); color: #fff;
@@ -419,17 +420,19 @@ input[data-s=boden].need ~ .soil-dropdown .soil-dropdown-toggle { background: va
 .zeile-bohrist .zb-btn.start:hover { background: #276b2a; }
 .zeile-bohrist .zb-btn.stop { background: #b01c1c; }
 .zeile-bohrist .zb-btn.stop:hover { background: #961818; }
-.zeile-bohrist .zb-zeit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 32px; }
-.zeile-bohrist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
-.zeile-bohrist[data-zstate="bearbeiten"] input[data-z] { display: block; }
-.zeile-bohrist [data-start], .zeile-bohrist [data-stop], .zeile-bohrist [data-edit-zeit], .zeile-bohrist .zeit-anzeige { display: none; }
+.zeile-bohrist [data-start], .zeile-bohrist [data-stop] { display: none; }
 .zeile-bohrist[data-zstate="leer"] [data-start] { display: inline-flex; }
-.zeile-bohrist[data-zstate="laeuft"] [data-stop],
-.zeile-bohrist[data-zstate="laeuft"] [data-edit-zeit],
-.zeile-bohrist[data-zstate="laeuft"] .zeit-anzeige,
-.zeile-bohrist[data-zstate="fertig"] [data-edit-zeit],
-.zeile-bohrist[data-zstate="fertig"] .zeit-anzeige,
-.zeile-bohrist[data-zstate="bearbeiten"] [data-edit-zeit] { display: inline-flex; }
+.zeile-bohrist[data-zstate="laeuft"] [data-stop] { display: inline-flex; }
+.zeile-bohrist .zb-entries { display: flex; flex-direction: column; gap: 4px; min-height: 32px; }
+.zeile-bohrist .zb-zeit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.zeile-bohrist input[data-z] { display: none; width: auto; flex: 1 1 110px; min-width: 90px; height: 34px; }
+.zeile-bohrist .zb-zeit[data-estate="bearbeiten"] input[data-z] { display: block; }
+.zeile-bohrist .zb-zeit [data-edit-zeit], .zeile-bohrist .zb-zeit .zeit-anzeige { display: none; }
+.zeile-bohrist .zb-zeit[data-estate="laeuft"] [data-edit-zeit],
+.zeile-bohrist .zb-zeit[data-estate="laeuft"] .zeit-anzeige,
+.zeile-bohrist .zb-zeit[data-estate="fertig"] [data-edit-zeit],
+.zeile-bohrist .zb-zeit[data-estate="fertig"] .zeit-anzeige,
+.zeile-bohrist .zb-zeit[data-estate="bearbeiten"] [data-edit-zeit] { display: inline-flex; }
 .zeile-bohrist .zeit-anzeige { font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .logo-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .logo-prev {

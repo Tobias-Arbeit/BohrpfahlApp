@@ -1033,7 +1033,7 @@ function readSchichten() {
 function readZeiten() {
   const z = {};
   for (const g of ZEIT_GROUPS) {
-    z[g.k] = $$(`.zeile[data-g="${g.k}"]`, form).map(r => {
+    z[g.k] = $$(`.zeile-bohrist[data-g="${g.k}"] .zb-zeit`, form).map(r => {
       const e = {};
       for (const f of ['d', 'von', 'bis']) { const v = $(`[data-z=${f}]`, r).value; if (v) e[f] = v; }
       return e;
@@ -1112,8 +1112,8 @@ const schichtRowHTML = s => {
 </div>`;
 };
 
-/* Zu Beginn nur eine Zeile je Arbeitsvorgang; bei "growable"-Vorgängen (Bohren, Bohrhindernis,
-   harte Bodenschicht) kommt automatisch eine weitere leere Zeile dazu, sobald die letzte
+/* Zu Beginn nur ein Eintrag je Arbeitsvorgang; bei "growable"-Vorgängen (Bohren, Bohrhindernis,
+   harte Bodenschicht) kommt automatisch ein weiterer leerer Eintrag dazu, sobald der letzte
    abgeschlossen ist (von + bis ausgefüllt) — siehe auch maybeGrowZeitGroup. */
 function zeitRowsFor(g, entries) {
   const list = (entries && entries.length ? entries : [{}]).map(e => e || {});
@@ -1123,50 +1123,60 @@ function zeitRowsFor(g, entries) {
 }
 
 function buildZeitRows(z) {
-  $('#zeitRows').innerHTML = ZEIT_GROUPS.map(g =>
-    zeitRowsFor(g, z?.[g.k]).map((e, i) => zeitZeileBohrist(g, i, e)).join('')
-  ).join('');
+  $('#zeitRows').innerHTML = ZEIT_GROUPS.map(g => zeitGroupHTML(g, z?.[g.k])).join('');
 }
 
-/** Legt bei Bedarf die nächste leere Zeile an, wenn die aktuell letzte Zeile einer growable-Kategorie
+/** Hängt bei Bedarf einen weiteren leeren Eintrag an, wenn der letzte Eintrag einer growable-Gruppe
     gerade abgeschlossen wurde (von + bis beide ausgefüllt). */
-function maybeGrowZeitGroup(row) {
-  const g = ZEIT_GROUPS.find(x => x.k === row.dataset.g);
+function maybeGrowZeitGroup(groupEl) {
+  const g = ZEIT_GROUPS.find(x => x.k === groupEl.dataset.g);
   if (!g || !g.growable) return;
-  const rows = $$(`.zeile[data-g="${g.k}"]`, form);
-  if (row !== rows[rows.length - 1]) return;
-  const e = readZeileZeit(row);
+  const entries = $$('.zb-zeit', groupEl);
+  const last = entries[entries.length - 1];
+  const e = readEntryZeit(last);
   if (!(e.von && e.bis)) return;
-  const i = rows.length;
-  row.insertAdjacentHTML('afterend', zeitZeileBohrist(g, i, {}));
+  last.insertAdjacentHTML('afterend', zeitEntryHTML(g, entries.length, {}));
 }
 
-/* Zeit-Zeile mit Start-/Stopp-Button (für Admin und Bohrist gleich). Datum/Uhrzeit erscheinen erst
-   nach dem Start, klein, mit einem Bearbeiten-Button für die manuelle Korrektur (z. B. wenn das
-   Tippen vergessen wurde). */
+/* Start-/Stopp-Button sitzt einmal im Kopf jeder Gruppe (für Admin und Bohrist gleich) und bleibt
+   dadurch immer an derselben Stelle, auch wenn (bei "growable"-Vorgängen) weitere Einträge
+   dazukommen. Er wirkt stets auf den letzten Eintrag der Gruppe. Datum/Uhrzeit je Eintrag
+   erscheinen erst nach dem Start, klein, mit einem Bearbeiten-Button für die manuelle Korrektur
+   (z. B. wenn das Tippen vergessen wurde). */
 const zeitZustand = e => !e.von ? 'leer' : !e.bis ? 'laeuft' : 'fertig';
 const zeitAnzeigeText = e => e.von ? `${e.d ? fmtDateShort(e.d) + ', ' : ''}${e.von}${e.bis ? '–' + e.bis : ' …'} Uhr` : '';
-const readZeileZeit = row => ({ d: $('[data-z=d]', row).value, von: $('[data-z=von]', row).value, bis: $('[data-z=bis]', row).value });
-function setZeitZustand(row) {
-  const e = readZeileZeit(row);
-  row.dataset.zstate = zeitZustand(e);
-  $('[data-anzeige]', row).textContent = zeitAnzeigeText(e);
+const readEntryZeit = el => ({ d: $('[data-z=d]', el).value, von: $('[data-z=von]', el).value, bis: $('[data-z=bis]', el).value });
+function setEntryZustand(entryEl) {
+  const e = readEntryZeit(entryEl);
+  entryEl.dataset.estate = zeitZustand(e);
+  $('[data-anzeige]', entryEl).textContent = zeitAnzeigeText(e);
+}
+/** Der Gruppen-Button richtet sich nach dem letzten Eintrag (leer → Start, läuft → Stopp,
+    fertig → kein Button, nur der Bearbeiten-Stift am Eintrag selbst). */
+function syncGroupZustand(groupEl) {
+  const entries = $$('.zb-zeit', groupEl);
+  groupEl.dataset.zstate = entries.length ? entries[entries.length - 1].dataset.estate : 'leer';
 }
 
-function zeitZeileBohrist(g, i, e) {
-  return `<div class="zeile zeile-bohrist" data-g="${g.k}" data-i="${i}" data-zstate="${zeitZustand(e)}">
+function zeitEntryHTML(g, i, e) {
+  return `<div class="zb-zeit" data-i="${i}" data-estate="${zeitZustand(e)}">
+    <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
+    <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
+    <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
+    <span class="zeit-anzeige" data-anzeige>${esc(zeitAnzeigeText(e))}</span>
+    <button type="button" class="icon-btn" data-edit-zeit title="Zeit bearbeiten" aria-label="${esc(g.label)}: Zeit bearbeiten">${ICON.edit}</button>
+  </div>`;
+}
+
+function zeitGroupHTML(g, rawEntries) {
+  const rows = zeitRowsFor(g, rawEntries);
+  return `<div class="zeile zeile-bohrist" data-g="${g.k}" data-zstate="${zeitZustand(rows[rows.length - 1])}">
     <div class="zb-head">
-      <span class="zl${i ? ' more' : ''}">${esc(g.label)}${i ? ' (weiterer)' : ''}</span>
+      <span class="zl">${esc(g.label)}</span>
       <button type="button" class="btn zb-btn start" data-start>▶ Start</button>
       <button type="button" class="btn zb-btn stop" data-stop>■ Stopp</button>
     </div>
-    <div class="zb-zeit">
-      <input type="date" data-z="d" aria-label="${esc(g.label)} Datum" value="${esc(e.d || '')}">
-      <input type="time" data-z="von" aria-label="${esc(g.label)} von" value="${esc(e.von || '')}">
-      <input type="time" data-z="bis" aria-label="${esc(g.label)} bis" value="${esc(e.bis || '')}">
-      <span class="zeit-anzeige" data-anzeige>${esc(zeitAnzeigeText(e))}</span>
-      <button type="button" class="icon-btn" data-edit-zeit title="Zeit bearbeiten" aria-label="${esc(g.label)}: Zeit bearbeiten">${ICON.edit}</button>
-    </div>
+    <div class="zb-entries">${rows.map((e, i) => zeitEntryHTML(g, i, e)).join('')}</div>
   </div>`;
 }
 
@@ -1397,8 +1407,8 @@ function requiredEls() {
   for (const g of ZEIT_GROUPS) {
     if (g.k === 'bewehren' && e.pfahlart.value !== 'bewehrt') continue;
     if (!['bohren', 'bewehren', 'betonieren'].includes(g.k)) continue;
-    const row = $(`.zeile[data-g=${g.k}][data-i="0"]`, form);
-    for (const [f, n] of [['d', 'Datum'], ['von', 'von'], ['bis', 'bis']]) out.push({ el: $(`[data-z=${f}]`, row), label: `${g.label}: ${n}` });
+    const entry = $(`.zeile-bohrist[data-g=${g.k}] .zb-zeit[data-i="0"]`, form);
+    for (const [f, n] of [['d', 'Datum'], ['von', 'von'], ['bis', 'bis']]) out.push({ el: $(`[data-z=${f}]`, entry), label: `${g.label}: ${n}` });
   }
   return out;
 }
@@ -1520,10 +1530,10 @@ form.addEventListener('click', e => {
     }
   });
 });
-// Manuelle Eingabe von Datum/Uhrzeit (Admin) kann eine growable-Zeile ebenfalls abschließen
+// Manuelle Eingabe von Datum/Uhrzeit (Admin) kann einen growable-Eintrag ebenfalls abschließen
 form.addEventListener('change', e => {
-  const zeile = e.target.closest('[data-z]')?.closest('.zeile');
-  if (zeile) maybeGrowZeitGroup(zeile);
+  const group = e.target.closest('[data-z]')?.closest('.zeile-bohrist');
+  if (group) maybeGrowZeitGroup(group);
 });
 form.addEventListener('change', recalc);
 
@@ -1564,32 +1574,40 @@ form.addEventListener('click', e => {
   }
   const startBtn = e.target.closest('[data-start]');
   if (startBtn) {
-    const row = startBtn.closest('.zeile');
+    const group = startBtn.closest('.zeile-bohrist');
+    const entries = $$('.zb-zeit', group);
+    const entry = entries[entries.length - 1];
     const d = new Date();
-    $('[data-z=d]', row).value = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    $('[data-z=von]', row).value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    setZeitZustand(row);
+    $('[data-z=d]', entry).value = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    $('[data-z=von]', entry).value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    setEntryZustand(entry);
+    syncGroupZustand(group);
     return recalc();
   }
   const stopBtn = e.target.closest('[data-stop]');
   if (stopBtn) {
-    const row = stopBtn.closest('.zeile');
+    const group = stopBtn.closest('.zeile-bohrist');
+    const entries = $$('.zb-zeit', group);
+    const entry = entries[entries.length - 1];
     const d = new Date();
-    $('[data-z=bis]', row).value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    setZeitZustand(row);
-    maybeGrowZeitGroup(row);
+    $('[data-z=bis]', entry).value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    setEntryZustand(entry);
+    maybeGrowZeitGroup(group);
+    syncGroupZustand(group);
     return recalc();
   }
   const editZeitBtn = e.target.closest('[data-edit-zeit]');
   if (editZeitBtn) {
-    const row = editZeitBtn.closest('.zeile');
-    if (row.dataset.zstate === 'bearbeiten') {
-      setZeitZustand(row);
-      maybeGrowZeitGroup(row);
+    const entry = editZeitBtn.closest('.zb-zeit');
+    const group = entry.closest('.zeile-bohrist');
+    if (entry.dataset.estate === 'bearbeiten') {
+      setEntryZustand(entry);
+      maybeGrowZeitGroup(group);
+      syncGroupZustand(group);
       editZeitBtn.innerHTML = ICON.edit;
       editZeitBtn.title = editZeitBtn.ariaLabel = 'Zeit bearbeiten';
     } else {
-      row.dataset.zstate = 'bearbeiten';
+      entry.dataset.estate = 'bearbeiten';
       editZeitBtn.innerHTML = ICON.check;
       editZeitBtn.title = editZeitBtn.ariaLabel = 'Fertig';
     }
