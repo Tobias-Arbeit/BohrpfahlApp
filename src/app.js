@@ -1042,6 +1042,16 @@ function readSchichten() {
   }).filter(s => !(s.bis === null && !s.boden));
 }
 
+/** Schichten nach Tiefe (bis) aufsteigend sortieren, damit eine nachträglich mit "+ Schicht"
+    hinzugefügte Zeile nach Eingabe der Tiefe automatisch an die richtige Stelle rutscht, statt sie
+    von Hand einsortieren zu müssen. Zeilen ohne (gültige) Tiefe bleiben ans Ende sortiert. */
+function sortSchichtRows() {
+  const list = readSchichten();
+  if (!list.length) return;
+  list.sort((a, b) => (isNum(a.bis) ? a.bis : Infinity) - (isNum(b.bis) ? b.bis : Infinity));
+  $('#schichtRows').innerHTML = list.map(schichtRowHTML).join('');
+}
+
 function readZeiten() {
   const z = {};
   for (const g of ZEIT_GROUPS) {
@@ -1525,6 +1535,11 @@ form.addEventListener('change', e => {
   const value = allSoils().filter(s => checked.has(s.name)).map(s => s.name).join(', ');
   $('[data-s=boden]', row).value = value;
   $('.soil-dropdown-label', row).innerHTML = soilSummary(value);
+});
+/* Schichten nach Eingabe einer Tiefe neu sortieren (siehe sortSchichtRows), nicht schon während des
+   Tippens (sonst würde die Zeile bei jedem Zeichen springen), sondern erst beim Verlassen des Felds. */
+form.addEventListener('change', e => {
+  if (e.target.closest('[data-s=bis]')) sortSchichtRows();
 });
 /* Bodenart-Dropdown je Schicht auf-/zuklappen; schließt sich bei Klick außerhalb oder beim Öffnen
    eines anderen Dropdowns (immer nur eines gleichzeitig offen). */
