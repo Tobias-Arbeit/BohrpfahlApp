@@ -1263,8 +1263,29 @@ function recalc() {
   $('#spanOut').textContent = sp.s == null || sp.e == null ? '–' : `${fmtDT(toLocalInput(new Date(sp.s)))} – ${fmtDT(toLocalInput(new Date(sp.e)))}`;
   $('#dauerOut').textContent = dm == null ? '–' : fmtDur(dm);
   $('#hindOut').textContent = hm == null ? '–' : fmtDurPad(hm) + ' h';
+  updateBohrtiefe();
   validate(false);
   updateRequired();
+}
+
+/** Bohrtiefen-Kontrolle (Nivellement): aus Höhe Fixpunkt und den beiden Ablesewerten (Rückblick auf
+    den Fixpunkt, Vorblick auf OK Bohrrohr) wird zunächst die Ziellinienhöhe des Geräts, daraus die
+    Höhe OK Bohrrohr und schließlich die noch abzubohrende Tiefe bis zur Pfahl-UK Soll berechnet.
+    Reine Messhilfe (nicht Teil der gespeicherten Pfahldaten), daher ohne name-Attribute an den Feldern. */
+function updateBohrtiefe() {
+  const hoehe = parseNum($('#bt_hoehe').value);
+  const ablFix = parseNum($('#bt_ablFix').value);
+  const ablRohr = parseNum($('#bt_ablRohr').value);
+  const sollUk = parseNum(form.elements.sUnterkante.value);
+  const hi = isNum(hoehe) && isNum(ablFix) ? rd(hoehe + ablFix, 3) : null;
+  const okRohr = isNum(hi) && isNum(ablRohr) ? rd(hi - ablRohr, 3) : null;
+  const tiefe = isNum(okRohr) && isNum(sollUk) ? rd(okRohr - sollUk, 3) : null;
+  const hb = hoehenbezug();
+  $('#btHiOut').textContent = isNum(hi) ? `${fmtPlain(hi, 3)} ${hb}` : '–';
+  $('#btOkOut').textContent = isNum(okRohr) ? `${fmtPlain(okRohr, 3)} ${hb}` : '–';
+  $('#btUkOut').textContent = isNum(sollUk) ? `${fmtPlain(sollUk, 3)} ${hb}` : '–';
+  $('#btTiefeOut').textContent = isNum(tiefe) ? `${fmtPlain(tiefe, 3)} m` : '–';
+  $('#btGraphic').innerHTML = bohrtiefeSvg({ hoehe, ablFix, ablRohr, hi, okRohr, sollUk, tiefe });
 }
 
 /** Prüft das Formular. Fehler blockieren das Speichern, Hinweise nicht. */
@@ -1363,6 +1384,8 @@ function openPile({ id = null, base = null } = {}) {
   $('#pileTitle').textContent = id ? `Pfahl ${p.nr || ''} bearbeiten` : 'Neuer Pfahl';
   $$('[data-hb]').forEach(s => { s.textContent = hoehenbezug(); });
   updateCoordLabels();
+  // Bohrtiefen-Rechner: reine Messhilfe, wird nicht mit dem Pfahl gespeichert, je Öffnen zurückgesetzt
+  $('#bt_hoehe').value = $('#bt_ablFix').value = $('#bt_ablRohr').value = '';
   recalc();
   applyPileLock(p, !id);
   renderFotos();

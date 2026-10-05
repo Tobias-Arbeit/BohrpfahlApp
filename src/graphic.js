@@ -253,3 +253,69 @@ function pileGraphicSvg(p) {
     ? `<ul class="pg-leg">${[...used.values()].map(u => `<li>${u.sw}<span>${esc2(u.label)}</span></li>`).join('')}</ul>` : '';
   return o.join('') + legend;
 }
+
+/* =====================================================================
+   Bohrtiefen-Kontrolle (Nivellement): Höhe Fixpunkt -> Ziellinie des Geräts -> Höhe OK Bohrrohr ->
+   erforderliche Bohrtiefe bis Pfahl-UK Soll. Das Layout ist fest (nicht maßstäblich), nur die
+   Zahlenwerte sind live; fehlende Werte werden als „–“ angezeigt.
+   ===================================================================== */
+
+/** Senkrechter Maßpfeil mit Beschriftung links (oder rechts, wenn right=true). */
+function btDimV(x, y1, y2, label, opts = {}) {
+  const top = Math.min(y1, y2), bot = Math.max(y1, y2);
+  const cls = 'bt-dim' + (opts.strong ? ' bt-dim-strong' : '');
+  const tx = opts.right ? x + 8 : x - 8;
+  const anchor = opts.right ? 'start' : 'end';
+  return `<g class="${cls}">
+    <line x1="${x}" y1="${top}" x2="${x}" y2="${bot}"/>
+    <path d="M${x - 3} ${top + 6} L${x} ${top} L${x + 3} ${top + 6}"/>
+    <path d="M${x - 3} ${bot - 6} L${x} ${bot} L${x + 3} ${bot - 6}"/>
+    ${label ? `<text x="${tx}" y="${(top + bot) / 2}" text-anchor="${anchor}" dominant-baseline="middle">${esc2(label)}</text>` : ''}
+  </g>`;
+}
+
+function bohrtiefeSvg(v) {
+  const W = 560, H = 236;
+  const fmt = n => isNum(n) ? `${fmtPlain(n, 3)} m` : '–';
+  const xFix = 76, xInst = 262, xRohr = 452;
+  const yLine = 48, yFix = 150, yRohrTop = 104, yUk = 198;
+  const o = [`<svg class="pg bt" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Schema Bohrtiefen-Kontrolle">`];
+
+  // Ziellinie (Sichtlinie des Nivelliergeräts) mit Dreibein in der Mitte
+  o.push(`<line x1="${xFix}" y1="${yLine}" x2="${xRohr}" y2="${yLine}" class="bt-sicht"/>`);
+  o.push(`<text x="${xInst}" y="${yLine - 10}" text-anchor="middle" class="pg-lbl">Ziellinie (Horizont)</text>`);
+  o.push(`<text x="${xInst}" y="${H - 10}" text-anchor="middle" class="pg-sub">Nivelliergerät · Ziellinienhöhe ${esc2(fmt(v.hi))}</text>`);
+  o.push(`<path d="M${xInst} ${yLine} l-13 24 M${xInst} ${yLine} l13 24 M${xInst - 13} ${yLine + 24} h26" class="bt-sicht"/>`);
+  o.push(`<circle cx="${xInst}" cy="${yLine}" r="4.5" class="bt-inst"/>`);
+
+  // Fixpunkt: bekannte Höhe, Ablesewert (Rückblick) zur Ziellinie
+  o.push(`<rect x="${xFix - 22}" y="${yFix + 2}" width="44" height="14" fill="url(#pgHart)"/>`);
+  o.push(`<line x1="${xFix - 22}" y1="${yFix + 2}" x2="${xFix + 22}" y2="${yFix + 2}" class="pg-ground"/>`);
+  o.push(`<line x1="${xFix}" y1="${yFix + 2}" x2="${xFix}" y2="${yLine}" class="pg-bore"/>`);
+  o.push(`<path d="M${xFix - 6} ${yFix + 2} l6 -11 l6 11 Z" class="bt-pt"/>`);
+  o.push(`<text x="${xFix}" y="${yFix + 30}" text-anchor="middle" class="pg-lbl">Fixpunkt</text>`);
+  o.push(`<text x="${xFix}" y="${yFix + 44}" text-anchor="middle" class="pg-sub bt-val">${esc2(fmt(v.hoehe))}</text>`);
+  o.push(btDimV(xFix - 34, yLine, yFix + 2, fmt(v.ablFix)));
+  o.push(`<text x="${xFix - 34}" y="${(yLine + yFix) / 2 - 14}" text-anchor="middle" class="pg-axis">Rückblick</text>`);
+
+  // OK Bohrrohr: Ablesewert (Vorblick) von der Ziellinie
+  o.push(btDimV(xRohr + 34, yLine, yRohrTop, fmt(v.ablRohr), { right: true }));
+  o.push(`<text x="${xRohr + 34}" y="${(yLine + yRohrTop) / 2 - 14}" text-anchor="middle" class="pg-axis">Vorblick</text>`);
+  o.push(`<line x1="${xRohr}" y1="${yRohrTop}" x2="${xRohr}" y2="${yLine}" class="pg-bore"/>`);
+  o.push(`<line x1="${xRohr - 18}" y1="${yRohrTop}" x2="${xRohr + 18}" y2="${yRohrTop}" class="pg-ground"/>`);
+  o.push(`<text x="${xRohr - 6}" y="${yRohrTop - 9}" text-anchor="end" class="pg-lbl">OK Bohrrohr</text>`);
+  o.push(`<text x="${xRohr + 6}" y="${yRohrTop - 9}" text-anchor="start" class="pg-sub bt-val">${esc2(fmt(v.okRohr))}</text>`);
+
+  // Bohrrohr von OK bis Pfahl-UK Soll, Bodenschraffur, Bohrtiefe als hervorgehobener Maßpfeil
+  o.push(`<rect x="${xRohr - 7}" y="${yRohrTop}" width="14" height="${yUk - yRohrTop}" class="bt-pipe"/>`);
+  o.push(`<rect x="${xRohr - 34}" y="${yUk}" width="68" height="20" fill="url(#pgHart)"/>`);
+  o.push(`<line x1="${xRohr - 18}" y1="${yUk}" x2="${xRohr + 18}" y2="${yUk}" class="pg-ground"/>`);
+  o.push(`<text x="${xRohr}" y="${yUk + 35}" text-anchor="middle" class="pg-lbl">Pfahl-UK Soll</text>`);
+  o.push(`<text x="${xRohr}" y="${yUk + 49}" text-anchor="middle" class="pg-sub bt-val">${esc2(fmt(v.sollUk))}</text>`);
+  o.push(btDimV(xRohr - 34, yRohrTop, yUk, '', { strong: true }));
+  o.push(`<text x="${xRohr - 44}" y="${(yRohrTop + yUk) / 2 - 6}" text-anchor="end" class="bt-result-lbl">Bohrtiefe</text>`);
+  o.push(`<text x="${xRohr - 44}" y="${(yRohrTop + yUk) / 2 + 10}" text-anchor="end" class="bt-result-lbl bt-result-val">${esc2(fmt(v.tiefe))}</text>`);
+
+  o.push('</svg>');
+  return o.join('');
+}

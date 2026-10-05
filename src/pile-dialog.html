@@ -178,6 +178,47 @@
         </div>
       </fieldset>
 
+      <fieldset id="fsBohrtiefe">
+        <legend>Bohrtiefen-Kontrolle (Nivellement)</legend>
+        <p class="sub" style="margin-top:0">Höhe Fixpunkt und die beiden Ablesewerte am Nivelliergerät eintragen – Höhe OK Bohrrohr und erforderliche Bohrtiefe werden daraus berechnet.</p>
+        <div id="btGraphic" class="bt-wrap"></div>
+        <div class="grid">
+          <div class="field">
+            <label for="bt_hoehe">Höhe Fixpunkt <span class="unit">[<span data-hb></span>]</span></label>
+            <input id="bt_hoehe" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="bt_ablFix">Ablesewert Fixpunkt <span class="unit">[m]</span></label>
+            <input id="bt_ablFix" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint">Rückblick, Latte auf dem Fixpunkt</span>
+          </div>
+          <div class="field">
+            <label for="bt_ablRohr">Ablesewert OK Bohrrohr <span class="unit">[m]</span></label>
+            <input id="bt_ablRohr" type="text" inputmode="decimal" autocomplete="off">
+            <span class="hint">Vorblick, Latte auf OK Bohrrohr</span>
+          </div>
+          <div class="field">
+            <label>Ziellinienhöhe (Horizont) <span class="unit">[<span data-hb></span>]</span></label>
+            <div class="readout" id="btHiOut">–</div>
+            <span class="hint">Höhe Fixpunkt + Ablesewert Fixpunkt</span>
+          </div>
+          <div class="field">
+            <label>Höhe OK Bohrrohr <span class="unit">[<span data-hb></span>]</span></label>
+            <div class="readout" id="btOkOut">–</div>
+            <span class="hint">Ziellinienhöhe − Ablesewert OK Bohrrohr</span>
+          </div>
+          <div class="field">
+            <label>Pfahl-UK Soll <span class="unit">[<span data-hb></span>]</span></label>
+            <div class="readout" id="btUkOut">–</div>
+            <span class="hint">aus „Höhen und Längen“ oben</span>
+          </div>
+        </div>
+        <div class="bt-result">
+          <span>Erforderliche Bohrtiefe ab OK Bohrrohr</span>
+          <strong id="btTiefeOut">–</strong>
+        </div>
+      </fieldset>
+
       <div class="zwei-spalten">
       <fieldset id="fsBoden">
         <legend>Bodenaufschluss (Schichtenfolge)
