@@ -563,25 +563,50 @@ svg.pg { display: block; background: var(--surface); border: 1px solid var(--lin
 .pg .pg-tick { stroke: var(--muted); stroke-width: .8; }
 .pg .pg-pile { fill: #9aa3ad; stroke: var(--ink); stroke-width: 1.2; }
 .pg .pg-bore { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 2; }
-/* Bohrtiefen-Kontrolle (Nivellement): eigenes Schema, nutzt die .pg-Grundfarben/-schrift mit */
-.bt-wrap { margin-bottom: 14px; }
-.bt-wrap svg.pg { width: 100%; height: auto; }
+/* Bohrtiefen-Kontrolle (Nivellement): eigene Popup-Zeichnung, nutzt die .pg-Grundfarben/-schrift mit.
+   Die Zeichnung selbst ist statisch; Eingabe-/Ausgabewerte sitzen als .bt-box-Kästchen direkt darauf
+   (prozentual positioniert, siehe btPct() in graphic.js), damit sie beim Verschieben/Skalieren der
+   Zeichnung an der richtigen Stelle bleiben. */
+.bt-wrap { position: relative; margin-bottom: 4px; }
+.bt-wrap svg.pg { width: 100%; height: auto; display: block; }
 .pg .bt-sicht { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 5 3; fill: none; }
 .pg .bt-inst { fill: var(--surface); stroke: var(--ink); stroke-width: 1.3; }
 .pg .bt-pt { fill: var(--accent); }
-.pg .bt-pipe { fill: #c9cfd6; stroke: var(--ink); stroke-width: 1.2; }
-.pg .bt-val { font-weight: 700; fill: var(--ink); }
+.pg .bt-pipe { fill: url(#pgPipeGrad); stroke: var(--ink); stroke-width: 1.1; }
+.pg .bt-pipe-joint { stroke: #5b6472; stroke-width: .7; opacity: .7; }
+.pg .bt-pipe-rim { fill: #7a8390; stroke: var(--ink); stroke-width: 1; }
+.pg .bt-pipe-hole { fill: #3c4149; }
 .pg .bt-dim line, .pg .bt-dim path { stroke: var(--muted); stroke-width: 1; fill: none; }
-.pg .bt-dim text { fill: var(--muted); font-size: 9.5px; font-variant-numeric: tabular-nums; }
 .pg .bt-dim-strong line, .pg .bt-dim-strong path { stroke: var(--accent); stroke-width: 1.5; }
-.pg .bt-result-lbl { fill: var(--accent); font-weight: 700; font-size: 10.5px; }
-.pg .bt-result-val { font-size: 12px; }
-.bt-result {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-  margin-top: 12px; padding: 12px 16px; border-radius: var(--radius);
-  background: var(--yes-bg); color: var(--yes-ink); font-weight: 600;
+
+.bt-box {
+  position: absolute; transform: translate(-50%, -50%); z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 60px;
+  padding: 3px 6px 4px; border-radius: 7px; text-align: center;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
 }
-.bt-result strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.bt-box-lbl { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); white-space: nowrap; }
+.bt-box input {
+  width: 66px; height: 22px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px;
+  font-size: 12.5px; text-align: center; font-variant-numeric: tabular-nums; background: var(--surface);
+}
+.bt-box-unit { font-size: 8px; color: var(--muted); }
+.bt-box-val { font-size: 12.5px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bt-box.bt-out { background: var(--surface-2); }
+.bt-box.bt-result { background: var(--yes-bg); border-color: var(--yes-ink); }
+.bt-box.bt-result .bt-box-lbl { color: var(--yes-ink); }
+.bt-box.bt-result .bt-box-val { color: var(--yes-ink); font-size: 14px; }
+.bt-trigger { margin: 0 0 14px; }
+#bohrtiefeDialog { width: min(680px, calc(100vw - 24px)); }
+/* Die .bt-box-Kästchen haben eine feste Pixelgröße (für lesbare Eingabefelder); auf schmalen
+   Bildschirmen schrumpft die Zeichnung darunter relativ dazu, daher hier kleiner skalieren. */
+@media (max-width: 480px) {
+  .bt-box { min-width: 46px; padding: 2px 4px 3px; gap: 0; }
+  .bt-box input { width: 48px; height: 19px; font-size: 10.5px; }
+  .bt-box-lbl { font-size: 7px; }
+  .bt-box-unit, .bt-box-val { font-size: 10px; }
+  .bt-box.bt-result .bt-box-val { font-size: 11.5px; }
+}
 .chip.st-geprueft { background: #2563eb; color: #fff; }
 .icon-btn.on { color: #2563eb; }
 .pruef-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: #2563eb; color: #fff; box-shadow: 0 0 0 2px rgba(37,99,235,.25); cursor: default; }
@@ -1122,46 +1147,9 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         </div>
       </fieldset>
 
-      <fieldset id="fsBohrtiefe">
-        <legend>Bohrtiefen-Kontrolle (Nivellement)</legend>
-        <p class="sub" style="margin-top:0">Höhe Fixpunkt und die beiden Ablesewerte am Nivelliergerät eintragen – Höhe OK Bohrrohr und erforderliche Bohrtiefe werden daraus berechnet.</p>
-        <div id="btGraphic" class="bt-wrap"></div>
-        <div class="grid">
-          <div class="field">
-            <label for="bt_hoehe">Höhe Fixpunkt <span class="unit">[<span data-hb></span>]</span></label>
-            <input id="bt_hoehe" type="text" inputmode="decimal" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="bt_ablFix">Ablesewert Fixpunkt <span class="unit">[m]</span></label>
-            <input id="bt_ablFix" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint">Rückblick, Latte auf dem Fixpunkt</span>
-          </div>
-          <div class="field">
-            <label for="bt_ablRohr">Ablesewert OK Bohrrohr <span class="unit">[m]</span></label>
-            <input id="bt_ablRohr" type="text" inputmode="decimal" autocomplete="off">
-            <span class="hint">Vorblick, Latte auf OK Bohrrohr</span>
-          </div>
-          <div class="field">
-            <label>Ziellinienhöhe (Horizont) <span class="unit">[<span data-hb></span>]</span></label>
-            <div class="readout" id="btHiOut">–</div>
-            <span class="hint">Höhe Fixpunkt + Ablesewert Fixpunkt</span>
-          </div>
-          <div class="field">
-            <label>Höhe OK Bohrrohr <span class="unit">[<span data-hb></span>]</span></label>
-            <div class="readout" id="btOkOut">–</div>
-            <span class="hint">Ziellinienhöhe − Ablesewert OK Bohrrohr</span>
-          </div>
-          <div class="field">
-            <label>Pfahl-UK Soll <span class="unit">[<span data-hb></span>]</span></label>
-            <div class="readout" id="btUkOut">–</div>
-            <span class="hint">aus „Höhen und Längen“ oben</span>
-          </div>
-        </div>
-        <div class="bt-result">
-          <span>Erforderliche Bohrtiefe ab OK Bohrrohr</span>
-          <strong id="btTiefeOut">–</strong>
-        </div>
-      </fieldset>
+      <div class="bt-trigger">
+        <button type="button" class="btn" id="btnBohrtiefe">Bohrtiefen-Kontrolle (Nivellement) …</button>
+      </div>
 
       <div class="zwei-spalten">
       <fieldset id="fsBoden">
@@ -1280,6 +1268,55 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
     <div class="dlg-foot">
       <button type="button" class="btn" data-close>Abbrechen</button>
       <button type="submit" class="btn primary" id="btnSave">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="bohrtiefeDialog" aria-labelledby="bohrtiefeTitle">
+  <form id="bohrtiefeForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="bohrtiefeTitle">Bohrtiefen-Kontrolle (Nivellement)</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dlg-body">
+      <p class="sub" style="margin-top:0">Höhe Fixpunkt und die beiden Ablesewerte direkt in der Skizze eintragen – Höhe OK Bohrrohr und erforderliche Bohrtiefe werden daraus berechnet.</p>
+      <div id="btGraphic" class="bt-wrap">
+        <div class="bt-box bt-in" style="left:17.74%;top:73.75%">
+          <span class="bt-box-lbl">Höhe Fixpunkt</span>
+          <input id="bt_hoehe" type="text" inputmode="decimal" autocomplete="off" aria-label="Höhe Fixpunkt">
+          <span class="bt-box-unit" data-hb></span>
+        </div>
+        <div class="bt-box bt-in" style="left:11.29%;top:40.94%">
+          <span class="bt-box-lbl">Rückblick</span>
+          <input id="bt_ablFix" type="text" inputmode="decimal" autocomplete="off" aria-label="Ablesewert Fixpunkt (Rückblick)">
+          <span class="bt-box-unit">m</span>
+        </div>
+        <div class="bt-box bt-in" style="left:74.19%;top:32.81%">
+          <span class="bt-box-lbl">Vorblick</span>
+          <input id="bt_ablRohr" type="text" inputmode="decimal" autocomplete="off" aria-label="Ablesewert OK Bohrrohr (Vorblick)">
+          <span class="bt-box-unit">m</span>
+        </div>
+        <div class="bt-box bt-out" style="left:51.61%;top:11.25%">
+          <span class="bt-box-lbl">Ziellinienhöhe</span>
+          <span class="bt-box-val" id="btHiOut">–</span>
+        </div>
+        <div class="bt-box bt-out" style="left:90.32%;top:43.75%">
+          <span class="bt-box-lbl">OK Bohrrohr</span>
+          <span class="bt-box-val" id="btOkOut">–</span>
+        </div>
+        <div class="bt-box bt-result" style="left:74.19%;top:62.5%">
+          <span class="bt-box-lbl">Bohrtiefe</span>
+          <span class="bt-box-val" id="btTiefeOut">–</span>
+        </div>
+        <div class="bt-box bt-out" style="left:80.65%;top:93.75%">
+          <span class="bt-box-lbl">Pfahl-UK Soll</span>
+          <span class="bt-box-val" id="btUkOut">–</span>
+        </div>
+      </div>
+      <p class="hint" style="display:block;margin-top:10px">Rückblick: Latte auf dem Fixpunkt. Vorblick: Latte auf OK Bohrrohr. Pfahl-UK Soll wird aus „Höhen und Längen“ übernommen.</p>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn primary" data-close>Schließen</button>
     </div>
   </form>
 </dialog>
@@ -3734,7 +3771,11 @@ const SOIL_PATTERNS = {
   const extra = `
     <pattern id="pgHind" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#a9744a"/><line x1="0" y1="0" x2="0" y2="6" stroke="#5b3a1f" stroke-width="2"/></pattern>
     <pattern id="pgHart" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="6" height="6" fill="#9aa1ab"/><line x1="0" y1="0" x2="0" y2="6" stroke="#4b525c" stroke-width="2"/></pattern>
-    <pattern id="pgWater" width="8" height="6" patternUnits="userSpaceOnUse"><path d="M0 3 q2 -3 4 0 t4 0" fill="none" stroke="#2563eb" stroke-width="0.8" opacity=".55"/></pattern>`;
+    <pattern id="pgWater" width="8" height="6" patternUnits="userSpaceOnUse"><path d="M0 3 q2 -3 4 0 t4 0" fill="none" stroke="#2563eb" stroke-width="0.8" opacity=".55"/></pattern>
+    <linearGradient id="pgPipeGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8b93a0"/><stop offset=".22" stop-color="#e7eaee"/>
+      <stop offset=".5" stop-color="#aab1bc"/><stop offset=".78" stop-color="#e7eaee"/><stop offset="1" stop-color="#75808d"/>
+    </linearGradient>`;
   document.body.insertAdjacentHTML('beforeend', `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>${pats}${extra}</defs></svg>`);
 })();
 
@@ -3906,37 +3947,36 @@ function pileGraphicSvg(p) {
 
 /* =====================================================================
    Bohrtiefen-Kontrolle (Nivellement): Höhe Fixpunkt -> Ziellinie des Geräts -> Höhe OK Bohrrohr ->
-   erforderliche Bohrtiefe bis Pfahl-UK Soll. Das Layout ist fest (nicht maßstäblich), nur die
-   Zahlenwerte sind live; fehlende Werte werden als „–“ angezeigt.
-   ===================================================================== */
+   erforderliche Bohrtiefe bis Pfahl-UK Soll. Die Zeichnung ist rein statisch (festes Layout, keine
+   Zahlenwerte) – die Werte sitzen als eigene Eingabe-/Ausgabe-Kästchen direkt auf der Zeichnung
+   (siehe .bt-box in pile-dialog.html, Positionen über btPct() aus BT_VIEW abgeleitet), damit beim
+   Tippen kein Element neu aufgebaut wird und der Fokus erhalten bleibt. */
+const BT_VIEW = {
+  w: 620, h: 320,
+  xFix: 110, xInst: 320, xRohr: 500,
+  yLine: 70, yFix: 190, yRohrTop: 140, yUk: 260,
+  xRueck: 70, xVor: 460,
+};
 
-/** Senkrechter Maßpfeil mit Beschriftung links (oder rechts, wenn right=true). */
-function btDimV(x, y1, y2, label, opts = {}) {
+/** Senkrechter Maßpfeil (nur Geometrie – die Beschriftung steht im zugehörigen .bt-box daneben). */
+function btDimV(x, y1, y2, strong) {
   const top = Math.min(y1, y2), bot = Math.max(y1, y2);
-  const cls = 'bt-dim' + (opts.strong ? ' bt-dim-strong' : '');
-  const tx = opts.right ? x + 8 : x - 8;
-  const anchor = opts.right ? 'start' : 'end';
-  return `<g class="${cls}">
+  return `<g class="bt-dim${strong ? ' bt-dim-strong' : ''}">
     <line x1="${x}" y1="${top}" x2="${x}" y2="${bot}"/>
     <path d="M${x - 3} ${top + 6} L${x} ${top} L${x + 3} ${top + 6}"/>
     <path d="M${x - 3} ${bot - 6} L${x} ${bot} L${x + 3} ${bot - 6}"/>
-    ${label ? `<text x="${tx}" y="${(top + bot) / 2}" text-anchor="${anchor}" dominant-baseline="middle">${esc2(label)}</text>` : ''}
   </g>`;
 }
 
-function bohrtiefeSvg(v) {
-  const W = 560, H = 236;
-  const fmt = n => isNum(n) ? `${fmtPlain(n, 3)} m` : '–';
-  const xFix = 76, xInst = 262, xRohr = 452;
-  const yLine = 48, yFix = 150, yRohrTop = 104, yUk = 198;
+function bohrtiefeSvg() {
+  const { w: W, h: H, xFix, xInst, xRohr, yLine, yFix, yRohrTop, yUk, xRueck, xVor } = BT_VIEW;
   const o = [`<svg class="pg bt" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Schema Bohrtiefen-Kontrolle">`];
 
   // Ziellinie (Sichtlinie des Nivelliergeräts) mit Dreibein in der Mitte
   o.push(`<line x1="${xFix}" y1="${yLine}" x2="${xRohr}" y2="${yLine}" class="bt-sicht"/>`);
-  o.push(`<text x="${xInst}" y="${yLine - 10}" text-anchor="middle" class="pg-lbl">Ziellinie (Horizont)</text>`);
-  o.push(`<text x="${xInst}" y="${H - 10}" text-anchor="middle" class="pg-sub">Nivelliergerät · Ziellinienhöhe ${esc2(fmt(v.hi))}</text>`);
   o.push(`<path d="M${xInst} ${yLine} l-13 24 M${xInst} ${yLine} l13 24 M${xInst - 13} ${yLine + 24} h26" class="bt-sicht"/>`);
   o.push(`<circle cx="${xInst}" cy="${yLine}" r="4.5" class="bt-inst"/>`);
+  o.push(`<text x="${xInst}" y="${yLine + 42}" text-anchor="middle" class="pg-axis">Nivelliergerät</text>`);
 
   // Fixpunkt: bekannte Höhe, Ablesewert (Rückblick) zur Ziellinie
   o.push(`<rect x="${xFix - 22}" y="${yFix + 2}" width="44" height="14" fill="url(#pgHart)"/>`);
@@ -3944,31 +3984,34 @@ function bohrtiefeSvg(v) {
   o.push(`<line x1="${xFix}" y1="${yFix + 2}" x2="${xFix}" y2="${yLine}" class="pg-bore"/>`);
   o.push(`<path d="M${xFix - 6} ${yFix + 2} l6 -11 l6 11 Z" class="bt-pt"/>`);
   o.push(`<text x="${xFix}" y="${yFix + 30}" text-anchor="middle" class="pg-lbl">Fixpunkt</text>`);
-  o.push(`<text x="${xFix}" y="${yFix + 44}" text-anchor="middle" class="pg-sub bt-val">${esc2(fmt(v.hoehe))}</text>`);
-  o.push(btDimV(xFix - 34, yLine, yFix + 2, fmt(v.ablFix)));
-  o.push(`<text x="${xFix - 34}" y="${(yLine + yFix) / 2 - 14}" text-anchor="middle" class="pg-axis">Rückblick</text>`);
+  o.push(btDimV(xRueck, yLine, yFix + 2));
 
   // OK Bohrrohr: Ablesewert (Vorblick) von der Ziellinie
-  o.push(btDimV(xRohr + 34, yLine, yRohrTop, fmt(v.ablRohr), { right: true }));
-  o.push(`<text x="${xRohr + 34}" y="${(yLine + yRohrTop) / 2 - 14}" text-anchor="middle" class="pg-axis">Vorblick</text>`);
+  o.push(btDimV(xVor, yLine, yRohrTop));
   o.push(`<line x1="${xRohr}" y1="${yRohrTop}" x2="${xRohr}" y2="${yLine}" class="pg-bore"/>`);
-  o.push(`<line x1="${xRohr - 18}" y1="${yRohrTop}" x2="${xRohr + 18}" y2="${yRohrTop}" class="pg-ground"/>`);
-  o.push(`<text x="${xRohr - 6}" y="${yRohrTop - 9}" text-anchor="end" class="pg-lbl">OK Bohrrohr</text>`);
-  o.push(`<text x="${xRohr + 6}" y="${yRohrTop - 9}" text-anchor="start" class="pg-sub bt-val">${esc2(fmt(v.okRohr))}</text>`);
+  o.push(`<text x="${xRohr + 24}" y="${yRohrTop - 6}" text-anchor="start" class="pg-lbl">OK Bohrrohr</text>`);
 
-  // Bohrrohr von OK bis Pfahl-UK Soll, Bodenschraffur, Bohrtiefe als hervorgehobener Maßpfeil
-  o.push(`<rect x="${xRohr - 7}" y="${yRohrTop}" width="14" height="${yUk - yRohrTop}" class="bt-pipe"/>`);
+  // Bohrrohr (Kasing) von OK bis Pfahl-UK Soll: Mantel mit Rundungs-Verlauf, offene Mündung oben und
+  // ein paar Rohrschuss-Fugen – wirkt dadurch eher wie ein echtes Stahlrohr als eine flache Fläche.
+  const rw = 15;
+  o.push(`<rect x="${xRohr - rw / 2}" y="${yRohrTop}" width="${rw}" height="${yUk - yRohrTop}" class="bt-pipe"/>`);
+  o.push(`<line x1="${xRohr - rw / 2}" y1="${yRohrTop + 36}" x2="${xRohr + rw / 2}" y2="${yRohrTop + 36}" class="bt-pipe-joint"/>`);
+  o.push(`<line x1="${xRohr - rw / 2}" y1="${yRohrTop + 72}" x2="${xRohr + rw / 2}" y2="${yRohrTop + 72}" class="bt-pipe-joint"/>`);
+  o.push(`<ellipse cx="${xRohr}" cy="${yRohrTop}" rx="${rw / 2}" ry="3.2" class="bt-pipe-rim"/>`);
+  o.push(`<ellipse cx="${xRohr}" cy="${yRohrTop + 1.1}" rx="${rw / 2 - 2.6}" ry="1.6" class="bt-pipe-hole"/>`);
+
+  // Pfahl-UK Soll: Bodenschraffur, Bohrtiefe als hervorgehobener Maßpfeil (gleiche Spur wie Vorblick)
   o.push(`<rect x="${xRohr - 34}" y="${yUk}" width="68" height="20" fill="url(#pgHart)"/>`);
   o.push(`<line x1="${xRohr - 18}" y1="${yUk}" x2="${xRohr + 18}" y2="${yUk}" class="pg-ground"/>`);
   o.push(`<text x="${xRohr}" y="${yUk + 35}" text-anchor="middle" class="pg-lbl">Pfahl-UK Soll</text>`);
-  o.push(`<text x="${xRohr}" y="${yUk + 49}" text-anchor="middle" class="pg-sub bt-val">${esc2(fmt(v.sollUk))}</text>`);
-  o.push(btDimV(xRohr - 34, yRohrTop, yUk, '', { strong: true }));
-  o.push(`<text x="${xRohr - 44}" y="${(yRohrTop + yUk) / 2 - 6}" text-anchor="end" class="bt-result-lbl">Bohrtiefe</text>`);
-  o.push(`<text x="${xRohr - 44}" y="${(yRohrTop + yUk) / 2 + 10}" text-anchor="end" class="bt-result-lbl bt-result-val">${esc2(fmt(v.tiefe))}</text>`);
+  o.push(btDimV(xVor, yRohrTop, yUk, true));
 
   o.push('</svg>');
   return o.join('');
 }
+
+/** Position (in %) für ein .bt-box-Kästchen aus viewBox-Koordinaten, für style="left:…;top:…". */
+const btPct = (x, y) => `left:${(x / BT_VIEW.w * 100).toFixed(2)}%;top:${(y / BT_VIEW.h * 100).toFixed(2)}%`;
 </script>
 <script>'use strict';
 
@@ -5284,10 +5327,13 @@ function recalc() {
   updateRequired();
 }
 
-/** Bohrtiefen-Kontrolle (Nivellement): aus Höhe Fixpunkt und den beiden Ablesewerten (Rückblick auf
-    den Fixpunkt, Vorblick auf OK Bohrrohr) wird zunächst die Ziellinienhöhe des Geräts, daraus die
-    Höhe OK Bohrrohr und schließlich die noch abzubohrende Tiefe bis zur Pfahl-UK Soll berechnet.
-    Reine Messhilfe (nicht Teil der gespeicherten Pfahldaten), daher ohne name-Attribute an den Feldern. */
+/** Bohrtiefen-Kontrolle (Nivellement, eigenes Popup): aus Höhe Fixpunkt und den beiden Ablesewerten
+    (Rückblick auf den Fixpunkt, Vorblick auf OK Bohrrohr) wird zunächst die Ziellinienhöhe des
+    Geräts, daraus die Höhe OK Bohrrohr und schließlich die noch abzubohrende Tiefe bis zur
+    Pfahl-UK Soll berechnet. Die Werte stehen direkt als Kästchen auf der (statischen) Zeichnung;
+    hier wird nur ihr Text aktualisiert, die Zeichnung selbst bleibt unverändert (kein Fokusverlust
+    beim Tippen). Reine Messhilfe (nicht Teil der gespeicherten Pfahldaten), daher ohne
+    name-Attribute an den Feldern. */
 function updateBohrtiefe() {
   const hoehe = parseNum($('#bt_hoehe').value);
   const ablFix = parseNum($('#bt_ablFix').value);
@@ -5301,8 +5347,12 @@ function updateBohrtiefe() {
   $('#btOkOut').textContent = isNum(okRohr) ? `${fmtPlain(okRohr, 3)} ${hb}` : '–';
   $('#btUkOut').textContent = isNum(sollUk) ? `${fmtPlain(sollUk, 3)} ${hb}` : '–';
   $('#btTiefeOut').textContent = isNum(tiefe) ? `${fmtPlain(tiefe, 3)} m` : '–';
-  $('#btGraphic').innerHTML = bohrtiefeSvg({ hoehe, ablFix, ablRohr, hi, okRohr, sollUk, tiefe });
 }
+
+const bohrtiefeDlg = $('#bohrtiefeDialog');
+$('#btGraphic').insertAdjacentHTML('afterbegin', bohrtiefeSvg());
+$('#btnBohrtiefe').addEventListener('click', () => { updateBohrtiefe(); bohrtiefeDlg.showModal(); });
+bohrtiefeDlg.addEventListener('input', updateBohrtiefe);
 
 /** Prüft das Formular. Fehler blockieren das Speichern, Hinweise nicht. */
 function validate(strict) {

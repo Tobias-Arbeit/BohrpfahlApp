@@ -1268,10 +1268,13 @@ function recalc() {
   updateRequired();
 }
 
-/** Bohrtiefen-Kontrolle (Nivellement): aus Höhe Fixpunkt und den beiden Ablesewerten (Rückblick auf
-    den Fixpunkt, Vorblick auf OK Bohrrohr) wird zunächst die Ziellinienhöhe des Geräts, daraus die
-    Höhe OK Bohrrohr und schließlich die noch abzubohrende Tiefe bis zur Pfahl-UK Soll berechnet.
-    Reine Messhilfe (nicht Teil der gespeicherten Pfahldaten), daher ohne name-Attribute an den Feldern. */
+/** Bohrtiefen-Kontrolle (Nivellement, eigenes Popup): aus Höhe Fixpunkt und den beiden Ablesewerten
+    (Rückblick auf den Fixpunkt, Vorblick auf OK Bohrrohr) wird zunächst die Ziellinienhöhe des
+    Geräts, daraus die Höhe OK Bohrrohr und schließlich die noch abzubohrende Tiefe bis zur
+    Pfahl-UK Soll berechnet. Die Werte stehen direkt als Kästchen auf der (statischen) Zeichnung;
+    hier wird nur ihr Text aktualisiert, die Zeichnung selbst bleibt unverändert (kein Fokusverlust
+    beim Tippen). Reine Messhilfe (nicht Teil der gespeicherten Pfahldaten), daher ohne
+    name-Attribute an den Feldern. */
 function updateBohrtiefe() {
   const hoehe = parseNum($('#bt_hoehe').value);
   const ablFix = parseNum($('#bt_ablFix').value);
@@ -1285,8 +1288,12 @@ function updateBohrtiefe() {
   $('#btOkOut').textContent = isNum(okRohr) ? `${fmtPlain(okRohr, 3)} ${hb}` : '–';
   $('#btUkOut').textContent = isNum(sollUk) ? `${fmtPlain(sollUk, 3)} ${hb}` : '–';
   $('#btTiefeOut').textContent = isNum(tiefe) ? `${fmtPlain(tiefe, 3)} m` : '–';
-  $('#btGraphic').innerHTML = bohrtiefeSvg({ hoehe, ablFix, ablRohr, hi, okRohr, sollUk, tiefe });
 }
+
+const bohrtiefeDlg = $('#bohrtiefeDialog');
+$('#btGraphic').insertAdjacentHTML('afterbegin', bohrtiefeSvg());
+$('#btnBohrtiefe').addEventListener('click', () => { updateBohrtiefe(); bohrtiefeDlg.showModal(); });
+bohrtiefeDlg.addEventListener('input', updateBohrtiefe);
 
 /** Prüft das Formular. Fehler blockieren das Speichern, Hinweise nicht. */
 function validate(strict) {

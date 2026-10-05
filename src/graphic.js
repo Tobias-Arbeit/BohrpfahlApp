@@ -84,7 +84,11 @@ const SOIL_PATTERNS = {
   const extra = `
     <pattern id="pgHind" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#a9744a"/><line x1="0" y1="0" x2="0" y2="6" stroke="#5b3a1f" stroke-width="2"/></pattern>
     <pattern id="pgHart" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="6" height="6" fill="#9aa1ab"/><line x1="0" y1="0" x2="0" y2="6" stroke="#4b525c" stroke-width="2"/></pattern>
-    <pattern id="pgWater" width="8" height="6" patternUnits="userSpaceOnUse"><path d="M0 3 q2 -3 4 0 t4 0" fill="none" stroke="#2563eb" stroke-width="0.8" opacity=".55"/></pattern>`;
+    <pattern id="pgWater" width="8" height="6" patternUnits="userSpaceOnUse"><path d="M0 3 q2 -3 4 0 t4 0" fill="none" stroke="#2563eb" stroke-width="0.8" opacity=".55"/></pattern>
+    <linearGradient id="pgPipeGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8b93a0"/><stop offset=".22" stop-color="#e7eaee"/>
+      <stop offset=".5" stop-color="#aab1bc"/><stop offset=".78" stop-color="#e7eaee"/><stop offset="1" stop-color="#75808d"/>
+    </linearGradient>`;
   document.body.insertAdjacentHTML('beforeend', `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>${pats}${extra}</defs></svg>`);
 })();
 
@@ -256,37 +260,36 @@ function pileGraphicSvg(p) {
 
 /* =====================================================================
    Bohrtiefen-Kontrolle (Nivellement): Höhe Fixpunkt -> Ziellinie des Geräts -> Höhe OK Bohrrohr ->
-   erforderliche Bohrtiefe bis Pfahl-UK Soll. Das Layout ist fest (nicht maßstäblich), nur die
-   Zahlenwerte sind live; fehlende Werte werden als „–“ angezeigt.
-   ===================================================================== */
+   erforderliche Bohrtiefe bis Pfahl-UK Soll. Die Zeichnung ist rein statisch (festes Layout, keine
+   Zahlenwerte) – die Werte sitzen als eigene Eingabe-/Ausgabe-Kästchen direkt auf der Zeichnung
+   (siehe .bt-box in pile-dialog.html, Positionen über btPct() aus BT_VIEW abgeleitet), damit beim
+   Tippen kein Element neu aufgebaut wird und der Fokus erhalten bleibt. */
+const BT_VIEW = {
+  w: 620, h: 320,
+  xFix: 110, xInst: 320, xRohr: 500,
+  yLine: 70, yFix: 190, yRohrTop: 140, yUk: 260,
+  xRueck: 70, xVor: 460,
+};
 
-/** Senkrechter Maßpfeil mit Beschriftung links (oder rechts, wenn right=true). */
-function btDimV(x, y1, y2, label, opts = {}) {
+/** Senkrechter Maßpfeil (nur Geometrie – die Beschriftung steht im zugehörigen .bt-box daneben). */
+function btDimV(x, y1, y2, strong) {
   const top = Math.min(y1, y2), bot = Math.max(y1, y2);
-  const cls = 'bt-dim' + (opts.strong ? ' bt-dim-strong' : '');
-  const tx = opts.right ? x + 8 : x - 8;
-  const anchor = opts.right ? 'start' : 'end';
-  return `<g class="${cls}">
+  return `<g class="bt-dim${strong ? ' bt-dim-strong' : ''}">
     <line x1="${x}" y1="${top}" x2="${x}" y2="${bot}"/>
     <path d="M${x - 3} ${top + 6} L${x} ${top} L${x + 3} ${top + 6}"/>
     <path d="M${x - 3} ${bot - 6} L${x} ${bot} L${x + 3} ${bot - 6}"/>
-    ${label ? `<text x="${tx}" y="${(top + bot) / 2}" text-anchor="${anchor}" dominant-baseline="middle">${esc2(label)}</text>` : ''}
   </g>`;
 }
 
-function bohrtiefeSvg(v) {
-  const W = 560, H = 236;
-  const fmt = n => isNum(n) ? `${fmtPlain(n, 3)} m` : '–';
-  const xFix = 76, xInst = 262, xRohr = 452;
-  const yLine = 48, yFix = 150, yRohrTop = 104, yUk = 198;
+function bohrtiefeSvg() {
+  const { w: W, h: H, xFix, xInst, xRohr, yLine, yFix, yRohrTop, yUk, xRueck, xVor } = BT_VIEW;
   const o = [`<svg class="pg bt" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Schema Bohrtiefen-Kontrolle">`];
 
   // Ziellinie (Sichtlinie des Nivelliergeräts) mit Dreibein in der Mitte
   o.push(`<line x1="${xFix}" y1="${yLine}" x2="${xRohr}" y2="${yLine}" class="bt-sicht"/>`);
-  o.push(`<text x="${xInst}" y="${yLine - 10}" text-anchor="middle" class="pg-lbl">Ziellinie (Horizont)</text>`);
-  o.push(`<text x="${xInst}" y="${H - 10}" text-anchor="middle" class="pg-sub">Nivelliergerät · Ziellinienhöhe ${esc2(fmt(v.hi))}</text>`);
   o.push(`<path d="M${xInst} ${yLine} l-13 24 M${xInst} ${yLine} l13 24 M${xInst - 13} ${yLine + 24} h26" class="bt-sicht"/>`);
   o.push(`<circle cx="${xInst}" cy="${yLine}" r="4.5" class="bt-inst"/>`);
+  o.push(`<text x="${xInst}" y="${yLine + 42}" text-anchor="middle" class="pg-axis">Nivelliergerät</text>`);
 
   // Fixpunkt: bekannte Höhe, Ablesewert (Rückblick) zur Ziellinie
   o.push(`<rect x="${xFix - 22}" y="${yFix + 2}" width="44" height="14" fill="url(#pgHart)"/>`);
@@ -294,28 +297,31 @@ function bohrtiefeSvg(v) {
   o.push(`<line x1="${xFix}" y1="${yFix + 2}" x2="${xFix}" y2="${yLine}" class="pg-bore"/>`);
   o.push(`<path d="M${xFix - 6} ${yFix + 2} l6 -11 l6 11 Z" class="bt-pt"/>`);
   o.push(`<text x="${xFix}" y="${yFix + 30}" text-anchor="middle" class="pg-lbl">Fixpunkt</text>`);
-  o.push(`<text x="${xFix}" y="${yFix + 44}" text-anchor="middle" class="pg-sub bt-val">${esc2(fmt(v.hoehe))}</text>`);
-  o.push(btDimV(xFix - 34, yLine, yFix + 2, fmt(v.ablFix)));
-  o.push(`<text x="${xFix - 34}" y="${(yLine + yFix) / 2 - 14}" text-anchor="middle" class="pg-axis">Rückblick</text>`);
+  o.push(btDimV(xRueck, yLine, yFix + 2));
 
   // OK Bohrrohr: Ablesewert (Vorblick) von der Ziellinie
-  o.push(btDimV(xRohr + 34, yLine, yRohrTop, fmt(v.ablRohr), { right: true }));
-  o.push(`<text x="${xRohr + 34}" y="${(yLine + yRohrTop) / 2 - 14}" text-anchor="middle" class="pg-axis">Vorblick</text>`);
+  o.push(btDimV(xVor, yLine, yRohrTop));
   o.push(`<line x1="${xRohr}" y1="${yRohrTop}" x2="${xRohr}" y2="${yLine}" class="pg-bore"/>`);
-  o.push(`<line x1="${xRohr - 18}" y1="${yRohrTop}" x2="${xRohr + 18}" y2="${yRohrTop}" class="pg-ground"/>`);
-  o.push(`<text x="${xRohr - 6}" y="${yRohrTop - 9}" text-anchor="end" class="pg-lbl">OK Bohrrohr</text>`);
-  o.push(`<text x="${xRohr + 6}" y="${yRohrTop - 9}" text-anchor="start" class="pg-sub bt-val">${esc2(fmt(v.okRohr))}</text>`);
+  o.push(`<text x="${xRohr + 24}" y="${yRohrTop - 6}" text-anchor="start" class="pg-lbl">OK Bohrrohr</text>`);
 
-  // Bohrrohr von OK bis Pfahl-UK Soll, Bodenschraffur, Bohrtiefe als hervorgehobener Maßpfeil
-  o.push(`<rect x="${xRohr - 7}" y="${yRohrTop}" width="14" height="${yUk - yRohrTop}" class="bt-pipe"/>`);
+  // Bohrrohr (Kasing) von OK bis Pfahl-UK Soll: Mantel mit Rundungs-Verlauf, offene Mündung oben und
+  // ein paar Rohrschuss-Fugen – wirkt dadurch eher wie ein echtes Stahlrohr als eine flache Fläche.
+  const rw = 15;
+  o.push(`<rect x="${xRohr - rw / 2}" y="${yRohrTop}" width="${rw}" height="${yUk - yRohrTop}" class="bt-pipe"/>`);
+  o.push(`<line x1="${xRohr - rw / 2}" y1="${yRohrTop + 36}" x2="${xRohr + rw / 2}" y2="${yRohrTop + 36}" class="bt-pipe-joint"/>`);
+  o.push(`<line x1="${xRohr - rw / 2}" y1="${yRohrTop + 72}" x2="${xRohr + rw / 2}" y2="${yRohrTop + 72}" class="bt-pipe-joint"/>`);
+  o.push(`<ellipse cx="${xRohr}" cy="${yRohrTop}" rx="${rw / 2}" ry="3.2" class="bt-pipe-rim"/>`);
+  o.push(`<ellipse cx="${xRohr}" cy="${yRohrTop + 1.1}" rx="${rw / 2 - 2.6}" ry="1.6" class="bt-pipe-hole"/>`);
+
+  // Pfahl-UK Soll: Bodenschraffur, Bohrtiefe als hervorgehobener Maßpfeil (gleiche Spur wie Vorblick)
   o.push(`<rect x="${xRohr - 34}" y="${yUk}" width="68" height="20" fill="url(#pgHart)"/>`);
   o.push(`<line x1="${xRohr - 18}" y1="${yUk}" x2="${xRohr + 18}" y2="${yUk}" class="pg-ground"/>`);
   o.push(`<text x="${xRohr}" y="${yUk + 35}" text-anchor="middle" class="pg-lbl">Pfahl-UK Soll</text>`);
-  o.push(`<text x="${xRohr}" y="${yUk + 49}" text-anchor="middle" class="pg-sub bt-val">${esc2(fmt(v.sollUk))}</text>`);
-  o.push(btDimV(xRohr - 34, yRohrTop, yUk, '', { strong: true }));
-  o.push(`<text x="${xRohr - 44}" y="${(yRohrTop + yUk) / 2 - 6}" text-anchor="end" class="bt-result-lbl">Bohrtiefe</text>`);
-  o.push(`<text x="${xRohr - 44}" y="${(yRohrTop + yUk) / 2 + 10}" text-anchor="end" class="bt-result-lbl bt-result-val">${esc2(fmt(v.tiefe))}</text>`);
+  o.push(btDimV(xVor, yRohrTop, yUk, true));
 
   o.push('</svg>');
   return o.join('');
 }
+
+/** Position (in %) für ein .bt-box-Kästchen aus viewBox-Koordinaten, für style="left:…;top:…". */
+const btPct = (x, y) => `left:${(x / BT_VIEW.w * 100).toFixed(2)}%;top:${(y / BT_VIEW.h * 100).toFixed(2)}%`;
