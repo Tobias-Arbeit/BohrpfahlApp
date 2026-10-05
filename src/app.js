@@ -306,6 +306,16 @@ function hartSumme(p) {
   const l = layerSpans(p);
   return l.length ? rd(l.filter(s => s.art === 'hart').reduce((a, s) => a + (s.bis - s.von), 0), 2) : null;
 }
+/** Bodenschichten als Text für CSV-Export (und Re-Import, siehe impSchichten in import.js):
+    "<bis> [<Art>] <Bodenart(en)/Hinweis> | ...". "Boden" (Normalfall) bleibt ohne Klammerzusatz,
+    nur Bohrhindernis/harte Schicht werden markiert. */
+function schichtenText(p) {
+  return (p.schichten || []).filter(s => isNum(s.bis)).map(s => {
+    const art = s.art || 'boden';
+    const tag = art === 'boden' ? '' : `[${SCHICHT_ARTEN.find(a => a.k === art)?.label || art}] `;
+    return `${fmtPlain(s.bis, 2)} ${tag}${s.boden || ''}`.trim();
+  }).join(' | ');
+}
 /** Betonverbrauch SOLL [m³] = Pfahllänge × π × r² (Durchmesser in cm); Grundlage ist die Soll-Länge, sonst die Ist-Länge */
 const soll = p => {
   const len = isNum(p.sPfahllaenge) ? p.sPfahllaenge : p.pfahllaenge;
@@ -349,6 +359,7 @@ const COLS = [
   { k: 'abstichSoll',   label: 'Abstichmaß Überbeton Soll', unit: 'cm', kind: 'cm' },
   { k: 'abstich',       label: 'Abstichmaß Überbeton Ist', unit: 'cm', kind: 'cm' },
   { k: 'hartSumme',     label: 'Durchörtern harte Bodenschichten', unit: 'm', kind: 'm' },
+  { k: 'schichten',     label: 'Bodenschichten',        unit: '',        kind: 'text' },
   { k: 'planNr',        label: 'Bewehrung lt. Plan Nr.', unit: '',       kind: 'text' },
   { k: 'masse',         label: 'Bewehrung Masse',       unit: 'kg',      kind: 'm' },
   { k: 'betongute',     label: 'Betongüte',             unit: '',        kind: 'text' },
@@ -379,6 +390,7 @@ function getVal(p, k) {
     case 'ende': { const e = span(p).e; return e == null ? null : toLocalInput(new Date(e)); }
     case 'verbrauchSoll': return soll(p);
     case 'hartSumme': return hartSumme(p);
+    case 'schichten': return schichtenText(p);
     case 'hindernisDauer': return hindernisMin(p);
     case 'geraet': return geraetText(p.geraet, p.geraetInfo);
     case 'status': return STATUS[pileStatus(p)].label;

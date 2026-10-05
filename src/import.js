@@ -27,6 +27,9 @@ const IMP_GROUPS = [
     ['bohrlaenge', 'Bohrlänge – IST', 'num', 3], ['pfahllaenge', 'Pfahllänge – IST', 'num', 3], ['leerbohrung', 'Leerbohrung – IST', 'num', 3],
     ['gwTiefe', 'Grundwasser ab', 'num', 2], ['grundwasser', 'Bohren im GW', 'num', 3], ['abstich', 'Abstichmaß Überbeton', 'num', 2],
   ] },
+  { label: 'Bodenaufschluss', fields: [
+    ['schichten', 'Bodenschichten (Tiefe m [Art] Bodenart/Hinweis, je Schicht mit „ | “ getrennt)', 'schichten'],
+  ] },
   { label: 'Bewehrung und Beton', fields: [
     ['planNr', 'Bewehrung lt. Plan Nr.', 'text'], ['masse', 'Bewehrung Masse', 'num', 2], ['betongute', 'Betongüte', 'text'],
     ['konsistenz', 'Konsistenz', 'text'], ['verbrauchIst', 'Verbrauch IST', 'num', 2],
@@ -69,6 +72,7 @@ const IMP_ALIASES = (() => {
     grundwasser: ['bohrenimgw', 'bohrenimgrundwasser', 'grundwasser', 'gw', 'imgrundwasser', 'gwbohrung'],
     planNr: ['bewehrungltplannr', 'ltplannr', 'plannr', 'plan', 'bewehrungplannr', 'planbewehrung'],
     masse: ['masse', 'bewehrung', 'bewehrungmasse', 'bewehrungsmasse', 'gewicht', 'bewehrunggewicht'],
+    schichten: ['bodenschichten', 'bodenaufschluss', 'schichten', 'schichtenfolge', 'bodenprofil'],
     betongute: ['betonguete', 'betongute', 'beton', 'betonsorte', 'guete'],
     konsistenz: ['konsistenz'],
     verbrauchIst: ['verbrauchist', 'betonverbrauch', 'verbrauch', 'betonverbrauchist'],
@@ -211,6 +215,23 @@ function impZeitText(s) {
   return out;
 }
 
+/** „2,00 Kies, Sand | 5,00 Ton | 6,50 [Bohrhindernis] Findling“ → schichten-Einträge (siehe
+    schichtenText in app.js, Gegenstück beim CSV-Export). Pro Schicht: Tiefe bis, optional die Art
+    in eckigen Klammern (Bohrhindernis/harte Bodenschicht; ohne Klammer = Boden), dahinter die
+    Bodenart(en) bzw. der Hinweis. Liefert { list } oder { bad: '<unlesbarer Teil>' }. */
+function impSchichten(txt) {
+  const out = [];
+  for (const part of txt.split('|').map(s => s.trim()).filter(Boolean)) {
+    const m = /^([\d.,]+)\s*(?:\[([^\]]+)\]\s*)?(.*)$/.exec(part);
+    const bis = m && parseNum(m[1]);
+    if (!m || bis === null || Number.isNaN(bis)) return { bad: part };
+    const artLabel = impNorm(m[2] || '');
+    const art = artLabel.includes('hindernis') ? 'hindernis' : artLabel.includes('hart') ? 'hart' : 'boden';
+    out.push({ bis: rd(bis, 2), art, boden: (m[3] || '').trim() });
+  }
+  return { list: out };
+}
+
 /* =====================================================================
    Zuordnung & Auswertung
    ===================================================================== */
@@ -281,6 +302,11 @@ function impReadRow(row, cols) {
         : txt;
     }
     else if (def.type === 'pfahlart') it.partial[key] = /^un/i.test(txt) ? 'unbewehrt' : 'bewehrt';
+    else if (def.type === 'schichten') {
+      const r = impSchichten(txt);
+      if (r.bad) it.issues.push(`${def.label}: „${r.bad}“ nicht lesbar`);
+      else it.partial[key] = r.list;
+    }
     else if (def.type === 'bool') {
       const b = impBool(cell, txt);
       if (b === null) it.issues.push(`${def.label}: „${txt}“ nicht erkannt (Ja/Nein erwartet)`);

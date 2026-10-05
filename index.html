@@ -4196,6 +4196,16 @@ function hartSumme(p) {
   const l = layerSpans(p);
   return l.length ? rd(l.filter(s => s.art === 'hart').reduce((a, s) => a + (s.bis - s.von), 0), 2) : null;
 }
+/** Bodenschichten als Text für CSV-Export (und Re-Import, siehe impSchichten in import.js):
+    "<bis> [<Art>] <Bodenart(en)/Hinweis> | ...". "Boden" (Normalfall) bleibt ohne Klammerzusatz,
+    nur Bohrhindernis/harte Schicht werden markiert. */
+function schichtenText(p) {
+  return (p.schichten || []).filter(s => isNum(s.bis)).map(s => {
+    const art = s.art || 'boden';
+    const tag = art === 'boden' ? '' : `[${SCHICHT_ARTEN.find(a => a.k === art)?.label || art}] `;
+    return `${fmtPlain(s.bis, 2)} ${tag}${s.boden || ''}`.trim();
+  }).join(' | ');
+}
 /** Betonverbrauch SOLL [m³] = Pfahllänge × π × r² (Durchmesser in cm); Grundlage ist die Soll-Länge, sonst die Ist-Länge */
 const soll = p => {
   const len = isNum(p.sPfahllaenge) ? p.sPfahllaenge : p.pfahllaenge;
@@ -4239,6 +4249,7 @@ const COLS = [
   { k: 'abstichSoll',   label: 'Abstichmaß Überbeton Soll', unit: 'cm', kind: 'cm' },
   { k: 'abstich',       label: 'Abstichmaß Überbeton Ist', unit: 'cm', kind: 'cm' },
   { k: 'hartSumme',     label: 'Durchörtern harte Bodenschichten', unit: 'm', kind: 'm' },
+  { k: 'schichten',     label: 'Bodenschichten',        unit: '',        kind: 'text' },
   { k: 'planNr',        label: 'Bewehrung lt. Plan Nr.', unit: '',       kind: 'text' },
   { k: 'masse',         label: 'Bewehrung Masse',       unit: 'kg',      kind: 'm' },
   { k: 'betongute',     label: 'Betongüte',             unit: '',        kind: 'text' },
@@ -4269,6 +4280,7 @@ function getVal(p, k) {
     case 'ende': { const e = span(p).e; return e == null ? null : toLocalInput(new Date(e)); }
     case 'verbrauchSoll': return soll(p);
     case 'hartSumme': return hartSumme(p);
+    case 'schichten': return schichtenText(p);
     case 'hindernisDauer': return hindernisMin(p);
     case 'geraet': return geraetText(p.geraet, p.geraetInfo);
     case 'status': return STATUS[pileStatus(p)].label;
@@ -7185,6 +7197,9 @@ const IMP_GROUPS = [
     ['bohrlaenge', 'Bohrlänge – IST', 'num', 3], ['pfahllaenge', 'Pfahllänge – IST', 'num', 3], ['leerbohrung', 'Leerbohrung – IST', 'num', 3],
     ['gwTiefe', 'Grundwasser ab', 'num', 2], ['grundwasser', 'Bohren im GW', 'num', 3], ['abstich', 'Abstichmaß Überbeton', 'num', 2],
   ] },
+  { label: 'Bodenaufschluss', fields: [
+    ['schichten', 'Bodenschichten (Tiefe m [Art] Bodenart/Hinweis, je Schicht mit „ | “ getrennt)', 'schichten'],
+  ] },
   { label: 'Bewehrung und Beton', fields: [
     ['planNr', 'Bewehrung lt. Plan Nr.', 'text'], ['masse', 'Bewehrung Masse', 'num', 2], ['betongute', 'Betongüte', 'text'],
     ['konsistenz', 'Konsistenz', 'text'], ['verbrauchIst', 'Verbrauch IST', 'num', 2],
@@ -7227,6 +7242,7 @@ const IMP_ALIASES = (() => {
     grundwasser: ['bohrenimgw', 'bohrenimgrundwasser', 'grundwasser', 'gw', 'imgrundwasser', 'gwbohrung'],
     planNr: ['bewehrungltplannr', 'ltplannr', 'plannr', 'plan', 'bewehrungplannr', 'planbewehrung'],
     masse: ['masse', 'bewehrung', 'bewehrungmasse', 'bewehrungsmasse', 'gewicht', 'bewehrunggewicht'],
+    schichten: ['bodenschichten', 'bodenaufschluss', 'schichten', 'schichtenfolge', 'bodenprofil'],
     betongute: ['betonguete', 'betongute', 'beton', 'betonsorte', 'guete'],
     konsistenz: ['konsistenz'],
     verbrauchIst: ['verbrauchist', 'betonverbrauch', 'verbrauch', 'betonverbrauchist'],
@@ -7369,6 +7385,23 @@ function impZeitText(s) {
   return out;
 }
 
+/** „2,00 Kies, Sand | 5,00 Ton | 6,50 [Bohrhindernis] Findling“ → schichten-Einträge (siehe
+    schichtenText in app.js, Gegenstück beim CSV-Export). Pro Schicht: Tiefe bis, optional die Art
+    in eckigen Klammern (Bohrhindernis/harte Bodenschicht; ohne Klammer = Boden), dahinter die
+    Bodenart(en) bzw. der Hinweis. Liefert { list } oder { bad: '<unlesbarer Teil>' }. */
+function impSchichten(txt) {
+  const out = [];
+  for (const part of txt.split('|').map(s => s.trim()).filter(Boolean)) {
+    const m = /^([\d.,]+)\s*(?:\[([^\]]+)\]\s*)?(.*)$/.exec(part);
+    const bis = m && parseNum(m[1]);
+    if (!m || bis === null || Number.isNaN(bis)) return { bad: part };
+    const artLabel = impNorm(m[2] || '');
+    const art = artLabel.includes('hindernis') ? 'hindernis' : artLabel.includes('hart') ? 'hart' : 'boden';
+    out.push({ bis: rd(bis, 2), art, boden: (m[3] || '').trim() });
+  }
+  return { list: out };
+}
+
 /* =====================================================================
    Zuordnung & Auswertung
    ===================================================================== */
@@ -7439,6 +7472,11 @@ function impReadRow(row, cols) {
         : txt;
     }
     else if (def.type === 'pfahlart') it.partial[key] = /^un/i.test(txt) ? 'unbewehrt' : 'bewehrt';
+    else if (def.type === 'schichten') {
+      const r = impSchichten(txt);
+      if (r.bad) it.issues.push(`${def.label}: „${r.bad}“ nicht lesbar`);
+      else it.partial[key] = r.list;
+    }
     else if (def.type === 'bool') {
       const b = impBool(cell, txt);
       if (b === null) it.issues.push(`${def.label}: „${txt}“ nicht erkannt (Ja/Nein erwartet)`);
