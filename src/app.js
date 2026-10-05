@@ -1292,8 +1292,34 @@ function updateBohrtiefe() {
 
 const bohrtiefeDlg = $('#bohrtiefeDialog');
 $('#btGraphic').insertAdjacentHTML('afterbegin', bohrtiefeSvg());
-$('#btnBohrtiefe').addEventListener('click', () => { updateBohrtiefe(); bohrtiefeDlg.showModal(); });
+
+/** Größtmögliche Breite/Höhe für die Bohrtiefen-Zeichnung (im festen Seitenverhältnis BT_VIEW.w:h)
+    berechnen, die noch ohne Scrollen in den Dialog passt, und als Pixelwert auf .bt-wrap setzen.
+    Reines CSS (aspect-ratio zusammen mit flex-grow) "contained" hier nicht zuverlässig über beide
+    Achsen zugleich; deshalb hier per JS, einmal beim Öffnen und bei jeder Größenänderung (z. B.
+    Drehen des iPads). */
+function sizeBohrtiefeWrap() {
+  const body = $('.dlg-body', bohrtiefeDlg);
+  const wrap = $('#btGraphic');
+  const ratio = BT_VIEW.w / BT_VIEW.h;
+  const siblingsH = [...body.children].filter(el => el !== wrap).reduce((s, el) => {
+    const m = getComputedStyle(el);
+    return s + el.offsetHeight + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
+  }, 0);
+  const availH = Math.max(160, body.clientHeight - siblingsH - 12);
+  const availW = wrap.parentElement.clientWidth;
+  const w = Math.max(420, Math.min(availW, availH * ratio));
+  wrap.style.width = `${w}px`;
+  wrap.style.height = `${w / ratio}px`;
+}
+
+$('#btnBohrtiefe').addEventListener('click', () => {
+  updateBohrtiefe();
+  bohrtiefeDlg.showModal();
+  sizeBohrtiefeWrap();
+});
 bohrtiefeDlg.addEventListener('input', updateBohrtiefe);
+addEventListener('resize', () => { if (bohrtiefeDlg.open) sizeBohrtiefeWrap(); });
 
 /** Prüft das Formular. Fehler blockieren das Speichern, Hinweise nicht. */
 function validate(strict) {

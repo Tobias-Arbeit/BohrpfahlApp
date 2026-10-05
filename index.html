@@ -579,33 +579,65 @@ svg.pg { display: block; background: var(--surface); border: 1px solid var(--lin
 .pg .bt-dim line, .pg .bt-dim path { stroke: var(--muted); stroke-width: 1; fill: none; }
 .pg .bt-dim-strong line, .pg .bt-dim-strong path { stroke: var(--accent); stroke-width: 1.5; }
 
+/* .bt-box hat eine feste Breite (nicht nur min-width): die Beschriftung darf dadurch auf zwei
+   Zeilen umbrechen, statt das Kästchen über seine Position hinaus zu verbreitern – sonst ragen
+   randnahe Kästchen (z. B. „OK Bohrrohr“, „Pfahl-UK Soll“) bei größerer Darstellung über die
+   Zeichnung hinaus und erzeugen einen Scrollbalken. */
 .bt-box {
   position: absolute; transform: translate(-50%, -50%); z-index: 1;
-  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 60px;
-  padding: 3px 6px 4px; border-radius: 7px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; width: 68px;
+  padding: 3px 4px 4px; border-radius: 7px; text-align: center;
   background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
 }
-.bt-box-lbl { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); white-space: nowrap; }
+.bt-box-lbl { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); white-space: normal; line-height: 1.15; }
 .bt-box input {
-  width: 66px; height: 22px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px;
+  width: 100%; height: 22px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px;
   font-size: 12.5px; text-align: center; font-variant-numeric: tabular-nums; background: var(--surface);
 }
 .bt-box-unit { font-size: 8px; color: var(--muted); }
-.bt-box-val { font-size: 12.5px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.bt-box.bt-out { background: var(--surface-2); }
+.bt-box-val { font-size: 12.5px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* Ausgabe-Kästchen zeigen den vollen Höhenwert inkl. Höhenbezug (z. B. "747,250 m ü. A") –
+   etwas breiter als die Eingabe-Kästchen, Text darf bei Bedarf trotzdem zweizeilig umbrechen. */
+.bt-box.bt-out, .bt-box.bt-result { width: 94px; background: var(--surface-2); }
 .bt-box.bt-result { background: var(--yes-bg); border-color: var(--yes-ink); }
 .bt-box.bt-result .bt-box-lbl { color: var(--yes-ink); }
 .bt-box.bt-result .bt-box-val { color: var(--yes-ink); font-size: 14px; }
 .bt-trigger { margin: 0 0 14px; }
-#bohrtiefeDialog { width: min(680px, calc(100vw - 24px)); }
+/* Großzügig dimensioniert, damit die Zeichnung auf Tablets (iPad) nahezu den ganzen Bildschirm
+   einnimmt; der Höhen-Deckel (1600px) greift nur auf sehr großen Monitoren, auf Tablets bestimmt
+   100vh die Höhe. Die Dialoghöhe wird fest vorgegeben und über Flex an .dlg-body weitergereicht;
+   die tatsächliche Größe von .bt-wrap (im exakten Seitenverhältnis der viewBox 620:460, damit die
+   prozentual positionierten .bt-box-Kästchen, siehe btPct() in graphic.js, weiter exakt sitzen)
+   setzt sizeBohrtiefeWrap() in app.js per JS als Pixelwert – reines CSS (aspect-ratio in Kombination
+   mit flex-grow) liefert hier kein verlässliches "contain" über beide Achsen. */
+#bohrtiefeDialog { width: min(1300px, calc(100vw - 16px)); height: min(1600px, calc(100vh - 16px)); }
+#bohrtiefeDialog form { height: 100%; }
+/* overflow:hidden statt des sonst üblichen auto: Inhalt ist bewusst so bemessen, dass er ohne
+   Scrollen passt; "transform: translate(-50%,-50%)" bei den randnahen .bt-box-Kästchen lässt
+   manche Browser trotzdem (rein rechnerisch, nicht sichtbar) einen Scrollbalken anzeigen. */
+#bohrtiefeDialog .dlg-body { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+#bohrtiefeDialog .bt-wrap { margin: auto; }
+#bohrtiefeDialog .bt-wrap svg.pg { width: 100%; height: 100%; display: block; }
 /* Die .bt-box-Kästchen haben eine feste Pixelgröße (für lesbare Eingabefelder); auf schmalen
-   Bildschirmen schrumpft die Zeichnung darunter relativ dazu, daher hier kleiner skalieren. */
+   Bildschirmen schrumpft die Zeichnung darunter relativ dazu, daher hier kleiner skalieren –
+   auf Tablets/Desktop dagegen größer, damit sie zur größeren Zeichnung passen. */
 @media (max-width: 480px) {
-  .bt-box { min-width: 46px; padding: 2px 4px 3px; gap: 0; }
-  .bt-box input { width: 48px; height: 19px; font-size: 10.5px; }
+  .bt-box { width: 44px; padding: 2px 3px 3px; gap: 0; }
+  .bt-box.bt-out, .bt-box.bt-result { width: 58px; }
+  .bt-box input { height: 19px; font-size: 10.5px; }
   .bt-box-lbl { font-size: 7px; }
-  .bt-box-unit, .bt-box-val { font-size: 10px; }
-  .bt-box.bt-result .bt-box-val { font-size: 11.5px; }
+  .bt-box-unit, .bt-box-val { font-size: 9px; }
+  .bt-box.bt-result .bt-box-val { font-size: 10.5px; }
+}
+@media (min-width: 820px) {
+  #bohrtiefeDialog .bt-box { width: 92px; padding: 5px 7px 7px; border-radius: 9px; }
+  #bohrtiefeDialog .bt-box.bt-out, #bohrtiefeDialog .bt-box.bt-result { width: 128px; }
+  #bohrtiefeDialog .bt-box input { height: 32px; font-size: 16px; border-radius: 6px; }
+  #bohrtiefeDialog .bt-box-lbl { font-size: 11px; }
+  #bohrtiefeDialog .bt-box-unit, #bohrtiefeDialog .bt-box-val { font-size: 15px; }
+  #bohrtiefeDialog .bt-box.bt-result .bt-box-val { font-size: 19px; }
+  #bohrtiefeDialog .dlg-head h2 { font-size: 22px; }
+  #bohrtiefeDialog .dlg-body { padding: 26px 32px; font-size: 15px; }
 }
 .chip.st-geprueft { background: #2563eb; color: #fff; }
 .icon-btn.on { color: #2563eb; }
@@ -1281,34 +1313,34 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
     <div class="dlg-body">
       <p class="sub" style="margin-top:0">Höhe Fixpunkt und die beiden Ablesewerte direkt in der Skizze eintragen – Höhe OK Bohrrohr und erforderliche Bohrtiefe werden daraus berechnet.</p>
       <div id="btGraphic" class="bt-wrap">
-        <div class="bt-box bt-in" style="left:17.74%;top:73.75%">
+        <div class="bt-box bt-in" style="left:17.74%;top:69.57%">
           <span class="bt-box-lbl">Höhe Fixpunkt</span>
           <input id="bt_hoehe" type="text" inputmode="decimal" autocomplete="off" aria-label="Höhe Fixpunkt">
           <span class="bt-box-unit" data-hb></span>
         </div>
-        <div class="bt-box bt-in" style="left:11.29%;top:40.94%">
+        <div class="bt-box bt-in" style="left:11.29%;top:39.35%">
           <span class="bt-box-lbl">Rückblick</span>
           <input id="bt_ablFix" type="text" inputmode="decimal" autocomplete="off" aria-label="Ablesewert Fixpunkt (Rückblick)">
           <span class="bt-box-unit">m</span>
         </div>
-        <div class="bt-box bt-in" style="left:74.19%;top:32.81%">
+        <div class="bt-box bt-in" style="left:74.19%;top:28.26%">
           <span class="bt-box-lbl">Vorblick</span>
           <input id="bt_ablRohr" type="text" inputmode="decimal" autocomplete="off" aria-label="Ablesewert OK Bohrrohr (Vorblick)">
           <span class="bt-box-unit">m</span>
         </div>
-        <div class="bt-box bt-out" style="left:51.61%;top:11.25%">
+        <div class="bt-box bt-out" style="left:51.61%;top:10.87%">
           <span class="bt-box-lbl">Ziellinienhöhe</span>
           <span class="bt-box-val" id="btHiOut">–</span>
         </div>
-        <div class="bt-box bt-out" style="left:90.32%;top:43.75%">
+        <div class="bt-box bt-out" style="left:85%;top:36.96%">
           <span class="bt-box-lbl">OK Bohrrohr</span>
           <span class="bt-box-val" id="btOkOut">–</span>
         </div>
-        <div class="bt-box bt-result" style="left:74.19%;top:62.5%">
+        <div class="bt-box bt-result" style="left:74.19%;top:60.87%">
           <span class="bt-box-lbl">Bohrtiefe</span>
           <span class="bt-box-val" id="btTiefeOut">–</span>
         </div>
-        <div class="bt-box bt-out" style="left:80.65%;top:93.75%">
+        <div class="bt-box bt-out" style="left:78%;top:92.39%">
           <span class="bt-box-lbl">Pfahl-UK Soll</span>
           <span class="bt-box-val" id="btUkOut">–</span>
         </div>
@@ -3951,10 +3983,14 @@ function pileGraphicSvg(p) {
    Zahlenwerte) – die Werte sitzen als eigene Eingabe-/Ausgabe-Kästchen direkt auf der Zeichnung
    (siehe .bt-box in pile-dialog.html, Positionen über btPct() aus BT_VIEW abgeleitet), damit beim
    Tippen kein Element neu aufgebaut wird und der Fokus erhalten bleibt. */
+/* Seitenverhältnis bewusst weniger extrem breit (620:460 statt vorher 620:320): bei fester Breite
+   (Dialogbreite) bekommt die Zeichnung dadurch deutlich mehr nutzbare Höhe, statt von leerem Raum
+   umgeben zu sein – wichtig, damit sizeBohrtiefeWrap() (app.js) sie z. B. auf dem iPad im Hochformat
+   wirklich groß darstellen kann. */
 const BT_VIEW = {
-  w: 620, h: 320,
+  w: 620, h: 460,
   xFix: 110, xInst: 320, xRohr: 500,
-  yLine: 70, yFix: 190, yRohrTop: 140, yUk: 260,
+  yLine: 90, yFix: 270, yRohrTop: 170, yUk: 390,
   xRueck: 70, xVor: 460,
 };
 
@@ -3983,13 +4019,11 @@ function bohrtiefeSvg() {
   o.push(`<line x1="${xFix - 22}" y1="${yFix + 2}" x2="${xFix + 22}" y2="${yFix + 2}" class="pg-ground"/>`);
   o.push(`<line x1="${xFix}" y1="${yFix + 2}" x2="${xFix}" y2="${yLine}" class="pg-bore"/>`);
   o.push(`<path d="M${xFix - 6} ${yFix + 2} l6 -11 l6 11 Z" class="bt-pt"/>`);
-  o.push(`<text x="${xFix}" y="${yFix + 30}" text-anchor="middle" class="pg-lbl">Fixpunkt</text>`);
   o.push(btDimV(xRueck, yLine, yFix + 2));
 
   // OK Bohrrohr: Ablesewert (Vorblick) von der Ziellinie
   o.push(btDimV(xVor, yLine, yRohrTop));
   o.push(`<line x1="${xRohr}" y1="${yRohrTop}" x2="${xRohr}" y2="${yLine}" class="pg-bore"/>`);
-  o.push(`<text x="${xRohr + 24}" y="${yRohrTop - 6}" text-anchor="start" class="pg-lbl">OK Bohrrohr</text>`);
 
   // Bohrrohr (Kasing) von OK bis Pfahl-UK Soll: Mantel mit Rundungs-Verlauf, offene Mündung oben und
   // ein paar Rohrschuss-Fugen – wirkt dadurch eher wie ein echtes Stahlrohr als eine flache Fläche.
@@ -4003,7 +4037,6 @@ function bohrtiefeSvg() {
   // Pfahl-UK Soll: Bodenschraffur, Bohrtiefe als hervorgehobener Maßpfeil (gleiche Spur wie Vorblick)
   o.push(`<rect x="${xRohr - 34}" y="${yUk}" width="68" height="20" fill="url(#pgHart)"/>`);
   o.push(`<line x1="${xRohr - 18}" y1="${yUk}" x2="${xRohr + 18}" y2="${yUk}" class="pg-ground"/>`);
-  o.push(`<text x="${xRohr}" y="${yUk + 35}" text-anchor="middle" class="pg-lbl">Pfahl-UK Soll</text>`);
   o.push(btDimV(xVor, yRohrTop, yUk, true));
 
   o.push('</svg>');
@@ -5351,8 +5384,34 @@ function updateBohrtiefe() {
 
 const bohrtiefeDlg = $('#bohrtiefeDialog');
 $('#btGraphic').insertAdjacentHTML('afterbegin', bohrtiefeSvg());
-$('#btnBohrtiefe').addEventListener('click', () => { updateBohrtiefe(); bohrtiefeDlg.showModal(); });
+
+/** Größtmögliche Breite/Höhe für die Bohrtiefen-Zeichnung (im festen Seitenverhältnis BT_VIEW.w:h)
+    berechnen, die noch ohne Scrollen in den Dialog passt, und als Pixelwert auf .bt-wrap setzen.
+    Reines CSS (aspect-ratio zusammen mit flex-grow) "contained" hier nicht zuverlässig über beide
+    Achsen zugleich; deshalb hier per JS, einmal beim Öffnen und bei jeder Größenänderung (z. B.
+    Drehen des iPads). */
+function sizeBohrtiefeWrap() {
+  const body = $('.dlg-body', bohrtiefeDlg);
+  const wrap = $('#btGraphic');
+  const ratio = BT_VIEW.w / BT_VIEW.h;
+  const siblingsH = [...body.children].filter(el => el !== wrap).reduce((s, el) => {
+    const m = getComputedStyle(el);
+    return s + el.offsetHeight + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
+  }, 0);
+  const availH = Math.max(160, body.clientHeight - siblingsH - 12);
+  const availW = wrap.parentElement.clientWidth;
+  const w = Math.max(420, Math.min(availW, availH * ratio));
+  wrap.style.width = `${w}px`;
+  wrap.style.height = `${w / ratio}px`;
+}
+
+$('#btnBohrtiefe').addEventListener('click', () => {
+  updateBohrtiefe();
+  bohrtiefeDlg.showModal();
+  sizeBohrtiefeWrap();
+});
 bohrtiefeDlg.addEventListener('input', updateBohrtiefe);
+addEventListener('resize', () => { if (bohrtiefeDlg.open) sizeBohrtiefeWrap(); });
 
 /** Prüft das Formular. Fehler blockieren das Speichern, Hinweise nicht. */
 function validate(strict) {

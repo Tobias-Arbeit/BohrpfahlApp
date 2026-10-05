@@ -264,10 +264,14 @@ function pileGraphicSvg(p) {
    Zahlenwerte) – die Werte sitzen als eigene Eingabe-/Ausgabe-Kästchen direkt auf der Zeichnung
    (siehe .bt-box in pile-dialog.html, Positionen über btPct() aus BT_VIEW abgeleitet), damit beim
    Tippen kein Element neu aufgebaut wird und der Fokus erhalten bleibt. */
+/* Seitenverhältnis bewusst weniger extrem breit (620:460 statt vorher 620:320): bei fester Breite
+   (Dialogbreite) bekommt die Zeichnung dadurch deutlich mehr nutzbare Höhe, statt von leerem Raum
+   umgeben zu sein – wichtig, damit sizeBohrtiefeWrap() (app.js) sie z. B. auf dem iPad im Hochformat
+   wirklich groß darstellen kann. */
 const BT_VIEW = {
-  w: 620, h: 320,
+  w: 620, h: 460,
   xFix: 110, xInst: 320, xRohr: 500,
-  yLine: 70, yFix: 190, yRohrTop: 140, yUk: 260,
+  yLine: 90, yFix: 270, yRohrTop: 170, yUk: 390,
   xRueck: 70, xVor: 460,
 };
 
@@ -296,13 +300,11 @@ function bohrtiefeSvg() {
   o.push(`<line x1="${xFix - 22}" y1="${yFix + 2}" x2="${xFix + 22}" y2="${yFix + 2}" class="pg-ground"/>`);
   o.push(`<line x1="${xFix}" y1="${yFix + 2}" x2="${xFix}" y2="${yLine}" class="pg-bore"/>`);
   o.push(`<path d="M${xFix - 6} ${yFix + 2} l6 -11 l6 11 Z" class="bt-pt"/>`);
-  o.push(`<text x="${xFix}" y="${yFix + 30}" text-anchor="middle" class="pg-lbl">Fixpunkt</text>`);
   o.push(btDimV(xRueck, yLine, yFix + 2));
 
   // OK Bohrrohr: Ablesewert (Vorblick) von der Ziellinie
   o.push(btDimV(xVor, yLine, yRohrTop));
   o.push(`<line x1="${xRohr}" y1="${yRohrTop}" x2="${xRohr}" y2="${yLine}" class="pg-bore"/>`);
-  o.push(`<text x="${xRohr + 24}" y="${yRohrTop - 6}" text-anchor="start" class="pg-lbl">OK Bohrrohr</text>`);
 
   // Bohrrohr (Kasing) von OK bis Pfahl-UK Soll: Mantel mit Rundungs-Verlauf, offene Mündung oben und
   // ein paar Rohrschuss-Fugen – wirkt dadurch eher wie ein echtes Stahlrohr als eine flache Fläche.
@@ -316,7 +318,6 @@ function bohrtiefeSvg() {
   // Pfahl-UK Soll: Bodenschraffur, Bohrtiefe als hervorgehobener Maßpfeil (gleiche Spur wie Vorblick)
   o.push(`<rect x="${xRohr - 34}" y="${yUk}" width="68" height="20" fill="url(#pgHart)"/>`);
   o.push(`<line x1="${xRohr - 18}" y1="${yUk}" x2="${xRohr + 18}" y2="${yUk}" class="pg-ground"/>`);
-  o.push(`<text x="${xRohr}" y="${yUk + 35}" text-anchor="middle" class="pg-lbl">Pfahl-UK Soll</text>`);
   o.push(btDimV(xVor, yRohrTop, yUk, true));
 
   o.push('</svg>');
