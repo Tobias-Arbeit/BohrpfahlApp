@@ -1222,6 +1222,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <div class="schicht-fixed"><b id="endDepth">–</b><span>Pfahl-Unterkante (übernommen)</span><em id="ukLabel"></em></div>
         <div class="row-foot">
           <button type="button" class="btn small" id="btnAddSchicht">+ Schicht</button>
+          <button type="button" class="btn small" id="btnCopySchichten" title="Übernimmt die Schichtenfolge des zuletzt bearbeiteten Pfahls mit demselben Bohrgerät; die unterste Schicht wird auf die Pfahl-Unterkante dieses Pfahls angepasst">Letztes Bohrprofil (Gerät) übernehmen</button>
           <span class="sum">Summe harte Bodenschichten: <strong id="hartOut">–</strong></span>
         </div>
       </fieldset>
@@ -5355,6 +5356,15 @@ function zeitGroupHTML(g, rawEntries) {
   </div>`;
 }
 
+/** Das zuletzt bearbeitete Bohrprofil (Schichtenfolge) eines anderen Pfahls mit demselben Bohrgerät
+    (für „Letztes Bohrprofil (Gerät) übernehmen“, siehe btnCopySchichten). */
+function lastSchichtenForGeraet(geraetId, excludeId) {
+  if (!geraetId) return null;
+  return state.piles
+    .filter(p => p.geraet === geraetId && p.id !== excludeId && Array.isArray(p.schichten) && p.schichten.length)
+    .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))[0] || null;
+}
+
 /* Der Bodenaufschluss beginnt bei 0,00 (Arbeitsebene) und endet bei der Pfahl-UK: Die letzte Tiefe wird aus der
    Bohrlänge übernommen (Ist, sonst Soll) und folgt Änderungen, solange sie nicht überschrieben wurde. */
 let autoEnd = true;
@@ -5596,7 +5606,7 @@ function applyPileLock(p, isNew) {
   const locked = !isNew && isLocked(p);
   const open = new Set([...BOHRIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'geraet']);
   for (const el of form.elements) if (el.name) el.disabled = locked || (!full && !open.has(el.name));
-  $$('#schichtRows input, #schichtRows select, #schichtRows button, #zeitRows input, #zeitRows button, #btnAddSchicht, #btnCopySoll').forEach(el => { el.disabled = locked; });
+  $$('#schichtRows input, #schichtRows select, #schichtRows button, #zeitRows input, #zeitRows button, #btnAddSchicht, #btnCopySchichten, #btnCopySoll').forEach(el => { el.disabled = locked; });
   $('#btnSave').hidden = locked;
   const note = $('#roleNote');
   note.hidden = !(locked || !full);
@@ -5855,6 +5865,28 @@ form.addEventListener('click', e => {
     const now = $$('.schicht', form);
     $('[data-s=bis]', now.length > 1 ? now.at(-2) : now[0]).focus();
     return recalc();
+  }
+  if (e.target.closest('#btnCopySchichten')) {
+    const geraetId = form.elements.geraet.value;
+    if (!geraetId) return toast('Bitte zuerst ein Bohrgerät wählen.');
+    const src = lastSchichtenForGeraet(geraetId, editing);
+    if (!src) return toast('Für dieses Bohrgerät ist noch kein Bohrprofil mit Bodenschichten hinterlegt.');
+    if (readSchichten().length && !confirm(`Die aktuelle Schichtenfolge durch die von Pfahl „${src.nr}“ ersetzen?`)) return;
+    // Schichtenfolge übernehmen; die unterste Schicht wird unten (autoEnd/syncEndRow) automatisch
+    // auf die Pfahl-Unterkante DIESES Pfahls angepasst, auch wenn sie von der Quelle abweicht.
+    const sorted = src.schichten.map(s => ({ ...s })).sort((a, b) => (isNum(a.bis) ? a.bis : Infinity) - (isNum(b.bis) ? b.bis : Infinity));
+    const ref = endRef();
+    let copied = sorted;
+    if (ref.val != null) {
+      const idx = sorted.findIndex(s => isNum(s.bis) && s.bis >= ref.val);
+      if (idx >= 0) copied = sorted.slice(0, idx + 1);
+    }
+    if (!copied.length) copied = [{}];
+    $('#schichtRows').innerHTML = copied.map(schichtRowHTML).join('');
+    autoEnd = true;
+    recalc();
+    toast(`Schichtenfolge von Pfahl „${src.nr}“ übernommen (${copied.length} ${copied.length === 1 ? 'Schicht' : 'Schichten'}); unterste Tiefe an diesen Pfahl angepasst.`);
+    return;
   }
   const infoToggle = e.target.closest('[data-info-toggle]');
   if (infoToggle) {
