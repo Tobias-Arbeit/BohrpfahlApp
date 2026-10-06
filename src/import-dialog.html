@@ -13,6 +13,18 @@
           <span id="impFileName" class="sub" style="margin:0">oder Datei hierher ziehen</span>
         </div>
         <p class="sub" style="margin-top:14px">Noch keine passende Datei? <button type="button" class="link" id="btnImpTemplate">Excel-Vorlage herunterladen</button> (alle Spalten mit einer Beispielzeile).</p>
+
+        <div id="impDeleteBox" hidden>
+          <h3 class="imp-h">Importierte Pfähle verwalten</h3>
+          <p class="sub">Einzelne oder alle zuvor importierten Pfähle wieder entfernen, z. B. um eine Fehlimportierung rückgängig zu machen.</p>
+          <div class="row-foot" style="margin-top:0">
+            <span class="sum" id="impDelCount"></span>
+            <button type="button" class="link" id="btnImpDelAll">Alle auswählen</button>
+            <button type="button" class="link" id="btnImpDelNone">Auswahl aufheben</button>
+          </div>
+          <div id="impDelList" class="pdf-sel-list"></div>
+          <p style="margin:10px 0 0"><button type="button" class="btn small danger" id="btnImpDelRun">Ausgewählte Pfähle löschen</button></p>
+        </div>
       </div>
 
       <div id="impStep2" hidden>
@@ -48,6 +60,7 @@
         </div>
 
         <h3 class="imp-h">Vorschau</h3>
+        <p class="sub" style="margin:0 0 8px">Gelb markierte Zeilen überschreiben einen vorhandenen Pfahl. Mit dem Häkchen lässt sich jede Zeile einzeln vom Import ausnehmen.</p>
         <div id="impSummary" class="imp-summary" aria-live="polite"></div>
         <div id="impPrev" class="imp-prev"></div>
         <div id="impIssues" class="msgs" aria-live="polite"></div>

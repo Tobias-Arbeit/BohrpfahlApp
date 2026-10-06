@@ -515,14 +515,14 @@ async function appendPdfBytes(target, bytes) {
     zusammengefügt (etwas aufwändiger: jedes Teilstück entsteht als eigenes kleines PDF, das per
     copyPages eingefügt wird), wenn tatsächlich Anhänge vorhanden sind – ohne Anhänge bleibt der
     einfache, rein jsPDF-basierte Weg wie bisher bestehen. */
-async function exportProtokolle(list, { fotos = true } = {}) {
+async function exportProtokolle(list, { fotos = true, pdfs = true } = {}) {
   if (!list.length) return toast('Keine Pfähle für den Export vorhanden.');
   if (!window.jspdf) return toast('PDF-Bibliothek nicht geladen.');
   const name = list.length === 1
     ? fileBase('Bohrprotokoll_' + String(list[0].nr).replace(/[^\wäöüÄÖÜß-]+/g, '_'))
     : fileBase('Bohrprotokolle');
 
-  const anyPdfs = list.some(p => (p.pdfs || []).length);
+  const anyPdfs = pdfs && list.some(p => (p.pdfs || []).length);
   if (!anyPdfs) {
     const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
     list.forEach((p, i) => {
@@ -538,7 +538,7 @@ async function exportProtokolle(list, { fotos = true } = {}) {
       const protoDoc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
       drawProtokoll(protoDoc, p, state.projekt);
       await appendPdfBytes(merged, protoDoc.output('arraybuffer'));
-      for (const f of (p.pdfs || [])) {
+      for (const f of (pdfs ? (p.pdfs || []) : [])) {
         if (!f?.data) continue;
         try { await appendPdfBytes(merged, dataUrlBytes(f.data)); }
         catch { toast(`Anhang „${f.name || 'PDF'}“ bei Pfahl „${p.nr}“ konnte nicht eingefügt werden (beschädigte Datei?).`); }

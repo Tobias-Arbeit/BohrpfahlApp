@@ -701,21 +701,27 @@ const ICON = {
 
 /** PDF-Protokoll eines Pfahls; hat er Fotos, wird gefragt: mit oder ohne Fotoseiten */
 function pdfProtokoll(p, anchor) {
-  const n = (p.fotos || []).length;
-  if (!n) return exportProtokolle([p]);
+  const nFotos = (p.fotos || []).length;
+  const nPdfs = (p.pdfs || []).length;
+  if (!nFotos && !nPdfs) return exportProtokolle([p]);
   $$('.foto-ask').forEach(m => m.remove());
   const m = document.createElement('div');
   m.className = 'menu foto-ask';
-  m.innerHTML = `<button type="button" data-f="1">Mit Fotos (${n})</button><button type="button" data-f="0">Ohne Fotos</button>`;
+  m.innerHTML = `
+    ${nPdfs ? `<label><input type="checkbox" id="qaPdfs" checked> PDF-Anhänge (${nPdfs})</label>` : ''}
+    ${nFotos ? `<label><input type="checkbox" id="qaFotos" checked> Fotos (${nFotos})</label>` : ''}
+    <button type="button" data-go>Herunterladen</button>`;
   document.body.appendChild(m);
   const r = anchor.getBoundingClientRect();
   m.style.cssText = `position:fixed;right:auto;z-index:3000;top:${Math.round(r.bottom + 4)}px;left:${Math.round(Math.max(8, Math.min(r.left, innerWidth - 240)))}px`;
   const close = () => { m.remove(); document.removeEventListener('click', close); };
   m.addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    e.stopPropagation(); close();
-    exportProtokolle([p], { fotos: b.dataset.f === '1' });
+    if (e.target.closest('label')) { e.stopPropagation(); return; }   // Checkbox-Klick schließt das Menü nicht
+    if (!e.target.closest('[data-go]')) return;
+    e.stopPropagation();
+    const fotos = !nFotos || $('#qaFotos').checked, pdfs = !nPdfs || $('#qaPdfs').checked;
+    close();
+    exportProtokolle([p], { fotos, pdfs });
   });
   setTimeout(() => document.addEventListener('click', close), 0);
 }
@@ -2164,6 +2170,9 @@ function openPdfSelect() {
   gsel.value = '';
   pdfSelChosen = new Set(visiblePiles().map(p => p.id));   // Vorauswahl: aktuell gefilterte Tabelle
   renderPdfSelList();
+  $('input[name=pdfKind][value=proto]', pdfSelDlg).checked = true;
+  $('#pdfSelIncludePdfs').checked = true;
+  updatePdfKindUI();
   pdfSelDlg.showModal();
 }
 $('#btnPdf').addEventListener('click', openPdfSelect);
@@ -2187,13 +2196,19 @@ $('#pdfSelList').addEventListener('change', e => {
   if (cb.checked) pdfSelChosen.add(cb.dataset.pid); else pdfSelChosen.delete(cb.dataset.pid);
   updatePdfSelCount();
 });
+function updatePdfKindUI() {
+  const kind = $('input[name=pdfKind]:checked', pdfSelDlg).value;
+  $('#pdfSelIncludePdfs').disabled = kind === 'list';
+}
+$$('input[name=pdfKind]', pdfSelDlg).forEach(r => r.addEventListener('change', updatePdfKindUI));
 $('#btnPdfSelExport').addEventListener('click', () => {
   const list = state.piles.filter(p => pdfSelChosen.has(p.id)).sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
   if (!list.length) return toast('Bitte mindestens einen Pfahl auswählen.');
   const kind = $('input[name=pdfKind]:checked', pdfSelDlg).value;
+  const pdfs = $('#pdfSelIncludePdfs').checked;
   pdfSelDlg.close();
-  if (kind === 'proto') exportProtokolle(list);
-  else if (kind === 'proto-nofoto') exportProtokolle(list, { fotos: false });
+  if (kind === 'proto') exportProtokolle(list, { pdfs });
+  else if (kind === 'proto-nofoto') exportProtokolle(list, { fotos: false, pdfs });
   else exportPdf(list, `Auswahl: ${nf0.format(list.length)} von ${nf0.format(state.piles.length)} Pfählen`);
 });
 

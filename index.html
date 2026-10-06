@@ -133,6 +133,9 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .pdf-kind-choice { display: flex; flex-direction: column; gap: 8px; }
 .pdf-kind-choice label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
 .pdf-kind-choice input { flex: none; }
+.pdf-kind-sub { display: flex; align-items: center; gap: 8px; margin: 10px 0 0 24px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.pdf-kind-sub input { flex: none; }
+.pdf-kind-sub:has(input:disabled) { opacity: .5; cursor: not-allowed; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; height: 40px; }
 .seg label { margin: 0; font-weight: 500; font-size: 15px; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
@@ -693,11 +696,15 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 .col-id { min-width: 22px; padding: 0 5px; text-align: center; font-size: 11px; font-weight: 700; border-radius: 4px; background: var(--surface-2); color: var(--muted); }
 .imp-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .chip.bad { background: var(--err-bg); color: var(--danger); font-weight: 600; }
+.chip.warn { background: var(--warn-bg); color: var(--warn); font-weight: 600; }
 .imp-prev { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
 .imp-prev:empty { display: none; }
 .imp-prev thead th { padding: 8px 12px; font-weight: 600; white-space: nowrap; }
+.imp-prev thead th:first-child, .imp-prev td:first-child { padding: 8px 4px 8px 12px; width: 1%; }
 .imp-prev tbody tr { cursor: default; }
 .imp-prev td.empty { color: var(--muted); }
+.imp-prev tr.imp-row-update td, .imp-prev tr.imp-row-update:hover td { background: var(--warn-bg); }
+.imp-prev tr.imp-row-excluded td { opacity: .45; }
 
 /* ---------- Kopfbereich und Reiter (wie im Vorbild-Screenshot) ---------- */
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; padding: 14px 24px 12px; max-width: 1800px; margin: 0 auto; }
@@ -711,6 +718,10 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 .project-switch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .project-switch svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
 .menu button.sel { background: var(--yes-bg); color: var(--yes-ink); font-weight: 700; }
+.foto-ask label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; font-size: 13.5px; }
+.foto-ask label:hover { background: var(--surface-2); border-radius: 6px; }
+.foto-ask label input { flex: none; }
+.foto-ask [data-go] { font-weight: 600; }
 .menu-sep { border: 0; border-top: 1px solid var(--line); margin: 6px 2px; }
 .title-sep { width: 1px; align-self: stretch; margin: 2px 0; background: var(--line); }
 .page-title h1 { margin: 0; font-size: 21px; line-height: 1.2; display: flex; align-items: center; gap: 9px; }
@@ -1480,6 +1491,18 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
           <span id="impFileName" class="sub" style="margin:0">oder Datei hierher ziehen</span>
         </div>
         <p class="sub" style="margin-top:14px">Noch keine passende Datei? <button type="button" class="link" id="btnImpTemplate">Excel-Vorlage herunterladen</button> (alle Spalten mit einer Beispielzeile).</p>
+
+        <div id="impDeleteBox" hidden>
+          <h3 class="imp-h">Importierte Pfähle verwalten</h3>
+          <p class="sub">Einzelne oder alle zuvor importierten Pfähle wieder entfernen, z. B. um eine Fehlimportierung rückgängig zu machen.</p>
+          <div class="row-foot" style="margin-top:0">
+            <span class="sum" id="impDelCount"></span>
+            <button type="button" class="link" id="btnImpDelAll">Alle auswählen</button>
+            <button type="button" class="link" id="btnImpDelNone">Auswahl aufheben</button>
+          </div>
+          <div id="impDelList" class="pdf-sel-list"></div>
+          <p style="margin:10px 0 0"><button type="button" class="btn small danger" id="btnImpDelRun">Ausgewählte Pfähle löschen</button></p>
+        </div>
       </div>
 
       <div id="impStep2" hidden>
@@ -1515,6 +1538,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         </div>
 
         <h3 class="imp-h">Vorschau</h3>
+        <p class="sub" style="margin:0 0 8px">Gelb markierte Zeilen überschreiben einen vorhandenen Pfahl. Mit dem Häkchen lässt sich jede Zeile einzeln vom Import ausnehmen.</p>
         <div id="impSummary" class="imp-summary" aria-live="polite"></div>
         <div id="impPrev" class="imp-prev"></div>
         <div id="impIssues" class="msgs" aria-live="polite"></div>
@@ -1615,6 +1639,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <label><input type="radio" name="pdfKind" value="proto-nofoto"> Bohrprotokolle ohne Fotos</label>
         <label><input type="radio" name="pdfKind" value="list"> Übersichtsliste (Tabelle)</label>
       </div>
+      <label class="pdf-kind-sub"><input type="checkbox" id="pdfSelIncludePdfs" checked> PDF-Anhänge einschließen (werden hinter dem jeweiligen Bohrprotokoll eingefügt)</label>
     </fieldset>
   </div>
   <div class="dlg-foot">
@@ -3671,14 +3696,14 @@ async function appendPdfBytes(target, bytes) {
     zusammengefügt (etwas aufwändiger: jedes Teilstück entsteht als eigenes kleines PDF, das per
     copyPages eingefügt wird), wenn tatsächlich Anhänge vorhanden sind – ohne Anhänge bleibt der
     einfache, rein jsPDF-basierte Weg wie bisher bestehen. */
-async function exportProtokolle(list, { fotos = true } = {}) {
+async function exportProtokolle(list, { fotos = true, pdfs = true } = {}) {
   if (!list.length) return toast('Keine Pfähle für den Export vorhanden.');
   if (!window.jspdf) return toast('PDF-Bibliothek nicht geladen.');
   const name = list.length === 1
     ? fileBase('Bohrprotokoll_' + String(list[0].nr).replace(/[^\wäöüÄÖÜß-]+/g, '_'))
     : fileBase('Bohrprotokolle');
 
-  const anyPdfs = list.some(p => (p.pdfs || []).length);
+  const anyPdfs = pdfs && list.some(p => (p.pdfs || []).length);
   if (!anyPdfs) {
     const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
     list.forEach((p, i) => {
@@ -3694,7 +3719,7 @@ async function exportProtokolle(list, { fotos = true } = {}) {
       const protoDoc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
       drawProtokoll(protoDoc, p, state.projekt);
       await appendPdfBytes(merged, protoDoc.output('arraybuffer'));
-      for (const f of (p.pdfs || [])) {
+      for (const f of (pdfs ? (p.pdfs || []) : [])) {
         if (!f?.data) continue;
         try { await appendPdfBytes(merged, dataUrlBytes(f.data)); }
         catch { toast(`Anhang „${f.name || 'PDF'}“ bei Pfahl „${p.nr}“ konnte nicht eingefügt werden (beschädigte Datei?).`); }
@@ -4786,21 +4811,27 @@ const ICON = {
 
 /** PDF-Protokoll eines Pfahls; hat er Fotos, wird gefragt: mit oder ohne Fotoseiten */
 function pdfProtokoll(p, anchor) {
-  const n = (p.fotos || []).length;
-  if (!n) return exportProtokolle([p]);
+  const nFotos = (p.fotos || []).length;
+  const nPdfs = (p.pdfs || []).length;
+  if (!nFotos && !nPdfs) return exportProtokolle([p]);
   $$('.foto-ask').forEach(m => m.remove());
   const m = document.createElement('div');
   m.className = 'menu foto-ask';
-  m.innerHTML = `<button type="button" data-f="1">Mit Fotos (${n})</button><button type="button" data-f="0">Ohne Fotos</button>`;
+  m.innerHTML = `
+    ${nPdfs ? `<label><input type="checkbox" id="qaPdfs" checked> PDF-Anhänge (${nPdfs})</label>` : ''}
+    ${nFotos ? `<label><input type="checkbox" id="qaFotos" checked> Fotos (${nFotos})</label>` : ''}
+    <button type="button" data-go>Herunterladen</button>`;
   document.body.appendChild(m);
   const r = anchor.getBoundingClientRect();
   m.style.cssText = `position:fixed;right:auto;z-index:3000;top:${Math.round(r.bottom + 4)}px;left:${Math.round(Math.max(8, Math.min(r.left, innerWidth - 240)))}px`;
   const close = () => { m.remove(); document.removeEventListener('click', close); };
   m.addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    e.stopPropagation(); close();
-    exportProtokolle([p], { fotos: b.dataset.f === '1' });
+    if (e.target.closest('label')) { e.stopPropagation(); return; }   // Checkbox-Klick schließt das Menü nicht
+    if (!e.target.closest('[data-go]')) return;
+    e.stopPropagation();
+    const fotos = !nFotos || $('#qaFotos').checked, pdfs = !nPdfs || $('#qaPdfs').checked;
+    close();
+    exportProtokolle([p], { fotos, pdfs });
   });
   setTimeout(() => document.addEventListener('click', close), 0);
 }
@@ -6249,6 +6280,9 @@ function openPdfSelect() {
   gsel.value = '';
   pdfSelChosen = new Set(visiblePiles().map(p => p.id));   // Vorauswahl: aktuell gefilterte Tabelle
   renderPdfSelList();
+  $('input[name=pdfKind][value=proto]', pdfSelDlg).checked = true;
+  $('#pdfSelIncludePdfs').checked = true;
+  updatePdfKindUI();
   pdfSelDlg.showModal();
 }
 $('#btnPdf').addEventListener('click', openPdfSelect);
@@ -6272,13 +6306,19 @@ $('#pdfSelList').addEventListener('change', e => {
   if (cb.checked) pdfSelChosen.add(cb.dataset.pid); else pdfSelChosen.delete(cb.dataset.pid);
   updatePdfSelCount();
 });
+function updatePdfKindUI() {
+  const kind = $('input[name=pdfKind]:checked', pdfSelDlg).value;
+  $('#pdfSelIncludePdfs').disabled = kind === 'list';
+}
+$$('input[name=pdfKind]', pdfSelDlg).forEach(r => r.addEventListener('change', updatePdfKindUI));
 $('#btnPdfSelExport').addEventListener('click', () => {
   const list = state.piles.filter(p => pdfSelChosen.has(p.id)).sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
   if (!list.length) return toast('Bitte mindestens einen Pfahl auswählen.');
   const kind = $('input[name=pdfKind]:checked', pdfSelDlg).value;
+  const pdfs = $('#pdfSelIncludePdfs').checked;
   pdfSelDlg.close();
-  if (kind === 'proto') exportProtokolle(list);
-  else if (kind === 'proto-nofoto') exportProtokolle(list, { fotos: false });
+  if (kind === 'proto') exportProtokolle(list, { pdfs });
+  else if (kind === 'proto-nofoto') exportProtokolle(list, { fotos: false, pdfs });
   else exportPdf(list, `Auswahl: ${nf0.format(list.length)} von ${nf0.format(state.piles.length)} Pfählen`);
 });
 
@@ -7478,7 +7518,7 @@ const IMP_ALIASES = (() => {
   return a;
 })();
 
-const IMP = { sheets: [], grid: [], headerIdx: 0, map: [], units: [], mode: 'skip', result: null, fileName: '', crs: 'EPSG:25832', xyGuess: false };
+const IMP = { sheets: [], grid: [], headerIdx: 0, map: [], units: [], mode: 'skip', result: null, fileName: '', crs: 'EPSG:25832', xyGuess: false, excluded: new Set() };
 
 /* =====================================================================
    Datei lesen
@@ -7856,7 +7896,7 @@ function impError(msg) { $('#impError').innerHTML = msg ? `<div class="e">${esc(
 
 function openImport() {
   if (!isAdmin()) return toast('Der Import ist dem Administrator vorbehalten.');
-  IMP.sheets = []; IMP.grid = []; IMP.map = []; IMP.result = null; IMP.mode = 'skip';
+  IMP.sheets = []; IMP.grid = []; IMP.map = []; IMP.result = null; IMP.mode = 'skip'; IMP.excluded = new Set();
   IMP.crs = crsInfo(state.projekt.crs).id;
   IMP.crsManual = false;
   $('#impCrs').innerHTML = CRS_LIST.map(c => `<option value="${c.id}">${esc(c.label)}</option>`).join('');
@@ -7868,8 +7908,43 @@ function openImport() {
   $('#btnImpRun').disabled = true;
   $('#btnImpRun').textContent = 'Importieren';
   impError('');
+  impDelChosen = new Set();
+  renderImpDeleteBox();
   impDlg.showModal();
 }
+
+/* Importierte Pfähle wieder entfernen (z. B. um eine Fehlimportierung rückgängig zu machen) */
+let impDelChosen = new Set();
+function renderImpDeleteBox() {
+  const imported = state.piles.filter(p => p.quelle === 'import').sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
+  const box = $('#impDeleteBox');
+  box.hidden = !imported.length;
+  if (!imported.length) return;
+  $('#impDelCount').textContent = `${nf0.format(impDelChosen.size)} von ${nf0.format(imported.length)} importierten Pfählen ausgewählt`;
+  $('#impDelList').innerHTML = imported.map(p => `<label class="pdf-sel-row"><input type="checkbox" data-del-pid="${esc(p.id)}"${impDelChosen.has(p.id) ? ' checked' : ''}>
+    <span class="nr">${esc(p.nr)}</span>
+    <span class="chip st-${pileStatus(p)}">${esc(STATUS[pileStatus(p)].label)}</span>
+    <span class="meta">${p.createdAt ? esc(fmtDate(new Date(p.createdAt).toISOString().slice(0, 10))) : ''}</span></label>`).join('');
+}
+$('#btnImpDelAll').addEventListener('click', () => { impDelChosen = new Set(state.piles.filter(p => p.quelle === 'import').map(p => p.id)); renderImpDeleteBox(); });
+$('#btnImpDelNone').addEventListener('click', () => { impDelChosen = new Set(); renderImpDeleteBox(); });
+$('#impDelList').addEventListener('change', e => {
+  const cb = e.target.closest('[data-del-pid]');
+  if (!cb) return;
+  if (cb.checked) impDelChosen.add(cb.dataset.delPid); else impDelChosen.delete(cb.dataset.delPid);
+  renderImpDeleteBox();
+});
+$('#btnImpDelRun').addEventListener('click', async () => {
+  if (!impDelChosen.size) return toast('Bitte mindestens einen Pfahl auswählen.');
+  if (!confirm(`${plural(impDelChosen.size)} wirklich löschen? Das lässt sich nicht rückgängig machen.`)) return;
+  const n = impDelChosen.size;
+  state.piles = state.piles.filter(p => !impDelChosen.has(p.id));
+  impDelChosen = new Set();
+  render();
+  await persist();
+  renderImpDeleteBox();
+  toast(`${plural(n)} gelöscht.`);
+});
 
 async function impLoad(file) {
   impError('');
@@ -7997,19 +8072,30 @@ function impUpdate() {
     chip(c.new, 'neu', 'yes') + chip(c.update, 'aktualisieren', 'yes') + chip(c.skip, 'übersprungen', '') + chip(c.error, 'mit Fehler', 'bad') ||
     '<span class="sub">Keine Datenzeilen gefunden.</span>';
 
+  // veraltete Ausschlüsse (Pfahl-Nr. kommt in der aktuellen Vorschau nicht mehr vor) entfernen
+  const curNrs = new Set(res.items.map(it => it.nr.toLowerCase()));
+  for (const k of IMP.excluded) if (!curNrs.has(k)) IMP.excluded.delete(k);
+
   const shown = res.items.slice(0, 200);
-  const label = { new: 'Neu', update: 'Aktualisieren', skip: 'Übersprungen', error: 'Fehler' };
+  const label = { new: 'Neu', update: 'Überschreibt vorhandenen Pfahl', skip: 'Übersprungen', error: 'Fehler' };
   const cell = (p, k, f) => p && isNum(p[k]) ? esc(f.format(p[k])) : '<span class="empty">–</span>';
   const cl = coordLabels(IMP.crs);
   $('#impPrev').innerHTML = shown.length ? `<table><thead><tr>
-      <th>Pfahl-Nr.</th><th>Status</th><th>Zeile</th><th class="num">Pfahl-Ø [m]</th><th class="num">Arbeitsebene (Soll)</th>
+      <th></th><th>Pfahl-Nr.</th><th>Status</th><th>Zeile</th><th class="num">Pfahl-Ø [m]</th><th class="num">Arbeitsebene (Soll)</th>
       <th class="num">Pfahl-OK (Soll)</th><th class="num">Pfahl-UK (Soll)</th><th class="num">Pfahllänge (Soll) [m]</th>
       <th class="num">${esc(cl.ost.split(' ')[0])}</th><th class="num">${esc(cl.nord.split(' ')[0])}</th></tr></thead><tbody>` +
-    shown.map(it => `<tr><td>${esc(it.nr || '–')}</td><td><span class="chip ${it.status === 'new' || it.status === 'update' ? 'yes' : it.status === 'error' ? 'bad' : ''}">${label[it.status]}</span></td>
+    shown.map(it => {
+      const actionable = it.status === 'new' || it.status === 'update';
+      const excluded = actionable && IMP.excluded.has(it.nr.toLowerCase());
+      const chipCls = it.status === 'new' ? 'yes' : it.status === 'update' ? 'warn' : it.status === 'error' ? 'bad' : '';
+      return `<tr class="${it.status === 'update' ? 'imp-row-update' : ''}${excluded ? ' imp-row-excluded' : ''}">
+      <td>${actionable ? `<input type="checkbox" data-imp-excl="${esc(it.nr.toLowerCase())}" aria-label="Zeile „${esc(it.nr)}“ beim Import berücksichtigen"${excluded ? '' : ' checked'}>` : ''}</td>
+      <td>${esc(it.nr || '–')}</td><td><span class="chip ${chipCls}">${label[it.status]}</span></td>
       <td>${it.row}</td><td class="num">${cell(it.pile, 'durchmesser', nf2)}</td><td class="num">${cell(it.pile, 'sArbeitsebene', nf3)}</td>
       <td class="num">${cell(it.pile, 'sOberkante', nf3)}</td><td class="num">${cell(it.pile, 'sUnterkante', nf3)}</td><td class="num">${cell(it.pile, 'sPfahllaenge', nf3)}</td>
       <td class="num">${cell(it.pile, 'ost', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td>
-      <td class="num">${cell(it.pile, 'nord', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td></tr>`).join('') +
+      <td class="num">${cell(it.pile, 'nord', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td></tr>`;
+    }).join('') +
     '</tbody></table>' + (res.items.length > shown.length ? `<p class="sub" style="padding:8px 12px;margin:0">… und ${res.items.length - shown.length} weitere Zeilen</p>` : '') : '';
 
   const list = res.issues.slice(0, 40);
@@ -8027,14 +8113,23 @@ function impUpdate() {
     hasCoords && state.piles.some(p => isNum(p.ost)) && IMP.crs !== state.projekt.crs ? `Achtung: Das Projekt nutzt bisher ${state.projekt.crs}; bereits erfasste Koordinaten werden dann ebenfalls in ${IMP.crs} gelesen.` : '',
   ].filter(Boolean).join(' ');
 
-  const n = c.new + c.update;
+  const n = res.items.filter(it => (it.status === 'new' || it.status === 'update') && !IMP.excluded.has(it.nr.toLowerCase())).length;
   const btn = $('#btnImpRun');
   btn.disabled = !n;
-  btn.textContent = n ? `${plural(n)} importieren` : 'Importieren';
+  btn.textContent = n ? `${plural(n)} importieren${IMP.excluded.size ? ` (${nf0.format(IMP.excluded.size)} ausgeschlossen)` : ''}` : 'Importieren';
 }
 
 $('#btnImpFile').addEventListener('click', () => $('#impFile').click());
 $('#btnImpOther').addEventListener('click', () => { $('#impStep1').hidden = false; $('#impStep2').hidden = true; $('#btnImpRun').disabled = true; });
+
+/* Einzelne Zeile vom Import ausschließen (z. B. um einen vorhandenen Pfahl nicht zu überschreiben) */
+$('#impPrev').addEventListener('change', e => {
+  const cb = e.target.closest('[data-imp-excl]');
+  if (!cb) return;
+  const k = cb.dataset.impExcl;
+  if (cb.checked) IMP.excluded.delete(k); else IMP.excluded.add(k);
+  impUpdate();
+});
 $('#impFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) impLoad(f); });
 $('#impSheet').addEventListener('change', e => impSelectSheet(+e.target.value));
 $('#impHeaderRow').addEventListener('change', e => {
@@ -8066,7 +8161,7 @@ $('#impForm').addEventListener('submit', async e => {
   e.preventDefault();
   const res = IMP.result;
   if (!res) return;
-  const todo = res.items.filter(i => i.status === 'new' || i.status === 'update');
+  const todo = res.items.filter(i => (i.status === 'new' || i.status === 'update') && !IMP.excluded.has(i.nr.toLowerCase()));
   if (!todo.length) return;
   const t = Date.now();
   let added = 0, updated = 0;

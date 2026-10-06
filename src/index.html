@@ -133,6 +133,9 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .pdf-kind-choice { display: flex; flex-direction: column; gap: 8px; }
 .pdf-kind-choice label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
 .pdf-kind-choice input { flex: none; }
+.pdf-kind-sub { display: flex; align-items: center; gap: 8px; margin: 10px 0 0 24px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.pdf-kind-sub input { flex: none; }
+.pdf-kind-sub:has(input:disabled) { opacity: .5; cursor: not-allowed; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; height: 40px; }
 .seg label { margin: 0; font-weight: 500; font-size: 15px; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
@@ -693,11 +696,15 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 .col-id { min-width: 22px; padding: 0 5px; text-align: center; font-size: 11px; font-weight: 700; border-radius: 4px; background: var(--surface-2); color: var(--muted); }
 .imp-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .chip.bad { background: var(--err-bg); color: var(--danger); font-weight: 600; }
+.chip.warn { background: var(--warn-bg); color: var(--warn); font-weight: 600; }
 .imp-prev { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
 .imp-prev:empty { display: none; }
 .imp-prev thead th { padding: 8px 12px; font-weight: 600; white-space: nowrap; }
+.imp-prev thead th:first-child, .imp-prev td:first-child { padding: 8px 4px 8px 12px; width: 1%; }
 .imp-prev tbody tr { cursor: default; }
 .imp-prev td.empty { color: var(--muted); }
+.imp-prev tr.imp-row-update td, .imp-prev tr.imp-row-update:hover td { background: var(--warn-bg); }
+.imp-prev tr.imp-row-excluded td { opacity: .45; }
 
 /* ---------- Kopfbereich und Reiter (wie im Vorbild-Screenshot) ---------- */
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; padding: 14px 24px 12px; max-width: 1800px; margin: 0 auto; }
@@ -711,6 +718,10 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 .project-switch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .project-switch svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
 .menu button.sel { background: var(--yes-bg); color: var(--yes-ink); font-weight: 700; }
+.foto-ask label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; font-size: 13.5px; }
+.foto-ask label:hover { background: var(--surface-2); border-radius: 6px; }
+.foto-ask label input { flex: none; }
+.foto-ask [data-go] { font-weight: 600; }
 .menu-sep { border: 0; border-top: 1px solid var(--line); margin: 6px 2px; }
 .title-sep { width: 1px; align-self: stretch; margin: 2px 0; background: var(--line); }
 .page-title h1 { margin: 0; font-size: 21px; line-height: 1.2; display: flex; align-items: center; gap: 9px; }

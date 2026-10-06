@@ -94,7 +94,7 @@ const IMP_ALIASES = (() => {
   return a;
 })();
 
-const IMP = { sheets: [], grid: [], headerIdx: 0, map: [], units: [], mode: 'skip', result: null, fileName: '', crs: 'EPSG:25832', xyGuess: false };
+const IMP = { sheets: [], grid: [], headerIdx: 0, map: [], units: [], mode: 'skip', result: null, fileName: '', crs: 'EPSG:25832', xyGuess: false, excluded: new Set() };
 
 /* =====================================================================
    Datei lesen
@@ -472,7 +472,7 @@ function impError(msg) { $('#impError').innerHTML = msg ? `<div class="e">${esc(
 
 function openImport() {
   if (!isAdmin()) return toast('Der Import ist dem Administrator vorbehalten.');
-  IMP.sheets = []; IMP.grid = []; IMP.map = []; IMP.result = null; IMP.mode = 'skip';
+  IMP.sheets = []; IMP.grid = []; IMP.map = []; IMP.result = null; IMP.mode = 'skip'; IMP.excluded = new Set();
   IMP.crs = crsInfo(state.projekt.crs).id;
   IMP.crsManual = false;
   $('#impCrs').innerHTML = CRS_LIST.map(c => `<option value="${c.id}">${esc(c.label)}</option>`).join('');
@@ -484,8 +484,43 @@ function openImport() {
   $('#btnImpRun').disabled = true;
   $('#btnImpRun').textContent = 'Importieren';
   impError('');
+  impDelChosen = new Set();
+  renderImpDeleteBox();
   impDlg.showModal();
 }
+
+/* Importierte Pfähle wieder entfernen (z. B. um eine Fehlimportierung rückgängig zu machen) */
+let impDelChosen = new Set();
+function renderImpDeleteBox() {
+  const imported = state.piles.filter(p => p.quelle === 'import').sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
+  const box = $('#impDeleteBox');
+  box.hidden = !imported.length;
+  if (!imported.length) return;
+  $('#impDelCount').textContent = `${nf0.format(impDelChosen.size)} von ${nf0.format(imported.length)} importierten Pfählen ausgewählt`;
+  $('#impDelList').innerHTML = imported.map(p => `<label class="pdf-sel-row"><input type="checkbox" data-del-pid="${esc(p.id)}"${impDelChosen.has(p.id) ? ' checked' : ''}>
+    <span class="nr">${esc(p.nr)}</span>
+    <span class="chip st-${pileStatus(p)}">${esc(STATUS[pileStatus(p)].label)}</span>
+    <span class="meta">${p.createdAt ? esc(fmtDate(new Date(p.createdAt).toISOString().slice(0, 10))) : ''}</span></label>`).join('');
+}
+$('#btnImpDelAll').addEventListener('click', () => { impDelChosen = new Set(state.piles.filter(p => p.quelle === 'import').map(p => p.id)); renderImpDeleteBox(); });
+$('#btnImpDelNone').addEventListener('click', () => { impDelChosen = new Set(); renderImpDeleteBox(); });
+$('#impDelList').addEventListener('change', e => {
+  const cb = e.target.closest('[data-del-pid]');
+  if (!cb) return;
+  if (cb.checked) impDelChosen.add(cb.dataset.delPid); else impDelChosen.delete(cb.dataset.delPid);
+  renderImpDeleteBox();
+});
+$('#btnImpDelRun').addEventListener('click', async () => {
+  if (!impDelChosen.size) return toast('Bitte mindestens einen Pfahl auswählen.');
+  if (!confirm(`${plural(impDelChosen.size)} wirklich löschen? Das lässt sich nicht rückgängig machen.`)) return;
+  const n = impDelChosen.size;
+  state.piles = state.piles.filter(p => !impDelChosen.has(p.id));
+  impDelChosen = new Set();
+  render();
+  await persist();
+  renderImpDeleteBox();
+  toast(`${plural(n)} gelöscht.`);
+});
 
 async function impLoad(file) {
   impError('');
@@ -613,19 +648,30 @@ function impUpdate() {
     chip(c.new, 'neu', 'yes') + chip(c.update, 'aktualisieren', 'yes') + chip(c.skip, 'übersprungen', '') + chip(c.error, 'mit Fehler', 'bad') ||
     '<span class="sub">Keine Datenzeilen gefunden.</span>';
 
+  // veraltete Ausschlüsse (Pfahl-Nr. kommt in der aktuellen Vorschau nicht mehr vor) entfernen
+  const curNrs = new Set(res.items.map(it => it.nr.toLowerCase()));
+  for (const k of IMP.excluded) if (!curNrs.has(k)) IMP.excluded.delete(k);
+
   const shown = res.items.slice(0, 200);
-  const label = { new: 'Neu', update: 'Aktualisieren', skip: 'Übersprungen', error: 'Fehler' };
+  const label = { new: 'Neu', update: 'Überschreibt vorhandenen Pfahl', skip: 'Übersprungen', error: 'Fehler' };
   const cell = (p, k, f) => p && isNum(p[k]) ? esc(f.format(p[k])) : '<span class="empty">–</span>';
   const cl = coordLabels(IMP.crs);
   $('#impPrev').innerHTML = shown.length ? `<table><thead><tr>
-      <th>Pfahl-Nr.</th><th>Status</th><th>Zeile</th><th class="num">Pfahl-Ø [m]</th><th class="num">Arbeitsebene (Soll)</th>
+      <th></th><th>Pfahl-Nr.</th><th>Status</th><th>Zeile</th><th class="num">Pfahl-Ø [m]</th><th class="num">Arbeitsebene (Soll)</th>
       <th class="num">Pfahl-OK (Soll)</th><th class="num">Pfahl-UK (Soll)</th><th class="num">Pfahllänge (Soll) [m]</th>
       <th class="num">${esc(cl.ost.split(' ')[0])}</th><th class="num">${esc(cl.nord.split(' ')[0])}</th></tr></thead><tbody>` +
-    shown.map(it => `<tr><td>${esc(it.nr || '–')}</td><td><span class="chip ${it.status === 'new' || it.status === 'update' ? 'yes' : it.status === 'error' ? 'bad' : ''}">${label[it.status]}</span></td>
+    shown.map(it => {
+      const actionable = it.status === 'new' || it.status === 'update';
+      const excluded = actionable && IMP.excluded.has(it.nr.toLowerCase());
+      const chipCls = it.status === 'new' ? 'yes' : it.status === 'update' ? 'warn' : it.status === 'error' ? 'bad' : '';
+      return `<tr class="${it.status === 'update' ? 'imp-row-update' : ''}${excluded ? ' imp-row-excluded' : ''}">
+      <td>${actionable ? `<input type="checkbox" data-imp-excl="${esc(it.nr.toLowerCase())}" aria-label="Zeile „${esc(it.nr)}“ beim Import berücksichtigen"${excluded ? '' : ' checked'}>` : ''}</td>
+      <td>${esc(it.nr || '–')}</td><td><span class="chip ${chipCls}">${label[it.status]}</span></td>
       <td>${it.row}</td><td class="num">${cell(it.pile, 'durchmesser', nf2)}</td><td class="num">${cell(it.pile, 'sArbeitsebene', nf3)}</td>
       <td class="num">${cell(it.pile, 'sOberkante', nf3)}</td><td class="num">${cell(it.pile, 'sUnterkante', nf3)}</td><td class="num">${cell(it.pile, 'sPfahllaenge', nf3)}</td>
       <td class="num">${cell(it.pile, 'ost', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td>
-      <td class="num">${cell(it.pile, 'nord', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td></tr>`).join('') +
+      <td class="num">${cell(it.pile, 'nord', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td></tr>`;
+    }).join('') +
     '</tbody></table>' + (res.items.length > shown.length ? `<p class="sub" style="padding:8px 12px;margin:0">… und ${res.items.length - shown.length} weitere Zeilen</p>` : '') : '';
 
   const list = res.issues.slice(0, 40);
@@ -643,14 +689,23 @@ function impUpdate() {
     hasCoords && state.piles.some(p => isNum(p.ost)) && IMP.crs !== state.projekt.crs ? `Achtung: Das Projekt nutzt bisher ${state.projekt.crs}; bereits erfasste Koordinaten werden dann ebenfalls in ${IMP.crs} gelesen.` : '',
   ].filter(Boolean).join(' ');
 
-  const n = c.new + c.update;
+  const n = res.items.filter(it => (it.status === 'new' || it.status === 'update') && !IMP.excluded.has(it.nr.toLowerCase())).length;
   const btn = $('#btnImpRun');
   btn.disabled = !n;
-  btn.textContent = n ? `${plural(n)} importieren` : 'Importieren';
+  btn.textContent = n ? `${plural(n)} importieren${IMP.excluded.size ? ` (${nf0.format(IMP.excluded.size)} ausgeschlossen)` : ''}` : 'Importieren';
 }
 
 $('#btnImpFile').addEventListener('click', () => $('#impFile').click());
 $('#btnImpOther').addEventListener('click', () => { $('#impStep1').hidden = false; $('#impStep2').hidden = true; $('#btnImpRun').disabled = true; });
+
+/* Einzelne Zeile vom Import ausschließen (z. B. um einen vorhandenen Pfahl nicht zu überschreiben) */
+$('#impPrev').addEventListener('change', e => {
+  const cb = e.target.closest('[data-imp-excl]');
+  if (!cb) return;
+  const k = cb.dataset.impExcl;
+  if (cb.checked) IMP.excluded.delete(k); else IMP.excluded.add(k);
+  impUpdate();
+});
 $('#impFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) impLoad(f); });
 $('#impSheet').addEventListener('change', e => impSelectSheet(+e.target.value));
 $('#impHeaderRow').addEventListener('change', e => {
@@ -682,7 +737,7 @@ $('#impForm').addEventListener('submit', async e => {
   e.preventDefault();
   const res = IMP.result;
   if (!res) return;
-  const todo = res.items.filter(i => i.status === 'new' || i.status === 'update');
+  const todo = res.items.filter(i => (i.status === 'new' || i.status === 'update') && !IMP.excluded.has(i.nr.toLowerCase()));
   if (!todo.length) return;
   const t = Date.now();
   let added = 0, updated = 0;
