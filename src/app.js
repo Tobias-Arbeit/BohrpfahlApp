@@ -1004,9 +1004,6 @@ $$('.menu').forEach(m => m.addEventListener('click', e => {
   else if (act === 'users') openUsers();
   else if (act === 'rueck-export') exportRueckmeldung();
   else if (act === 'rueck-import') { if (isAdmin()) rueckInput.click(); }
-  else if (act === 'pdf-proto') exportProtokolle(visiblePiles());
-  else if (act === 'pdf-proto-nofoto') exportProtokolle(visiblePiles(), { fotos: false });
-  else if (act === 'pdf-list') exportPdf();
   else if (act === 'project-switch') { const id = e.target.closest('[data-id]')?.dataset.id; if (id) switchProject(id); }
   else if (act === 'project-new') createProject();
   else if (act === 'cols-all') { visibleCols = COLS.map(c => c.k); saveVisibleCols(); renderColsMenu(); render(); }
@@ -2034,15 +2031,14 @@ function exportCsv() {
   toast(`CSV exportiert: ${plural(list.length)}.`);
 }
 
-function exportPdf() {
-  const list = visiblePiles();
+function exportPdf(list = visiblePiles(), label = filterText()) {
   if (!list.length) return toast('Keine Daten zum Exportieren.');
   if (!window.jspdf) return toast('PDF-Bibliothek nicht geladen.');
   const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const stand = `${fmtDT(toLocalInput(new Date()))} Uhr`;
-  const filt = filterText();
+  const filt = label;
   const pr = state.projekt;
 
   const head = [TCOLS.map(c => { const u = unitOf(c); return c.label + (u ? `\n[${u}]` : ''); })];
@@ -2094,6 +2090,81 @@ function exportPdf() {
 }
 
 $('#btnCsv').addEventListener('click', exportCsv);
+
+/* =====================================================================
+   PDF-Export: Pfahlauswahl-Dialog
+   Vorauswahl über Herstellungsdatum (erstes Bohrdatum, sonst frühestes erfasstes Datum) und
+   Bohrgerät; einzelne Pfähle lassen sich danach noch an-/abwählen, bevor exportiert wird.
+   ===================================================================== */
+const pdfSelDlg = $('#pdfSelDialog');
+let pdfSelChosen = new Set();
+
+function pileMfgDate(p) {
+  const bohren = ((p.zeiten && p.zeiten.bohren) || []).map(e => e.d).filter(Boolean).sort();
+  if (bohren.length) return bohren[0];
+  return allEntries(p).map(e => e.d).filter(Boolean).sort()[0] || null;
+}
+
+function updatePdfSelCount() {
+  $('#pdfSelCount').textContent = `${nf0.format(pdfSelChosen.size)} von ${nf0.format(state.piles.length)} Pfählen ausgewählt`;
+}
+
+function renderPdfSelList() {
+  const list = [...state.piles].sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
+  $('#pdfSelList').innerHTML = list.length ? list.map(p => {
+    const d = pileMfgDate(p);
+    const g = geraetText(p.geraet, p.geraetInfo);
+    return `<label class="pdf-sel-row"><input type="checkbox" data-pid="${esc(p.id)}"${pdfSelChosen.has(p.id) ? ' checked' : ''}>
+      <span class="nr">${esc(p.nr)}</span>
+      <span class="chip st-${pileStatus(p)}">${esc(STATUS[pileStatus(p)].label)}</span>
+      <span class="meta">${d ? esc(fmtDate(d)) : 'kein Datum'}${g ? ' · ' + esc(g) : ''}</span></label>`;
+  }).join('') : '<p class="sub" style="padding:10px">Keine Pfähle vorhanden.</p>';
+  updatePdfSelCount();
+}
+
+function openPdfSelect() {
+  if (!state.piles.length) return toast('Keine Pfähle vorhanden.');
+  $('#pdfSelFrom').value = '';
+  $('#pdfSelTo').value = '';
+  const gsel = $('#pdfSelGeraet');
+  gsel.innerHTML = '<option value="">Alle Geräte</option>' +
+    (state.projekt.geraete || []).map(g => `<option value="${esc(g.id)}">${esc(geraetText(g.id))}</option>`).join('') +
+    '<option value="-">ohne Gerät</option>';
+  gsel.value = '';
+  pdfSelChosen = new Set(visiblePiles().map(p => p.id));   // Vorauswahl: aktuell gefilterte Tabelle
+  renderPdfSelList();
+  pdfSelDlg.showModal();
+}
+$('#btnPdf').addEventListener('click', openPdfSelect);
+
+$('#btnPdfSelApply').addEventListener('click', () => {
+  const from = $('#pdfSelFrom').value, to = $('#pdfSelTo').value, ger = $('#pdfSelGeraet').value;
+  pdfSelChosen = new Set(state.piles.filter(p => {
+    const d = pileMfgDate(p);
+    if (from && (!d || d < from)) return false;
+    if (to && (!d || d > to)) return false;
+    if (ger && (ger === '-' ? !!p.geraet : p.geraet !== ger)) return false;
+    return true;
+  }).map(p => p.id));
+  renderPdfSelList();
+});
+$('#btnPdfSelAll').addEventListener('click', () => { pdfSelChosen = new Set(state.piles.map(p => p.id)); renderPdfSelList(); });
+$('#btnPdfSelNone').addEventListener('click', () => { pdfSelChosen = new Set(); renderPdfSelList(); });
+$('#pdfSelList').addEventListener('change', e => {
+  const cb = e.target.closest('[data-pid]');
+  if (!cb) return;
+  if (cb.checked) pdfSelChosen.add(cb.dataset.pid); else pdfSelChosen.delete(cb.dataset.pid);
+  updatePdfSelCount();
+});
+$('#btnPdfSelExport').addEventListener('click', () => {
+  const list = state.piles.filter(p => pdfSelChosen.has(p.id)).sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
+  if (!list.length) return toast('Bitte mindestens einen Pfahl auswählen.');
+  const kind = $('input[name=pdfKind]:checked', pdfSelDlg).value;
+  pdfSelDlg.close();
+  if (kind === 'proto') exportProtokolle(list);
+  else if (kind === 'proto-nofoto') exportProtokolle(list, { fotos: false });
+  else exportPdf(list, `Auswahl: ${nf0.format(list.length)} von ${nf0.format(state.piles.length)} Pfählen`);
+});
 
 /** Liest eine vom Nutzer ausgewählte JSON-Datei; entfernt ein evtl. vorangestelltes Byte-Order-Mark
     (BOM), das manche Editoren/Cloud-Dienste beim Weiterreichen einer Textdatei ergänzen und das

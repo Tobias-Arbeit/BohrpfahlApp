@@ -1,0 +1,36 @@
+<dialog id="pdfSelDialog" class="wide" aria-labelledby="pdfSelTitle">
+  <div class="dlg-head">
+    <h2 id="pdfSelTitle">PDF-Export</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="sub" style="margin-top:0">Pfähle für den Export wählen. Die Filter dienen nur zur Vorauswahl – einzelne Pfähle lassen sich danach noch an- und abwählen.</p>
+
+    <div class="stats-bar">
+      <label>Herstellungsdatum von <input type="date" id="pdfSelFrom"></label>
+      <label>bis <input type="date" id="pdfSelTo"></label>
+      <label>Bohrgerät <select id="pdfSelGeraet"></select></label>
+      <button type="button" class="btn small" id="btnPdfSelApply">Vorauswahl anwenden</button>
+    </div>
+
+    <div class="row-foot" style="margin-top:0">
+      <span class="sum" id="pdfSelCount"></span>
+      <button type="button" class="link" id="btnPdfSelAll">Alle auswählen</button>
+      <button type="button" class="link" id="btnPdfSelNone">Auswahl aufheben</button>
+    </div>
+    <div id="pdfSelList" class="pdf-sel-list"></div>
+
+    <fieldset style="margin-top:16px">
+      <legend>Art des Exports</legend>
+      <div class="pdf-kind-choice">
+        <label><input type="radio" name="pdfKind" value="proto" checked> Bohrprotokolle mit Fotos (Anhang je Pfahl)</label>
+        <label><input type="radio" name="pdfKind" value="proto-nofoto"> Bohrprotokolle ohne Fotos</label>
+        <label><input type="radio" name="pdfKind" value="list"> Übersichtsliste (Tabelle)</label>
+      </div>
+    </fieldset>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" class="btn" data-close>Abbrechen</button>
+    <button type="button" class="btn primary" id="btnPdfSelExport">Exportieren</button>
+  </div>
+</dialog>

@@ -123,6 +123,16 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .pdf-item svg { width: 18px; height: 18px; flex: none; color: var(--accent); }
 .pdf-item span { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pdf-item .icon-btn { flex: none; color: var(--danger); }
+.pdf-sel-list { max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.pdf-sel-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 13.5px; }
+.pdf-sel-row:last-child { border-bottom: 0; }
+.pdf-sel-row:hover { background: var(--surface-2); }
+.pdf-sel-row input[type=checkbox] { flex: none; width: 16px; height: 16px; }
+.pdf-sel-row .nr { font-weight: 600; min-width: 110px; }
+.pdf-sel-row .meta { color: var(--muted); font-size: 12.5px; margin-left: auto; text-align: right; }
+.pdf-kind-choice { display: flex; flex-direction: column; gap: 8px; }
+.pdf-kind-choice label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
+.pdf-kind-choice input { flex: none; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; height: 40px; }
 .seg label { margin: 0; font-weight: 500; font-size: 15px; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
@@ -822,17 +832,10 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 20h14"/></svg>
         Rückmeldung senden
       </button>
-      <div class="menu-wrap">
-        <button id="btnPdf" class="linkbtn" type="button" aria-haspopup="true" aria-expanded="false" data-menu="menuPdf">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
-          PDF-Export
-        </button>
-        <div id="menuPdf" class="menu" hidden>
-          <button type="button" data-act="pdf-proto">Bohrprotokolle mit Fotos (Anhang je Pfahl)</button>
-          <button type="button" data-act="pdf-proto-nofoto">Bohrprotokolle ohne Fotos</button>
-          <button type="button" data-act="pdf-list">Übersichtsliste (Tabelle)</button>
-        </div>
-      </div>
+      <button id="btnPdf" class="linkbtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
+        PDF-Export
+      </button>
       <button id="btnLock" class="linkbtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
         Abmelden
@@ -1580,6 +1583,43 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
       <button type="button" class="btn primary" data-close>Schließen</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="pdfSelDialog" class="wide" aria-labelledby="pdfSelTitle">
+  <div class="dlg-head">
+    <h2 id="pdfSelTitle">PDF-Export</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="sub" style="margin-top:0">Pfähle für den Export wählen. Die Filter dienen nur zur Vorauswahl – einzelne Pfähle lassen sich danach noch an- und abwählen.</p>
+
+    <div class="stats-bar">
+      <label>Herstellungsdatum von <input type="date" id="pdfSelFrom"></label>
+      <label>bis <input type="date" id="pdfSelTo"></label>
+      <label>Bohrgerät <select id="pdfSelGeraet"></select></label>
+      <button type="button" class="btn small" id="btnPdfSelApply">Vorauswahl anwenden</button>
+    </div>
+
+    <div class="row-foot" style="margin-top:0">
+      <span class="sum" id="pdfSelCount"></span>
+      <button type="button" class="link" id="btnPdfSelAll">Alle auswählen</button>
+      <button type="button" class="link" id="btnPdfSelNone">Auswahl aufheben</button>
+    </div>
+    <div id="pdfSelList" class="pdf-sel-list"></div>
+
+    <fieldset style="margin-top:16px">
+      <legend>Art des Exports</legend>
+      <div class="pdf-kind-choice">
+        <label><input type="radio" name="pdfKind" value="proto" checked> Bohrprotokolle mit Fotos (Anhang je Pfahl)</label>
+        <label><input type="radio" name="pdfKind" value="proto-nofoto"> Bohrprotokolle ohne Fotos</label>
+        <label><input type="radio" name="pdfKind" value="list"> Übersichtsliste (Tabelle)</label>
+      </div>
+    </fieldset>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" class="btn" data-close>Abbrechen</button>
+    <button type="button" class="btn primary" id="btnPdfSelExport">Exportieren</button>
+  </div>
 </dialog>
 
 
@@ -5048,9 +5088,6 @@ $$('.menu').forEach(m => m.addEventListener('click', e => {
   else if (act === 'users') openUsers();
   else if (act === 'rueck-export') exportRueckmeldung();
   else if (act === 'rueck-import') { if (isAdmin()) rueckInput.click(); }
-  else if (act === 'pdf-proto') exportProtokolle(visiblePiles());
-  else if (act === 'pdf-proto-nofoto') exportProtokolle(visiblePiles(), { fotos: false });
-  else if (act === 'pdf-list') exportPdf();
   else if (act === 'project-switch') { const id = e.target.closest('[data-id]')?.dataset.id; if (id) switchProject(id); }
   else if (act === 'project-new') createProject();
   else if (act === 'cols-all') { visibleCols = COLS.map(c => c.k); saveVisibleCols(); renderColsMenu(); render(); }
@@ -6078,15 +6115,14 @@ function exportCsv() {
   toast(`CSV exportiert: ${plural(list.length)}.`);
 }
 
-function exportPdf() {
-  const list = visiblePiles();
+function exportPdf(list = visiblePiles(), label = filterText()) {
   if (!list.length) return toast('Keine Daten zum Exportieren.');
   if (!window.jspdf) return toast('PDF-Bibliothek nicht geladen.');
   const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const stand = `${fmtDT(toLocalInput(new Date()))} Uhr`;
-  const filt = filterText();
+  const filt = label;
   const pr = state.projekt;
 
   const head = [TCOLS.map(c => { const u = unitOf(c); return c.label + (u ? `\n[${u}]` : ''); })];
@@ -6138,6 +6174,81 @@ function exportPdf() {
 }
 
 $('#btnCsv').addEventListener('click', exportCsv);
+
+/* =====================================================================
+   PDF-Export: Pfahlauswahl-Dialog
+   Vorauswahl über Herstellungsdatum (erstes Bohrdatum, sonst frühestes erfasstes Datum) und
+   Bohrgerät; einzelne Pfähle lassen sich danach noch an-/abwählen, bevor exportiert wird.
+   ===================================================================== */
+const pdfSelDlg = $('#pdfSelDialog');
+let pdfSelChosen = new Set();
+
+function pileMfgDate(p) {
+  const bohren = ((p.zeiten && p.zeiten.bohren) || []).map(e => e.d).filter(Boolean).sort();
+  if (bohren.length) return bohren[0];
+  return allEntries(p).map(e => e.d).filter(Boolean).sort()[0] || null;
+}
+
+function updatePdfSelCount() {
+  $('#pdfSelCount').textContent = `${nf0.format(pdfSelChosen.size)} von ${nf0.format(state.piles.length)} Pfählen ausgewählt`;
+}
+
+function renderPdfSelList() {
+  const list = [...state.piles].sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
+  $('#pdfSelList').innerHTML = list.length ? list.map(p => {
+    const d = pileMfgDate(p);
+    const g = geraetText(p.geraet, p.geraetInfo);
+    return `<label class="pdf-sel-row"><input type="checkbox" data-pid="${esc(p.id)}"${pdfSelChosen.has(p.id) ? ' checked' : ''}>
+      <span class="nr">${esc(p.nr)}</span>
+      <span class="chip st-${pileStatus(p)}">${esc(STATUS[pileStatus(p)].label)}</span>
+      <span class="meta">${d ? esc(fmtDate(d)) : 'kein Datum'}${g ? ' · ' + esc(g) : ''}</span></label>`;
+  }).join('') : '<p class="sub" style="padding:10px">Keine Pfähle vorhanden.</p>';
+  updatePdfSelCount();
+}
+
+function openPdfSelect() {
+  if (!state.piles.length) return toast('Keine Pfähle vorhanden.');
+  $('#pdfSelFrom').value = '';
+  $('#pdfSelTo').value = '';
+  const gsel = $('#pdfSelGeraet');
+  gsel.innerHTML = '<option value="">Alle Geräte</option>' +
+    (state.projekt.geraete || []).map(g => `<option value="${esc(g.id)}">${esc(geraetText(g.id))}</option>`).join('') +
+    '<option value="-">ohne Gerät</option>';
+  gsel.value = '';
+  pdfSelChosen = new Set(visiblePiles().map(p => p.id));   // Vorauswahl: aktuell gefilterte Tabelle
+  renderPdfSelList();
+  pdfSelDlg.showModal();
+}
+$('#btnPdf').addEventListener('click', openPdfSelect);
+
+$('#btnPdfSelApply').addEventListener('click', () => {
+  const from = $('#pdfSelFrom').value, to = $('#pdfSelTo').value, ger = $('#pdfSelGeraet').value;
+  pdfSelChosen = new Set(state.piles.filter(p => {
+    const d = pileMfgDate(p);
+    if (from && (!d || d < from)) return false;
+    if (to && (!d || d > to)) return false;
+    if (ger && (ger === '-' ? !!p.geraet : p.geraet !== ger)) return false;
+    return true;
+  }).map(p => p.id));
+  renderPdfSelList();
+});
+$('#btnPdfSelAll').addEventListener('click', () => { pdfSelChosen = new Set(state.piles.map(p => p.id)); renderPdfSelList(); });
+$('#btnPdfSelNone').addEventListener('click', () => { pdfSelChosen = new Set(); renderPdfSelList(); });
+$('#pdfSelList').addEventListener('change', e => {
+  const cb = e.target.closest('[data-pid]');
+  if (!cb) return;
+  if (cb.checked) pdfSelChosen.add(cb.dataset.pid); else pdfSelChosen.delete(cb.dataset.pid);
+  updatePdfSelCount();
+});
+$('#btnPdfSelExport').addEventListener('click', () => {
+  const list = state.piles.filter(p => pdfSelChosen.has(p.id)).sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
+  if (!list.length) return toast('Bitte mindestens einen Pfahl auswählen.');
+  const kind = $('input[name=pdfKind]:checked', pdfSelDlg).value;
+  pdfSelDlg.close();
+  if (kind === 'proto') exportProtokolle(list);
+  else if (kind === 'proto-nofoto') exportProtokolle(list, { fotos: false });
+  else exportPdf(list, `Auswahl: ${nf0.format(list.length)} von ${nf0.format(state.piles.length)} Pfählen`);
+});
 
 /** Liest eine vom Nutzer ausgewählte JSON-Datei; entfernt ein evtl. vorangestelltes Byte-Order-Mark
     (BOM), das manche Editoren/Cloud-Dienste beim Weiterreichen einer Textdatei ergänzen und das
