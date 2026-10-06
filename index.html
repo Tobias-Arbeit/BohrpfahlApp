@@ -603,6 +603,12 @@ svg.pg { display: block; background: var(--surface); border: 1px solid var(--lin
 .bt-box.bt-result .bt-box-lbl { color: var(--yes-ink); }
 .bt-box.bt-result .bt-box-val { color: var(--yes-ink); font-size: 14px; }
 .bt-trigger { margin: 0 0 14px; }
+.btn-bohrtiefe {
+  width: 100%; justify-content: center; height: 44px;
+  background: var(--yes-bg); border: 1.5px solid var(--accent); color: var(--yes-ink); font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+.btn-bohrtiefe:hover { filter: brightness(0.96); }
 /* Großzügig dimensioniert, damit die Zeichnung auf Tablets (iPad) nahezu den ganzen Bildschirm
    einnimmt; der Höhen-Deckel (1600px) greift nur auf sehr großen Monitoren, auf Tablets bestimmt
    100vh die Höhe. Die Dialoghöhe wird fest vorgegeben und über Flex an .dlg-body weitergereicht;
@@ -652,7 +658,7 @@ svg.pg { display: block; background: var(--surface); border: 1px solid var(--lin
 .users-table td select { height: 32px; width: auto; }
 input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: not-allowed; background: var(--surface-2); }
 .seg input:disabled + span { opacity: .55; cursor: not-allowed; }
-@media (max-width: 900px) { .dlg-cols { grid-template-columns: 1fr; } .dlg-graphic { order: -1; } .dlg-sticky { position: static; } }
+@media (max-width: 900px) { .dlg-cols { grid-template-columns: 1fr; } .dlg-sticky { position: static; } }
 @media (max-width: 640px) { #pileDialog { width: 100vw; max-width: 100vw; } }
 
 /* ---------- Import ---------- */
@@ -1180,7 +1186,10 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
       </fieldset>
 
       <div class="bt-trigger">
-        <button type="button" class="btn" id="btnBohrtiefe">Bohrtiefen-Kontrolle (Nivellement) …</button>
+        <button type="button" class="btn btn-bohrtiefe" id="btnBohrtiefe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M12 3l4 4M12 3L8 7M5 21h14"/></svg>
+          Bohrtiefen-Kontrolle (Nivellement) …
+        </button>
       </div>
 
       <div class="zwei-spalten">
@@ -1505,7 +1514,7 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
     <div class="dlg-body">
       <p class="sub" style="margin-top:0">
         <strong>Administrator:</strong> alles (Import, Projektdaten, Planwerte, Löschen, Prüfen, Benutzer).<br>
-        <strong>Bohrist:</strong> ergänzt Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos (Pflichtfelder, ohne die er nicht speichern kann). Er sieht nur „Pfähle“ und „Karte“ und hat kein „Mein Konto“: Passwörter vergibt und ändert ausschließlich der Administrator hier. Importierte und vom Administrator angelegte Pfähle kann er weder löschen noch kopieren, geprüfte Pfähle sind für ihn gesperrt.
+        <strong>Bohrist:</strong> ergänzt Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos (gelb markierte Pflichtfelder; speichern geht auch bei offenen Pflichtfeldern, der Pfahl gilt dann als „In Ausführung“). Er sieht nur „Pfähle“ und „Karte“ und hat kein „Mein Konto“: Passwörter vergibt und ändert ausschließlich der Administrator hier. Importierte und vom Administrator angelegte Pfähle kann er weder löschen noch kopieren, geprüfte Pfähle sind für ihn gesperrt.
       </p>
 
       <table class="users-table">
@@ -5538,7 +5547,7 @@ function applyPileLock(p, isNew) {
   note.hidden = !(locked || !full);
   note.textContent = locked
     ? 'Dieser Pfahl wurde vom Administrator geprüft und ist gesperrt.'
-    : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos ergänzen (gelb markierte Pflichtfelder müssen ausgefüllt sein). Planwerte und Stammdaten sind gesperrt.';
+    : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos ergänzen (gelb markierte Felder sind Pflichtfelder). Planwerte und Stammdaten sind gesperrt.';
   // Kompaktes Formular für den Admin immer, für den Bohrist außer bei eigenen/neuen Pfählen
   // (dort sieht auch der Bohrist weiterhin das vollständige, unkompaktierte Formular).
   pileDlg.classList.toggle('kompakt', isAdmin() || !full);
@@ -5558,7 +5567,8 @@ function fillGrunddaten(p) {
 }
 
 /* --- Pflichtfelder des Bohrists ---
-   Ohne diese Angaben kann der Bohrist einen Pfahl nicht speichern; leere Pflichtfelder sind gelb markiert.
+   Leere Pflichtfelder sind gelb markiert; sie blockieren das Speichern nicht mehr, machen den Pfahl
+   dabei aber zu „In Ausführung“, bis alle Angaben vollständig sind (siehe updateRequired(), form-submit).
    Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Bohrist bei fremden Pfählen
    nicht mehr zugänglich (siehe "i"-Panel-Entfernung in pile-dialog.html) und deshalb nicht mehr Pflicht.
    Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkungen, Fotos. */
@@ -5583,19 +5593,20 @@ function requiredEls() {
   return out;
 }
 
-/** Markiert leere Pflichtfelder (nur Bohrist) und schaltet „Speichern“ entsprechend; liefert die fehlenden Angaben */
+/** Markiert leere Pflichtfelder (nur Bohrist); liefert die fehlenden Angaben. Speichern bleibt auch bei
+    offenen Pflichtfeldern möglich – der Pfahl gilt dann als „In Ausführung“ (siehe pileStatus() in map.js),
+    bis alle Angaben vollständig sind. */
 function updateRequired() {
   $$('.need', form).forEach(el => el.classList.remove('need'));
   const note = $('#reqNote'), btn = $('#btnSave');
-  if (isAdmin() || btn.hidden) { note.hidden = true; btn.disabled = false; btn.textContent = 'Speichern'; return []; }
+  if (isAdmin() || btn.hidden) { note.hidden = true; btn.textContent = 'Speichern'; return []; }
   const missing = requiredEls().filter(r => !r.el.disabled && empty(r.el));
   missing.forEach(r => r.el.classList.add('need'));
   note.hidden = false;
   note.classList.toggle('done', !missing.length);
   note.innerHTML = missing.length
-    ? `<strong>Pflichtfelder:</strong> Speichern ist erst möglich, wenn alle <strong>gelb markierten Felder</strong> ausgefüllt sind. Noch offen: <strong>${missing.length}</strong>.`
+    ? `<strong>Pflichtfelder:</strong> Noch offen: <strong>${missing.length}</strong> (<strong>gelb markierte Felder</strong>). Speichern ist trotzdem möglich – der Pfahl gilt dann als „In Ausführung“, bis alle Angaben vollständig sind.`
     : '<strong>Alle Pflichtfelder sind ausgefüllt.</strong> Der Pfahl kann gespeichert werden.';
-  btn.disabled = missing.length > 0;
   btn.textContent = missing.length ? `Speichern (${missing.length} Pflichtfelder offen)` : 'Speichern';
   return missing;
 }
@@ -5793,10 +5804,9 @@ form.addEventListener('click', e => {
 form.addEventListener('submit', async e => {
   e.preventDefault();
   if (!validate(true)) return;
-  if (!isAdmin()) {
-    const missing = updateRequired();
-    if (missing.length) return toast(`Bitte alle Pflichtfelder ausfüllen (${missing.length} offen).`);
-  }
+  // Pflichtfelder (nur Bohrist) blockieren das Speichern nicht mehr – ein unvollständig gespeicherter
+  // Pfahl gilt bis zur Vervollständigung als „In Ausführung“ (unvollstaendig-Flag, siehe pileStatus()).
+  const missing = isAdmin() ? [] : updateRequired();
   const p = readPile();
   const stamp = { updatedAt: Date.now(), updatedBy: me.name, updatedRole: me.role };
   if (editing) {
@@ -5806,15 +5816,15 @@ form.addEventListener('submit', async e => {
       if (isLocked(old)) return toast('Dieser Pfahl ist geprüft und gesperrt.');
       // Rechte auch hier durchsetzen: der Bohrist übernimmt nur die ihm erlaubten Felder
       const upd = canFullEdit(old) ? p : pickAllowed(p);
-      state.piles[i] = { ...old, ...upd, ...stamp, ...(isAdmin() ? { geprueft: editingGeprueft } : {}) };
+      state.piles[i] = { ...old, ...upd, ...stamp, ...(isAdmin() ? { geprueft: editingGeprueft } : { unvollstaendig: missing.length > 0 }) };
     }
   } else {
-    state.piles.push({ id: uid(), createdAt: Date.now(), quelle: isAdmin() ? 'admin' : 'borist', ...p, ...stamp, ...(isAdmin() && editingGeprueft ? { geprueft: editingGeprueft } : {}) });
+    state.piles.push({ id: uid(), createdAt: Date.now(), quelle: isAdmin() ? 'admin' : 'borist', ...p, ...stamp, ...(isAdmin() && editingGeprueft ? { geprueft: editingGeprueft } : {}), ...(!isAdmin() ? { unvollstaendig: missing.length > 0 } : {}) });
   }
   pileDlg.close();
   render();
   await persist();
-  toast(`Pfahl „${p.nr}“ gespeichert.`);
+  toast(missing.length ? `Pfahl „${p.nr}“ gespeichert – ${missing.length} Pflichtfelder noch offen.` : `Pfahl „${p.nr}“ gespeichert.`);
 });
 
 /* =====================================================================
@@ -6744,7 +6754,10 @@ function pileStatus(p) {
   if (p.geprueft) return 'geprueft';
   const z = p.zeiten || {};
   if ((z.betonieren || []).some(e => e.d && e.bis)) return 'fertig';
-  return ZEIT_GROUPS.some(g => (z[g.k] || []).some(e => e.d || e.von || e.bis)) ? 'aktiv' : 'offen';
+  if (ZEIT_GROUPS.some(g => (z[g.k] || []).some(e => e.d || e.von || e.bis))) return 'aktiv';
+  // Vom Bohrist unvollständig gespeicherter Pfahl (offene Pflichtfelder) gilt als „In Ausführung“,
+  // auch solange noch keine Ausführungszeiten erfasst sind – siehe form-submit in app.js.
+  return p.unvollstaendig ? 'aktiv' : 'offen';
 }
 
 /* =====================================================================

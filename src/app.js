@@ -1446,7 +1446,7 @@ function applyPileLock(p, isNew) {
   note.hidden = !(locked || !full);
   note.textContent = locked
     ? 'Dieser Pfahl wurde vom Administrator geprüft und ist gesperrt.'
-    : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos ergänzen (gelb markierte Pflichtfelder müssen ausgefüllt sein). Planwerte und Stammdaten sind gesperrt.';
+    : 'Sie können Ist-Werte, Bodenaufschluss, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Ausführungszeiten, Bemerkungen (extern und intern) und Fotos ergänzen (gelb markierte Felder sind Pflichtfelder). Planwerte und Stammdaten sind gesperrt.';
   // Kompaktes Formular für den Admin immer, für den Bohrist außer bei eigenen/neuen Pfählen
   // (dort sieht auch der Bohrist weiterhin das vollständige, unkompaktierte Formular).
   pileDlg.classList.toggle('kompakt', isAdmin() || !full);
@@ -1466,7 +1466,8 @@ function fillGrunddaten(p) {
 }
 
 /* --- Pflichtfelder des Bohrists ---
-   Ohne diese Angaben kann der Bohrist einen Pfahl nicht speichern; leere Pflichtfelder sind gelb markiert.
+   Leere Pflichtfelder sind gelb markiert; sie blockieren das Speichern nicht mehr, machen den Pfahl
+   dabei aber zu „In Ausführung“, bis alle Angaben vollständig sind (siehe updateRequired(), form-submit).
    Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Bohrist bei fremden Pfählen
    nicht mehr zugänglich (siehe "i"-Panel-Entfernung in pile-dialog.html) und deshalb nicht mehr Pflicht.
    Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkungen, Fotos. */
@@ -1491,19 +1492,20 @@ function requiredEls() {
   return out;
 }
 
-/** Markiert leere Pflichtfelder (nur Bohrist) und schaltet „Speichern“ entsprechend; liefert die fehlenden Angaben */
+/** Markiert leere Pflichtfelder (nur Bohrist); liefert die fehlenden Angaben. Speichern bleibt auch bei
+    offenen Pflichtfeldern möglich – der Pfahl gilt dann als „In Ausführung“ (siehe pileStatus() in map.js),
+    bis alle Angaben vollständig sind. */
 function updateRequired() {
   $$('.need', form).forEach(el => el.classList.remove('need'));
   const note = $('#reqNote'), btn = $('#btnSave');
-  if (isAdmin() || btn.hidden) { note.hidden = true; btn.disabled = false; btn.textContent = 'Speichern'; return []; }
+  if (isAdmin() || btn.hidden) { note.hidden = true; btn.textContent = 'Speichern'; return []; }
   const missing = requiredEls().filter(r => !r.el.disabled && empty(r.el));
   missing.forEach(r => r.el.classList.add('need'));
   note.hidden = false;
   note.classList.toggle('done', !missing.length);
   note.innerHTML = missing.length
-    ? `<strong>Pflichtfelder:</strong> Speichern ist erst möglich, wenn alle <strong>gelb markierten Felder</strong> ausgefüllt sind. Noch offen: <strong>${missing.length}</strong>.`
+    ? `<strong>Pflichtfelder:</strong> Noch offen: <strong>${missing.length}</strong> (<strong>gelb markierte Felder</strong>). Speichern ist trotzdem möglich – der Pfahl gilt dann als „In Ausführung“, bis alle Angaben vollständig sind.`
     : '<strong>Alle Pflichtfelder sind ausgefüllt.</strong> Der Pfahl kann gespeichert werden.';
-  btn.disabled = missing.length > 0;
   btn.textContent = missing.length ? `Speichern (${missing.length} Pflichtfelder offen)` : 'Speichern';
   return missing;
 }
@@ -1701,10 +1703,9 @@ form.addEventListener('click', e => {
 form.addEventListener('submit', async e => {
   e.preventDefault();
   if (!validate(true)) return;
-  if (!isAdmin()) {
-    const missing = updateRequired();
-    if (missing.length) return toast(`Bitte alle Pflichtfelder ausfüllen (${missing.length} offen).`);
-  }
+  // Pflichtfelder (nur Bohrist) blockieren das Speichern nicht mehr – ein unvollständig gespeicherter
+  // Pfahl gilt bis zur Vervollständigung als „In Ausführung“ (unvollstaendig-Flag, siehe pileStatus()).
+  const missing = isAdmin() ? [] : updateRequired();
   const p = readPile();
   const stamp = { updatedAt: Date.now(), updatedBy: me.name, updatedRole: me.role };
   if (editing) {
@@ -1714,15 +1715,15 @@ form.addEventListener('submit', async e => {
       if (isLocked(old)) return toast('Dieser Pfahl ist geprüft und gesperrt.');
       // Rechte auch hier durchsetzen: der Bohrist übernimmt nur die ihm erlaubten Felder
       const upd = canFullEdit(old) ? p : pickAllowed(p);
-      state.piles[i] = { ...old, ...upd, ...stamp, ...(isAdmin() ? { geprueft: editingGeprueft } : {}) };
+      state.piles[i] = { ...old, ...upd, ...stamp, ...(isAdmin() ? { geprueft: editingGeprueft } : { unvollstaendig: missing.length > 0 }) };
     }
   } else {
-    state.piles.push({ id: uid(), createdAt: Date.now(), quelle: isAdmin() ? 'admin' : 'borist', ...p, ...stamp, ...(isAdmin() && editingGeprueft ? { geprueft: editingGeprueft } : {}) });
+    state.piles.push({ id: uid(), createdAt: Date.now(), quelle: isAdmin() ? 'admin' : 'borist', ...p, ...stamp, ...(isAdmin() && editingGeprueft ? { geprueft: editingGeprueft } : {}), ...(!isAdmin() ? { unvollstaendig: missing.length > 0 } : {}) });
   }
   pileDlg.close();
   render();
   await persist();
-  toast(`Pfahl „${p.nr}“ gespeichert.`);
+  toast(missing.length ? `Pfahl „${p.nr}“ gespeichert – ${missing.length} Pflichtfelder noch offen.` : `Pfahl „${p.nr}“ gespeichert.`);
 });
 
 /* =====================================================================

@@ -84,7 +84,10 @@ function pileStatus(p) {
   if (p.geprueft) return 'geprueft';
   const z = p.zeiten || {};
   if ((z.betonieren || []).some(e => e.d && e.bis)) return 'fertig';
-  return ZEIT_GROUPS.some(g => (z[g.k] || []).some(e => e.d || e.von || e.bis)) ? 'aktiv' : 'offen';
+  if (ZEIT_GROUPS.some(g => (z[g.k] || []).some(e => e.d || e.von || e.bis))) return 'aktiv';
+  // Vom Bohrist unvollständig gespeicherter Pfahl (offene Pflichtfelder) gilt als „In Ausführung“,
+  // auch solange noch keine Ausführungszeiten erfasst sind – siehe form-submit in app.js.
+  return p.unvollstaendig ? 'aktiv' : 'offen';
 }
 
 /* =====================================================================
