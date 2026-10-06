@@ -841,8 +841,9 @@ function render() {
     </td></tr>`).join('');
 
   const t = totals(list);
+  const ausgefuehrt = list.filter(p => ['fertig', 'geprueft'].includes(pileStatus(p))).length;
   const foot = '<tr>' + cols.map((c, i) => {
-    if (i === 0) return '<td>Summe</td>';
+    if (i === 0) return `<td class="sum-label">Summe<span class="sum-counts">${nf0.format(list.length)} Pfähle ges. · ${nf0.format(ausgefuehrt)} ausgeführt</span></td>`;
     return `<td class="${colClass(c)}">${c.sum ? esc(totalText(c, t[c.k])) : ''}</td>`;
   }).join('') + '<td></td></tr>';
 
