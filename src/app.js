@@ -15,11 +15,6 @@ const IDLE_MS = 30 * 60 * 1000;     // automatische Sperre nach 30 Minuten Inakt
 const APP_ID = 'bohrpfahl-verwaltung';
 const DATA_VERSION = 4;
 
-const SOIL_SUGGESTIONS = [
-  'Sauberkeitsschicht', 'Kies / Schluff', 'Kies / Sand', 'Sand', 'Schluff', 'Ton', 'Auffüllung',
-  'Holz', 'Fels / Findling, Blöcke', 'Beton',
-];
-
 /** Art einer Schicht in der Schichtenfolge (Bohrhindernis / harte Bodenschicht erscheinen im Protokoll mit Titel) */
 const SCHICHT_ARTEN = [
   { k: 'boden',     label: 'Boden' },
