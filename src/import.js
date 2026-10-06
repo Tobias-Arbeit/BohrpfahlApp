@@ -409,6 +409,7 @@ function impParse() {
     else {
       seen.add(lc);
       const old = existing.get(lc);
+      it.old = old;
       if (old && IMP.mode === 'skip') it.status = 'skip';
       else {
         it.status = old ? 'update' : 'new';
@@ -654,7 +655,13 @@ function impUpdate() {
 
   const shown = res.items.slice(0, 200);
   const label = { new: 'Neu', update: 'Überschreibt vorhandenen Pfahl', skip: 'Übersprungen', error: 'Fehler' };
-  const cell = (p, k, f) => p && isNum(p[k]) ? esc(f.format(p[k])) : '<span class="empty">–</span>';
+  const cellTxt = (p, k, f) => p && isNum(p[k]) ? esc(f.format(p[k])) : '<span class="empty">–</span>';
+  // Nur die Zelle markieren, deren neuer Wert einen vorhandenen Wert tatsächlich ersetzt (nicht die ganze Zeile).
+  const cellCls = (it, k) => {
+    const nv = isNum(it.pile?.[k]) ? it.pile[k] : null;
+    const ov = it.old && isNum(it.old[k]) ? it.old[k] : null;
+    return it.status === 'update' && nv !== ov ? 'num imp-cell-changed' : 'num';
+  };
   const cl = coordLabels(IMP.crs);
   $('#impPrev').innerHTML = shown.length ? `<table><thead><tr>
       <th></th><th>Pfahl-Nr.</th><th>Status</th><th>Zeile</th><th class="num">Pfahl-Ø [m]</th><th class="num">Arbeitsebene (Soll)</th>
@@ -664,13 +671,14 @@ function impUpdate() {
       const actionable = it.status === 'new' || it.status === 'update';
       const excluded = actionable && IMP.excluded.has(it.nr.toLowerCase());
       const chipCls = it.status === 'new' ? 'yes' : it.status === 'update' ? 'warn' : it.status === 'error' ? 'bad' : '';
-      return `<tr class="${it.status === 'update' ? 'imp-row-update' : ''}${excluded ? ' imp-row-excluded' : ''}">
+      const nfOst = new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec });
+      return `<tr class="${excluded ? 'imp-row-excluded' : ''}">
       <td>${actionable ? `<input type="checkbox" data-imp-excl="${esc(it.nr.toLowerCase())}" aria-label="Zeile „${esc(it.nr)}“ beim Import berücksichtigen"${excluded ? '' : ' checked'}>` : ''}</td>
       <td>${esc(it.nr || '–')}</td><td><span class="chip ${chipCls}">${label[it.status]}</span></td>
-      <td>${it.row}</td><td class="num">${cell(it.pile, 'durchmesser', nf2)}</td><td class="num">${cell(it.pile, 'sArbeitsebene', nf3)}</td>
-      <td class="num">${cell(it.pile, 'sOberkante', nf3)}</td><td class="num">${cell(it.pile, 'sUnterkante', nf3)}</td><td class="num">${cell(it.pile, 'sPfahllaenge', nf3)}</td>
-      <td class="num">${cell(it.pile, 'ost', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td>
-      <td class="num">${cell(it.pile, 'nord', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td></tr>`;
+      <td>${it.row}</td><td class="${cellCls(it, 'durchmesser')}">${cellTxt(it.pile, 'durchmesser', nf2)}</td><td class="${cellCls(it, 'sArbeitsebene')}">${cellTxt(it.pile, 'sArbeitsebene', nf3)}</td>
+      <td class="${cellCls(it, 'sOberkante')}">${cellTxt(it.pile, 'sOberkante', nf3)}</td><td class="${cellCls(it, 'sUnterkante')}">${cellTxt(it.pile, 'sUnterkante', nf3)}</td><td class="${cellCls(it, 'sPfahllaenge')}">${cellTxt(it.pile, 'sPfahllaenge', nf3)}</td>
+      <td class="${cellCls(it, 'ost')}">${cellTxt(it.pile, 'ost', nfOst)}</td>
+      <td class="${cellCls(it, 'nord')}">${cellTxt(it.pile, 'nord', nfOst)}</td></tr>`;
     }).join('') +
     '</tbody></table>' + (res.items.length > shown.length ? `<p class="sub" style="padding:8px 12px;margin:0">… und ${res.items.length - shown.length} weitere Zeilen</p>` : '') : '';
 
