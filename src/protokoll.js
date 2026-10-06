@@ -151,7 +151,7 @@ function drawProtokoll(doc, p, proj) {
   T('Neigung:', 209.9, 125, { size: 11.3 });    T(fmtFlex(p.neigung), 300, 125, { size: 10.3, align: 'center', maxW: 60 });
   T('°', 339, 125.2, { size: 10.3 });
   T('Pfahl-Ø :', 386.2, 125, { size: 11.3 });   T(fmtFlex(p.durchmesser), 485.4, 124.7, { size: 10.3, align: 'center', maxW: 60 });
-  T('cm', 515.7, 125.2, { size: 10.3 });
+  T('m', 515.7, 125.2, { size: 10.3 });
   L(41, 132.2, 543.6, 132.2, 1.6);
   L(41, 139.6, 543.6, 139.6, 1.6);
 

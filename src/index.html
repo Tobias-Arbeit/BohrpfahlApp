@@ -193,6 +193,13 @@ main { padding: 20px; max-width: 1800px; margin: 0 auto; }
 }
 .menu button:hover { background: var(--surface-2); }
 .menu button svg { width: 18px; height: 18px; margin-right: 10px; vertical-align: -4px; color: var(--accent); }
+.cols-menu { max-height: 70vh; overflow: auto; min-width: 260px; }
+.cols-menu label { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 13.5px; }
+.cols-menu label:hover { background: var(--surface-2); }
+.cols-menu input[type=checkbox] { flex: none; width: 16px; height: 16px; }
+.cols-menu .cols-foot { display: flex; gap: 6px; padding: 6px 4px 2px; border-top: 1px solid var(--line); margin-top: 4px; }
+.cols-menu .cols-foot button { flex: 1; padding: 7px; font-size: 12.5px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); cursor: pointer; }
+.cols-menu .cols-foot button:hover { background: var(--surface-2); }
 .foto-slot, .pdf-slot { display: inline-block; width: 40px; }
 .foto-badge, .pdf-badge { display: inline-flex; align-items: center; gap: 2px; width: 40px; justify-content: center; color: var(--accent); font-size: 12px; vertical-align: middle; }
 .foto-badge svg, .pdf-badge svg { width: 18px; height: 18px; }
@@ -710,9 +717,6 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 .navtab:hover { color: var(--ink); }
 .navtab[aria-selected=true] { color: var(--accent); border-bottom-color: var(--primary); }
 .navtabs .menu { top: 100%; right: auto; left: 50%; transform: translateX(-50%); min-width: 260px; max-width: calc(100vw - 24px); }
-.lock-logo { display: block; margin-bottom: 6px; }
-.lock-logo svg { display: block; height: 44px; width: auto; }
-
 /* ---------- Grafik: Beschriftung mit Lichthof, Legende der Bodenarten ---------- */
 .pg .pg-halo { paint-order: stroke; stroke: rgba(255, 255, 255, .8); stroke-width: 2.4px; stroke-linejoin: round; }
 .pg .pg-soil.light.pg-halo { fill: #fff; stroke: rgba(0, 0, 0, .65); }
@@ -753,7 +757,6 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
 <!-- ============ Sperrbildschirm ============ -->
 <div id="lock" class="lock" hidden>
   <form id="lockForm" class="lock-card" autocomplete="on">
-    <div class="lock-logo" data-brand="44"></div>
     <h1>Bohrpfahl-Verwaltung</h1>
     <p class="only-login">Bitte melden Sie sich an.</p>
     <p class="only-setup">Ersteinrichtung: Legen Sie Benutzername und Passwort fest.</p>
@@ -928,6 +931,13 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
         <option value="geprueft">Durch Bauleitung geprüft</option>
       </select>
       <span class="spacer"></span>
+      <div class="menu-wrap" data-admin>
+        <button id="btnCols" class="btn" type="button" aria-haspopup="true" aria-expanded="false" data-menu="menuCols">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>
+          Spalten
+        </button>
+        <div id="menuCols" class="menu cols-menu" hidden></div>
+      </div>
     </div>
 
     <p id="count" class="count" aria-live="polite"></p>

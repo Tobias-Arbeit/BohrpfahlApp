@@ -14,7 +14,7 @@ const IMP_MAX_COLS = 100;
 const IMP_GROUPS = [
   { label: 'Pfahl', fields: [
     ['nr', 'Pfahl-Nr.', 'text'], ['pfahlart', 'Pfahlart', 'pfahlart'],
-    ['bewTyp', 'Bew. Typ', 'text'], ['durchmesser', 'Pfahl-Ø', 'num', 1],
+    ['bewTyp', 'Bew. Typ', 'text'], ['durchmesser', 'Pfahl-Ø', 'num', 2],
     ['neigung', 'Neigung', 'num', 1], ['wasserauflast', 'Wasserauflast', 'bool'],
   ] },
   { label: 'Lage (Koordinaten)', fields: [
@@ -316,8 +316,15 @@ function impReadRow(row, cols) {
       if (n === null) continue;
       if (Number.isNaN(n)) { it.issues.push(`${def.label}: „${txt}“ ist keine Zahl`); continue; }
       if (key === 'durchmesser') {
-        if (/mm/i.test(c.unit)) n /= 10;
-        else if (!/cm/i.test(c.unit) && n > 300) { it.issues.push(`Pfahl-Ø ${txt} als mm gewertet → ${fmtInput(rd(n / 10, 1))} cm`); n /= 10; }
+        // Pfahl-Ø wird (ohne Einheiten-Hinweis) in Meter erwartet; „mm“/„cm“ in der Einheitenzeile
+        // werden umgerechnet. Ohne Einheiten-Hinweis und unplausibel groß für Meter wird je nach
+        // Größenordnung als cm oder mm gewertet (typischer Tippfehler bei Excel-Listen).
+        if (/mm/i.test(c.unit)) n /= 1000;
+        else if (/cm/i.test(c.unit)) n /= 100;
+        else if (c.unit.trim().toLowerCase() !== 'm' && n > 3) {
+          if (n > 30) { it.issues.push(`Pfahl-Ø ${txt} als mm gewertet → ${fmtInput(rd(n / 1000, def.dec))} m`); n /= 1000; }
+          else { it.issues.push(`Pfahl-Ø ${txt} als cm gewertet → ${fmtInput(rd(n / 100, def.dec))} m`); n /= 100; }
+        }
       }
       it.partial[key] = rd(n, def.dec);
     } else if (def.type === 'dt') {
@@ -610,11 +617,11 @@ function impUpdate() {
   const cell = (p, k, f) => p && isNum(p[k]) ? esc(f.format(p[k])) : '<span class="empty">–</span>';
   const cl = coordLabels(IMP.crs);
   $('#impPrev').innerHTML = shown.length ? `<table><thead><tr>
-      <th>Pfahl-Nr.</th><th>Status</th><th>Zeile</th><th class="num">Pfahl-Ø [cm]</th><th class="num">Arbeitsebene (Soll)</th>
+      <th>Pfahl-Nr.</th><th>Status</th><th>Zeile</th><th class="num">Pfahl-Ø [m]</th><th class="num">Arbeitsebene (Soll)</th>
       <th class="num">Pfahl-OK (Soll)</th><th class="num">Pfahl-UK (Soll)</th><th class="num">Pfahllänge (Soll) [m]</th>
       <th class="num">${esc(cl.ost.split(' ')[0])}</th><th class="num">${esc(cl.nord.split(' ')[0])}</th></tr></thead><tbody>` +
     shown.map(it => `<tr><td>${esc(it.nr || '–')}</td><td><span class="chip ${it.status === 'new' || it.status === 'update' ? 'yes' : it.status === 'error' ? 'bad' : ''}">${label[it.status]}</span></td>
-      <td>${it.row}</td><td class="num">${cell(it.pile, 'durchmesser', nf1)}</td><td class="num">${cell(it.pile, 'sArbeitsebene', nf3)}</td>
+      <td>${it.row}</td><td class="num">${cell(it.pile, 'durchmesser', nf2)}</td><td class="num">${cell(it.pile, 'sArbeitsebene', nf3)}</td>
       <td class="num">${cell(it.pile, 'sOberkante', nf3)}</td><td class="num">${cell(it.pile, 'sUnterkante', nf3)}</td><td class="num">${cell(it.pile, 'sPfahllaenge', nf3)}</td>
       <td class="num">${cell(it.pile, 'ost', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td>
       <td class="num">${cell(it.pile, 'nord', new Intl.NumberFormat('de-DE', { minimumFractionDigits: cl.dec, maximumFractionDigits: cl.dec }))}</td></tr>`).join('') +
@@ -700,12 +707,12 @@ $('#btnImpTemplate').addEventListener('click', () => {
   if (!window.XLSX) return toast('Excel-Bibliothek nicht geladen.');
   // Aufbau wie die Pfahlaufteilung: Überschriftenzeile, Einheitenzeile, dann ein Pfahl je Zeile (Planwerte = Soll)
   const cols = [
-    ['Pfahl-Nr.', '[-]'], ['Pfahl Ø', '[cm]'], ['Pfahllänge', '[m]'], ['Y-Koordinate', '[m]'], ['X-Koordinate', '[m]'],
+    ['Pfahl-Nr.', '[-]'], ['Pfahl Ø', '[m]'], ['Pfahllänge', '[m]'], ['Y-Koordinate', '[m]'], ['X-Koordinate', '[m]'],
     ['Pfahl UK', '[müA]'], ['Pfahl OK', '[müA]'], ['Arbeitsebene', '[müA]'], ['Pfahlart', 'Typ'], ['Neigung', '°'],
     ['Bew Typ', ''], ['lt. Plan Nr.:', ''], ['Bewehrung', 'kg'], ['Betongüte', ''], ['Konsistenz', ''],
   ];
-  const ex1 = ['P07-01', 88, 18, 19164.8713, 225305.6425, 747.0499, 765.0499, 765.9669, 'bewehrt', 0, 'Block00', 'S16_02500_ZL6_301904955_KMP-G45000_SB_B', 1500, 'C25-30', 'F54'];
-  const ex2 = ['P07-02', 88, 18, 19162.5986, 225303.4972, 747.0262, 765.0262, 765.9432, 'bewehrt', 0, 'Block00', 'S16_02500_ZL6_301904955_KMP-G45000_SB_B', 2000, 'C25-30', 'F55'];
+  const ex1 = ['P07-01', 0.88, 18, 19164.8713, 225305.6425, 747.0499, 765.0499, 765.9669, 'bewehrt', 0, 'Block00', 'S16_02500_ZL6_301904955_KMP-G45000_SB_B', 1500, 'C25-30', 'F54'];
+  const ex2 = ['P07-02', 0.88, 18, 19162.5986, 225303.4972, 747.0262, 765.0262, 765.9432, 'bewehrt', 0, 'Block00', 'S16_02500_ZL6_301904955_KMP-G45000_SB_B', 2000, 'C25-30', 'F55'];
   const ws = XLSX.utils.aoa_to_sheet([cols.map(c => c[0]), cols.map(c => c[1]), ex1, ex2]);
   ws['!cols'] = cols.map(c => ({ wch: Math.max(12, c[0].length + 3) }));
   const hints = XLSX.utils.aoa_to_sheet([
@@ -713,7 +720,7 @@ $('#btnImpTemplate').addEventListener('click', () => {
     ['Jede Zeile ist ein Pfahl. Pflichtspalte ist „Pfahl-Nr.“; alle anderen Spalten dürfen fehlen. Eine Einheitenzeile unter den Überschriften (z. B. „[cm]“) wird erkannt und nicht als Pfahl gelesen.'],
     ['Höhen und Längen ohne Zusatz gelten als Planwerte (SOLL). Ist-Werte kennzeichnen Sie mit „Ist“ in der Überschrift (z. B. „Pfahl OK Ist“).'],
     ['Bohrlänge, Pfahllänge und Leerbohrung dürfen leer bleiben – sie werden aus Arbeitsebene, OK und UK berechnet.'],
-    ['Der Pfahldurchmesser wird in cm erwartet. Steht „mm“ in der Überschrift oder Einheitenzeile, wird umgerechnet.'],
+    ['Der Pfahldurchmesser wird in m erwartet. Steht „cm“ oder „mm“ in der Überschrift oder Einheitenzeile, wird umgerechnet.'],
     ['Koordinaten: Rechtswert (Ost) und Hochwert (Nord) bzw. Y und X im selben System für alle Pfähle. Das Koordinatensystem wird beim Import erkannt und kann dort geändert werden.'],
     ['Bei Spalten „X“ und „Y“: Bei Landesvermessung (Österreich MGI, Deutschland Gauß-Krüger) ist Y der Rechtswert und X der Hochwert.'],
     ['Importierte Pfähle haben noch keine Ausführungszeiten und erscheinen auf der Karte als „Noch offen“.'],

@@ -13,7 +13,7 @@ const SS_KEY = 'bohrpfahl.sk';      // Sitzungsschlüssel (nur solange der Tab o
 const PBKDF2_ITER = 400000;
 const IDLE_MS = 30 * 60 * 1000;     // automatische Sperre nach 30 Minuten Inaktivität
 const APP_ID = 'bohrpfahl-verwaltung';
-const DATA_VERSION = 3;
+const DATA_VERSION = 4;
 
 const SOIL_SUGGESTIONS = [
   'Sauberkeitsschicht', 'Kies / Schluff', 'Kies / Sand', 'Sand', 'Schluff', 'Ton', 'Auffüllung',
@@ -145,6 +145,9 @@ function migratePile(p, fromVersion) {
     }
     q.zeiten = z;
     delete q.beginn; delete q.ende;
+  }
+  if (fromVersion < 4) {
+    if (isNum(p.durchmesser)) q.durchmesser = rd(p.durchmesser / 100, 2);       // cm → m
   }
   // mindestens eine Zeile je Arbeitsvorgang sicherstellen; nicht mehr angezeigte Arbeitsvorgänge
   // (z. B. „Entsanden“) bleiben in den Daten erhalten
@@ -317,10 +320,10 @@ function schichtenText(p) {
     return `${fmtPlain(s.bis, 2)} ${tag}${s.boden || ''}`.trim();
   }).join(' | ');
 }
-/** Betonverbrauch SOLL [m³] = Pfahllänge × π × r² (Durchmesser in cm); Grundlage ist die Soll-Länge, sonst die Ist-Länge */
+/** Betonverbrauch SOLL [m³] = Pfahllänge × π × r² (Durchmesser in m); Grundlage ist die Soll-Länge, sonst die Ist-Länge */
 const soll = p => {
   const len = isNum(p.sPfahllaenge) ? p.sPfahllaenge : p.pfahllaenge;
-  return (isNum(len) && isNum(p.durchmesser)) ? rd(len * Math.PI * (p.durchmesser / 200) ** 2, 1) : null;
+  return (isNum(len) && isNum(p.durchmesser)) ? rd(len * Math.PI * (p.durchmesser / 2) ** 2, 1) : null;
 };
 /** Abstichmaß Überbeton SOLL [cm] = (Arbeitsebene Soll − Pfahl-OK Soll) × 100 − notwendiger Überbeton
     [cm] (Projektdaten). Rein informativer Wert (wie Verbrauch SOLL), nicht editierbar/gespeichert. */
@@ -339,7 +342,7 @@ const COLS = [
   { k: 'bewTyp',        label: 'Bew. Typ',              unit: '',        kind: 'text' },
   { k: 'typ',           label: 'Typ / Verfahren',       unit: '',        kind: 'text', t: true },
   { k: 'neigung',       label: 'Neigung',               unit: '°',       kind: 'cm' },
-  { k: 'durchmesser',   label: 'Pfahl-Ø',               unit: 'cm',      kind: 'cm',   t: true },
+  { k: 'durchmesser',   label: 'Pfahl-Ø',               unit: 'm',       kind: 'm',    t: true },
   { k: 'ost',           label: 'Rechtswert / Ost',      unit: '@C',      kind: 'coord' },
   { k: 'nord',          label: 'Hochwert / Nord',       unit: '@C',      kind: 'coord' },
   { k: 'sArbeitsebene', label: 'Arbeitsebene Soll',     unit: '@H',      kind: 'h' },
@@ -381,7 +384,15 @@ const COLS = [
 const TCOLS = COLS.filter(c => c.t);
 /* Kompakte Tabelle für den Bohrist: weniger Spalten, dafür der Bewehrungstyp dabei (sonst nur im CSV). */
 const BOHRIST_TABLE_KEYS = ['nr', 'bewTyp', 'typ', 'durchmesser', 'pfahllaenge', 'wasserauflast', 'verbrauchIst', 'status'];
-const tableCols = () => isAdmin() ? TCOLS : COLS.filter(c => BOHRIST_TABLE_KEYS.includes(c.k));
+/* Welche Spalten der Administrator in der Pfahlliste sieht (Dropdown „Spalten“, siehe renderColsMenu).
+   Je Gerät in localStorage gemerkt, unabhängig von den verschlüsselten Pfahldaten. „nr“ bleibt immer an. */
+const LS_COLS = 'bohrpfahl.cols';
+let visibleCols = (() => {
+  const saved = readJSON(LS_COLS);
+  return Array.isArray(saved) && saved.length ? saved : TCOLS.map(c => c.k);
+})();
+const saveVisibleCols = () => localStorage.setItem(LS_COLS, JSON.stringify(visibleCols));
+const tableCols = () => isAdmin() ? COLS.filter(c => c.k === 'nr' || visibleCols.includes(c.k)) : COLS.filter(c => BOHRIST_TABLE_KEYS.includes(c.k));
 const unitOf = c => c.unit === '@H' ? hoehenbezug() : c.unit === '@C' ? coordLabels().unit : c.unit;
 
 function getVal(p, k) {
@@ -997,7 +1008,30 @@ $$('.menu').forEach(m => m.addEventListener('click', e => {
   else if (act === 'pdf-list') exportPdf();
   else if (act === 'project-switch') { const id = e.target.closest('[data-id]')?.dataset.id; if (id) switchProject(id); }
   else if (act === 'project-new') createProject();
+  else if (act === 'cols-all') { visibleCols = COLS.map(c => c.k); saveVisibleCols(); renderColsMenu(); render(); }
+  else if (act === 'cols-default') { visibleCols = TCOLS.map(c => c.k); saveVisibleCols(); renderColsMenu(); render(); }
 }));
+
+/* Dropdown „Spalten“ (nur Administrator): welche der Datenbank-Spalten in der Pfahlliste sichtbar sind. */
+function renderColsMenu() {
+  $('#menuCols').innerHTML = COLS.map(c => {
+    const locked = c.k === 'nr';
+    const checked = locked || visibleCols.includes(c.k);
+    return `<label><input type="checkbox" data-col="${c.k}"${checked ? ' checked' : ''}${locked ? ' disabled' : ''}> ${esc(c.label)}</label>`;
+  }).join('') + `<div class="cols-foot">
+    <button type="button" data-act="cols-default">Standard</button>
+    <button type="button" data-act="cols-all">Alle</button>
+  </div>`;
+}
+renderColsMenu();
+$('#menuCols').addEventListener('change', e => {
+  const cb = e.target.closest('[data-col]');
+  if (!cb) return;
+  const k = cb.dataset.col;
+  visibleCols = cb.checked ? [...visibleCols, k] : visibleCols.filter(x => x !== k);
+  saveVisibleCols();
+  render();
+});
 
 /* Dialoge schließen */
 document.addEventListener('click', e => {
@@ -1013,7 +1047,7 @@ const form = $('#pileForm');
 /* Zahlenfelder mit Nachkommastellen */
 /* (s… = Soll/Plan, ohne Präfix = Ist/ausgeführt) */
 const NUM_FIELDS = {
-  durchmesser: 1, neigung: 1,
+  durchmesser: 2, neigung: 1,
   sArbeitsebene: 3, sOberkante: 3, sUnterkante: 3, sBohrlaenge: 3, sPfahllaenge: 3, sLeerbohrung: 3,
   arbeitsebene: 3, oberkante: 3, unterkante: 3, bohrlaenge: 3, pfahllaenge: 3, leerbohrung: 3,
   gwTiefe: 2, grundwasser: 3, abstich: 1,
@@ -1371,7 +1405,7 @@ function validate(strict) {
     errs.push(`Die Pfahl-Nr. „${p.nr}“ ist bereits vergeben.`); bad.add('nr');
   }
   if (isNum(p.durchmesser) && p.durchmesser <= 0) { errs.push('Der Pfahldurchmesser muss größer als 0 sein.'); bad.add('durchmesser'); }
-  if (isNum(p.durchmesser) && p.durchmesser > 300) warns.push('Pfahl-Ø ist größer als 300 cm – bitte Einheit prüfen (Eingabe in cm).');
+  if (isNum(p.durchmesser) && p.durchmesser > 3) warns.push('Pfahl-Ø ist größer als 3 m – bitte Einheit prüfen (Eingabe in m).');
 
   // Höhen und Längen: Soll und Ist getrennt prüfen
   for (const [pre, tag] of [['s', 'Soll'], ['', 'Ist']]) {
@@ -1496,10 +1530,14 @@ function applyPileLock(p, isNew) {
 /** Kurzreferenz oben im kompakten Formular: Nr., Soll-Maße, Betongüte, Verbrauch Soll. */
 function fillGrunddaten(p) {
   $('#gdNr').textContent = p.nr || '–';
+  $('#gdArbeitsebene').textContent = isNum(p.sArbeitsebene) ? `${nf3.format(p.sArbeitsebene)} ${hoehenbezug()}` : '–';
+  $('#gdOberkante').textContent = isNum(p.sOberkante) ? `${nf3.format(p.sOberkante)} ${hoehenbezug()}` : '–';
+  $('#gdUnterkante').textContent = isNum(p.sUnterkante) ? `${nf3.format(p.sUnterkante)} ${hoehenbezug()}` : '–';
   $('#gdBohrlaenge').textContent = isNum(p.sBohrlaenge) ? `${nf3.format(p.sBohrlaenge)} m` : '–';
   $('#gdPfahllaenge').textContent = isNum(p.sPfahllaenge) ? `${nf3.format(p.sPfahllaenge)} m` : '–';
   $('#gdNeigung').textContent = isNum(p.neigung) ? `${nf1.format(p.neigung)}°` : '–';
-  $('#gdDurchmesser').textContent = isNum(p.durchmesser) ? `${nf1.format(p.durchmesser)} cm` : '–';
+  $('#gdDurchmesser').textContent = isNum(p.durchmesser) ? `${nf2.format(p.durchmesser)} m` : '–';
+  $('#gdBewTyp').textContent = p.bewTyp || (p.pfahlart === 'unbewehrt' ? 'unbewehrt' : '–');
   $('#gdBetongute').textContent = p.betongute || '–';
   const s = soll(p);
   $('#gdSoll').textContent = s == null ? '–' : `${fmtFlex(s)} m³`;

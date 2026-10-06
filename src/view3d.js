@@ -109,7 +109,7 @@ function pile3DMesh(p, refY) {
 
   const ae = isNum(p.arbeitsebene) ? p.arbeitsebene : p.sArbeitsebene;
   const topY = (isNum(ae) ? ae : refY) - refY;
-  const r = Math.max(0.15, (isNum(p.durchmesser) ? p.durchmesser : 40) / 200);
+  const r = Math.max(0.15, (isNum(p.durchmesser) ? p.durchmesser : 0.4) / 2);
   const layers = layerSpans(p);
 
   const addSeg = (von, bis, color) => {
