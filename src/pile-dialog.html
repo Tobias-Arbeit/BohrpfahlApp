@@ -279,11 +279,22 @@
             <textarea id="f_bemerkungIntern" name="bemerkungIntern" rows="3" maxlength="600" aria-label="Bemerkungen (intern), nur interne Dokumentation"></textarea>
           </div>
         </div>
+        <div class="field" style="margin-top:12px" data-admin>
+          <label>PDF-Anhänge <span class="unit">(optional, nur Administrator)</span></label>
+          <div id="pdfList" class="pdf-list"></div>
+          <p style="margin:8px 0 0"><button type="button" class="btn small" id="btnAddPdf">+ PDF anhängen</button></p>
+          <input id="pdfFile" type="file" accept="application/pdf" multiple hidden>
+          <span class="hint" id="pdfHint">Anhänge werden beim PDF-Download direkt hinter dem Bohrprotokoll eingefügt, vor eventuellen Fotos. Auch per Drag &amp; Drop auf einen Pfahl in der Liste möglich.</span>
+        </div>
         <div class="field" style="margin-top:12px">
           <label>Fotos <span class="unit">(optional)</span></label>
           <div id="fotoList" class="foto-list"></div>
-          <p style="margin:8px 0 0"><button type="button" class="btn small" id="btnAddFoto">+ Foto hinzufügen</button></p>
+          <p style="margin:8px 0 0">
+            <button type="button" class="btn small" id="btnAddFoto">+ Foto hinzufügen</button>
+            <button type="button" class="btn small" id="btnCamFoto">Mit Kamera aufnehmen</button>
+          </p>
           <input id="fotoFile" type="file" accept="image/*" multiple hidden>
+          <input id="camFile" type="file" accept="image/*" capture="environment" hidden>
           <span class="hint" id="fotoHint">Die Fotos werden verkleinert gespeichert und erscheinen im PDF auf einer eigenen Seite nach dem Protokoll.</span>
         </div>
       </fieldset>

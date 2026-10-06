@@ -449,8 +449,10 @@ function drawProtokoll(doc, p, proj) {
   doc.setTextColor(...INK);
 }
 
-/** Fotoseiten zu einem Pfahl: Kopf mit Logo, Baustelle usw., darunter die Fotos (2 Spalten, 3 Zeilen je Seite) */
-function drawFotoSeiten(doc, p, proj) {
+/** Fotoseiten zu einem Pfahl: Kopf mit Logo, Baustelle usw., darunter die Fotos (2 Spalten, 3 Zeilen je Seite).
+    fresh: true, wenn doc gerade erst angelegt wurde (keine vorangehenden Seiten) – dann wird die erste
+    Seite nicht über addPage() ergänzt (sonst bliebe Seite 1 leer); siehe exportProtokolle. */
+function drawFotoSeiten(doc, p, proj, { fresh = false } = {}) {
   const fotos = (p.fotos || []).filter(f => f && f.data);
   if (!fotos.length) return;
   const PW = doc.internal.pageSize.getWidth();
@@ -462,7 +464,7 @@ function drawFotoSeiten(doc, p, proj) {
   const datum = sp.s == null ? '' : fmtDateShort(toLocalInput(new Date(sp.s)).slice(0, 10));
   const pages = Math.ceil(fotos.length / perPage);
   for (let pg = 0; pg < pages; pg++) {
-    doc.addPage();
+    if (!(fresh && pg === 0)) doc.addPage();
     doc.setDrawColor(0, 51, 102); doc.setTextColor(1, 19, 67); doc.setLineDashPattern([], 0);
     doc.setFillColor(0, 51, 102); doc.rect(x0, y0, x1 - x0 - 108, 52, 'F');
     doc.setFillColor(253, 198, 0); doc.rect(x0, y0 + 52, x1 - x0, 3.2, 'F');
@@ -501,18 +503,53 @@ function drawFotoSeiten(doc, p, proj) {
   }
 }
 
-function exportProtokolle(list, { fotos = true } = {}) {
+/** Kopiert alle Seiten aus bytes (ArrayBuffer/Uint8Array eines PDFs) ans Ende von target (pdf-lib). */
+async function appendPdfBytes(target, bytes) {
+  const src = await window.PDFLib.PDFDocument.load(bytes);
+  const pages = await target.copyPages(src, src.getPageIndices());
+  pages.forEach(pg => target.addPage(pg));
+}
+
+/** Baut je Pfahl Protokoll (1 Seite) + angehängte PDFs + Fotoseiten zusammen und reiht die Pfähle
+    aneinander. jsPDF kann keine fremden PDF-Seiten einbetten, daher wird nur dann über pdf-lib
+    zusammengefügt (etwas aufwändiger: jedes Teilstück entsteht als eigenes kleines PDF, das per
+    copyPages eingefügt wird), wenn tatsächlich Anhänge vorhanden sind – ohne Anhänge bleibt der
+    einfache, rein jsPDF-basierte Weg wie bisher bestehen. */
+async function exportProtokolle(list, { fotos = true } = {}) {
   if (!list.length) return toast('Keine Pfähle für den Export vorhanden.');
   if (!window.jspdf) return toast('PDF-Bibliothek nicht geladen.');
-  const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
-  list.forEach((p, i) => {
-    if (i) doc.addPage();
-    drawProtokoll(doc, p, state.projekt);
-    if (fotos) drawFotoSeiten(doc, p, state.projekt);   // eigene Seite(n) mit Fotos, falls vorhanden
-  });
   const name = list.length === 1
     ? fileBase('Bohrprotokoll_' + String(list[0].nr).replace(/[^\wäöüÄÖÜß-]+/g, '_'))
     : fileBase('Bohrprotokolle');
-  doc.save(name + '.pdf');
+
+  const anyPdfs = list.some(p => (p.pdfs || []).length);
+  if (!anyPdfs) {
+    const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+    list.forEach((p, i) => {
+      if (i) doc.addPage();
+      drawProtokoll(doc, p, state.projekt);
+      if (fotos) drawFotoSeiten(doc, p, state.projekt);   // eigene Seite(n) mit Fotos, falls vorhanden
+    });
+    doc.save(name + '.pdf');
+  } else {
+    if (!window.PDFLib) return toast('PDF-Bibliothek (pdf-lib) für Anhänge nicht geladen.');
+    const merged = await window.PDFLib.PDFDocument.create();
+    for (const p of list) {
+      const protoDoc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+      drawProtokoll(protoDoc, p, state.projekt);
+      await appendPdfBytes(merged, protoDoc.output('arraybuffer'));
+      for (const f of (p.pdfs || [])) {
+        if (!f?.data) continue;
+        try { await appendPdfBytes(merged, dataUrlBytes(f.data)); }
+        catch { toast(`Anhang „${f.name || 'PDF'}“ bei Pfahl „${p.nr}“ konnte nicht eingefügt werden (beschädigte Datei?).`); }
+      }
+      if (fotos && (p.fotos || []).length) {
+        const fotoDoc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+        drawFotoSeiten(fotoDoc, p, state.projekt, { fresh: true });
+        await appendPdfBytes(merged, fotoDoc.output('arraybuffer'));
+      }
+    }
+    download(await merged.save(), name + '.pdf', 'application/pdf');
+  }
   toast(list.length === 1 ? `Bohrprotokoll „${list[0].nr}“ erstellt.` : `Bohrprotokolle erstellt: ${plural(list.length)}.`);
 }

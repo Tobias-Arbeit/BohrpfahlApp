@@ -77,6 +77,7 @@ const toB64 = buf => {
   return btoa(s);
 };
 const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const dataUrlBytes = dataUrl => fromB64((dataUrl.split(',')[1] || ''));
 const randomBytes = n => crypto.getRandomValues(new Uint8Array(n));
 const uid = () => [...randomBytes(12)].map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -155,6 +156,7 @@ function migratePile(p, fromVersion) {
   for (const k of Object.keys(q.zeiten || {})) if (!(k in z)) z[k] = q.zeiten[k];
   q.zeiten = z;
   if (!Array.isArray(q.fotos)) q.fotos = [];
+  if (!Array.isArray(q.pdfs)) q.pdfs = [];
   // Schichten: früheres Häkchen „hart“ → Art
   q.schichten = (Array.isArray(q.schichten) ? q.schichten : []).map(s => {
     const { hart, ...rest } = s;
@@ -215,7 +217,6 @@ function persist() {
     if (!key) return;
     const blob = await seal(key, state);
     localStorage.setItem(LS_DATA, JSON.stringify(blob));
-    scheduleCloudSync();
   }).catch(e => toast(e && e.name === 'QuotaExceededError'
     ? 'Speichern fehlgeschlagen: Der Speicher des Browsers ist voll. Bitte Fotos entfernen.'
     : 'Speichern fehlgeschlagen: ' + (e && e.message ? e.message : e)));
@@ -510,7 +511,7 @@ async function newUserRecord(name, role, password, master) {
   const uk = await deriveKey(password, salt, PBKDF2_ITER);
   return { id: uid(), name, role, salt: toB64(salt), iter: PBKDF2_ITER, wk: await wrapMaster(master, uk) };
 }
-const saveMeta = () => { localStorage.setItem(LS_META, JSON.stringify(meta)); scheduleCloudSync(); };
+const saveMeta = () => localStorage.setItem(LS_META, JSON.stringify(meta));
 
 async function startSession() {
   sessionStorage.setItem(SS_KEY, JSON.stringify({ k: toB64(await crypto.subtle.exportKey('raw', key)), u: me.id }));
@@ -654,7 +655,6 @@ function showApp() {
   lastActivity = Date.now();
   applyRole();
   render();
-  scheduleCloudSync(500);
 }
 
 function visiblePiles() {
@@ -684,6 +684,7 @@ const ICON = {
   pin: svg('<path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
   check: svg('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/>'),
   cam: svg('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
+  clip: svg('<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>'),
 };
 
 
@@ -822,6 +823,7 @@ function render() {
       <button class="icon-btn" type="button" data-act="edit" title="Bearbeiten" aria-label="Pfahl ${esc(p.nr)} bearbeiten">${ICON.edit}</button>
       ${toLatLon(p) ? `<button class="icon-btn" type="button" data-act="map" title="Auf Karte zeigen" aria-label="Pfahl ${esc(p.nr)} auf Karte zeigen">${ICON.pin}</button>` : ''}
       ${(p.fotos || []).length ? `<span class="foto-badge" title="${p.fotos.length} Foto(s) angehängt" role="img" aria-label="${p.fotos.length} Fotos angehängt">${ICON.cam}<b>${p.fotos.length}</b></span>` : '<span class="foto-slot"></span>'}
+      ${isAdmin() ? ((p.pdfs || []).length ? `<span class="pdf-badge" title="${p.pdfs.length} PDF-Anhang/Anhänge" role="img" aria-label="${p.pdfs.length} PDF-Anhänge">${ICON.clip}<b>${p.pdfs.length}</b></span>` : '<span class="pdf-slot"></span>') : ''}
       <button class="icon-btn" type="button" data-act="pdf" title="Bohrprotokoll (PDF)" aria-label="Bohrprotokoll für Pfahl ${esc(p.nr)} als PDF">${ICON.pdf}</button>
       ${p.geprueft ? `<span class="pruef-badge" title="Geprüft von ${esc(p.geprueft.von)} am ${esc(fmtDate(String(p.geprueft.am).slice(0, 10)))}" role="img" aria-label="Geprüft">${ICON.check}</span>` : '<span class="pruef-slot"></span>'}
       ${canDeleteOrCopy(p) ? `<button class="icon-btn danger" type="button" data-act="del" title="Löschen" aria-label="Pfahl ${esc(p.nr)} löschen">${ICON.del}</button>` : ''}
@@ -907,6 +909,40 @@ $('#tableWrap').addEventListener('click', e => {
     render();
     toast(`Pfahl „${p.nr}“ gelöscht.`);
   }
+});
+
+/* PDF per Drag & Drop direkt auf eine Pfahlzeile anhängen (nur Administrator, siehe addPdfFiles). */
+let dragOverRow = null;
+function clearDragOverRow() { dragOverRow?.classList.remove('drag-over'); dragOverRow = null; }
+$('#tableWrap').addEventListener('dragover', e => {
+  if (!isAdmin() || !e.dataTransfer.types.includes('Files')) return;
+  e.preventDefault();   // verhindert, dass der Browser die Datei sonst stattdessen öffnet/navigiert
+  const tr = e.target.closest('tr[data-id]');
+  e.dataTransfer.dropEffect = tr ? 'copy' : 'none';
+  if (tr !== dragOverRow) { clearDragOverRow(); if (tr) { dragOverRow = tr; tr.classList.add('drag-over'); } }
+});
+$('#tableWrap').addEventListener('dragleave', e => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr && tr === dragOverRow && !tr.contains(e.relatedTarget)) clearDragOverRow();
+});
+$('#tableWrap').addEventListener('drop', async e => {
+  if (!isAdmin()) return;
+  e.preventDefault();
+  const tr = e.target.closest('tr[data-id]');
+  clearDragOverRow();
+  if (!tr) return;
+  const files = [...(e.dataTransfer.files || [])];
+  const pdfFiles = files.filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  if (!pdfFiles.length) return toast(files.length ? 'Nur PDF-Dateien können per Drag & Drop angehängt werden.' : 'Keine Datei erkannt.');
+  const p = state.piles.find(x => x.id === tr.dataset.id);
+  if (!p) return;
+  if (!Array.isArray(p.pdfs)) p.pdfs = [];
+  const before = p.pdfs.length;
+  const msgs = await addPdfFiles(pdfFiles, p.pdfs);
+  render();
+  await persist();
+  const added = p.pdfs.length - before;
+  toast(msgs.join(' ') || `${added} PDF${added === 1 ? '' : 's'} an Pfahl „${p.nr}“ angehängt.`);
 });
 
 $('#q').addEventListener('input', e => { ui.q = e.target.value; render(); });
@@ -1071,6 +1107,7 @@ function readPile() {
   p.schichten = readSchichten();
   p.zeiten = readZeiten();
   p.fotos = curFotos.slice();
+  p.pdfs = curPdfs.slice();
   const opt = e.geraet.selectedOptions[0];
   p.geraet = e.geraet.value;
   p.geraetInfo = p.geraet && opt ? { typ: opt.dataset.typ || '', inv: opt.dataset.inv || '', kommentar: opt.dataset.kommentar || '', verfahren: opt.dataset.verfahren || '' } : null;
@@ -1413,6 +1450,8 @@ function openPile({ id = null, base = null } = {}) {
   editingGeprueft = p.geprueft || null;
   curFotos = structuredClone(p.fotos || []);
   $('#fotoHint').textContent = 'Die Fotos werden verkleinert gespeichert und erscheinen im PDF auf einer eigenen Seite nach dem Protokoll.';
+  curPdfs = structuredClone(p.pdfs || []);
+  $('#pdfHint').textContent = 'Anhänge werden beim PDF-Download direkt hinter dem Bohrprotokoll eingefügt, vor eventuellen Fotos. Auch per Drag & Drop auf einen Pfahl in der Liste möglich.';
   fillGeraetSelect(p);
   $('#pileTitle').textContent = id ? `Pfahl ${p.nr || ''} bearbeiten` : 'Neuer Pfahl';
   $$('[data-hb]').forEach(s => { s.textContent = hoehenbezug(); });
@@ -1422,6 +1461,7 @@ function openPile({ id = null, base = null } = {}) {
   recalc();
   applyPileLock(p, !id);
   renderFotos();
+  renderPdfs();
   updateRequired();
   updatePruefBox();
   $('#formMsgs').innerHTML = '';
@@ -1510,9 +1550,15 @@ function updateRequired() {
   return missing;
 }
 
-/* --- Fotos zur Bemerkung (verkleinert als JPEG im Pfahl gespeichert) --- */
+/* --- Fotos (verkleinert als JPEG) und PDF-Anhänge (nur Administrator, unverändert) zur Bemerkung,
+   beide als Base64 am Pfahl gespeichert. Teilen sich ein gemeinsames Speicherbudget (localStorage
+   ist je Browser-Origin auf ca. 5 MB begrenzt). --- */
 let curFotos = [];
-const FOTO_MAX = 8, FOTO_PX = 1280, DATA_LIMIT = 3400000;   // Browser-Speicher (localStorage) ist auf ca. 5 MB begrenzt
+let curPdfs = [];
+const FOTO_MAX = 8, FOTO_PX = 1280, PDF_MAX = 5, DATA_LIMIT = 3400000;
+const storageUsed = () => JSON.stringify(state).length
+  + curFotos.reduce((s, x) => s + x.data.length, 0)
+  + curPdfs.reduce((s, x) => s + x.data.length, 0);
 
 function renderFotos() {
   const locked = $('#btnSave').hidden;
@@ -1520,6 +1566,14 @@ function renderFotos() {
     <img src="${f.data}" alt="Foto ${i + 1}"><span>${esc(f.name || 'Foto ' + (i + 1))}</span>
     ${locked ? '' : `<button type="button" class="icon-btn" data-foto-rm="${i}" title="Foto entfernen" aria-label="Foto ${i + 1} entfernen">${ICON.rm}</button>`}</div>`).join('');
   $('#btnAddFoto').disabled = locked || curFotos.length >= FOTO_MAX;
+  $('#btnCamFoto').disabled = locked || curFotos.length >= FOTO_MAX;
+}
+
+function renderPdfs() {
+  const locked = $('#btnSave').hidden;
+  $('#pdfList').innerHTML = curPdfs.map((f, i) => `<div class="pdf-item">${ICON.pdf}<span>${esc(f.name || 'PDF ' + (i + 1))}</span>
+    ${locked ? '' : `<button type="button" class="icon-btn" data-pdf-rm="${i}" title="Anhang entfernen" aria-label="${esc(f.name || 'PDF ' + (i + 1))} entfernen">${ICON.rm}</button>`}</div>`).join('');
+  $('#btnAddPdf').disabled = locked || curPdfs.length >= PDF_MAX;
 }
 
 async function shrinkImage(file) {
@@ -1536,28 +1590,72 @@ async function shrinkImage(file) {
   } finally { URL.revokeObjectURL(url); }
 }
 
-$('#btnAddFoto').addEventListener('click', () => $('#fotoFile').click());
-$('#fotoFile').addEventListener('change', async e => {
-  const files = [...e.target.files]; e.target.value = '';
+/** Fotos aus Dateiauswahl oder Kameraaufnahme (gleiche Pipeline für beide) hinzufügen. */
+async function addFotoFiles(files) {
   const msgs = [];
   for (const f of files) {
     if (curFotos.length >= FOTO_MAX) { msgs.push(`Höchstens ${FOTO_MAX} Fotos je Pfahl.`); break; }
     if (!/^image\//.test(f.type)) { msgs.push(`„${f.name}“ ist kein Bild.`); continue; }
     try {
       const foto = await shrinkImage(f);
-      const used = JSON.stringify(state).length + curFotos.reduce((s, x) => s + x.data.length, 0);
-      if (used + foto.data.length > DATA_LIMIT) { msgs.push('Der Speicher des Browsers ist fast voll – dieses Foto wurde nicht hinzugefügt. Bitte Fotos entfernen oder nach dem Export beim Administrator löschen.'); break; }
+      if (storageUsed() + foto.data.length > DATA_LIMIT) { msgs.push('Der Speicher des Browsers ist fast voll – dieses Foto wurde nicht hinzugefügt. Bitte Fotos entfernen oder nach dem Export beim Administrator löschen.'); break; }
       curFotos.push(foto);
     } catch (err) { msgs.push(`„${f.name}“: ${err.message}`); }
   }
   renderFotos();
   $('#fotoHint').textContent = msgs.join(' ') || 'Die Fotos werden verkleinert gespeichert und erscheinen im PDF auf einer eigenen Seite nach dem Protokoll.';
-});
+}
+
+$('#btnAddFoto').addEventListener('click', () => $('#fotoFile').click());
+$('#btnCamFoto').addEventListener('click', () => $('#camFile').click());
+$('#fotoFile').addEventListener('change', e => { const files = [...e.target.files]; e.target.value = ''; addFotoFiles(files); });
+$('#camFile').addEventListener('change', e => { const files = [...e.target.files]; e.target.value = ''; addFotoFiles(files); });
 $('#fotoList').addEventListener('click', e => {
   const b = e.target.closest('[data-foto-rm]');
   if (!b) return;
   curFotos.splice(+b.dataset.fotoRm, 1);
   renderFotos();
+});
+
+function readFileAsDataURL(file) {
+  return new Promise((ok, no) => {
+    const r = new FileReader();
+    r.onload = () => ok(r.result);
+    r.onerror = () => no(new Error('Datei nicht lesbar'));
+    r.readAsDataURL(file);
+  });
+}
+
+/** PDF-Dateien (Datei-Dialog oder Drag & Drop in der Pfahlliste, siehe tableWrap-Listener) anhängen;
+    reiht sich beim Download zwischen Bohrprotokoll und Fotos ein (siehe exportProtokolle in
+    protokoll.js). Nur für Administratoren verfügbar (BOHRIST_KEYS lässt „pdfs“ bewusst aus). */
+async function addPdfFiles(files, target = curPdfs) {
+  const msgs = [];
+  for (const f of files) {
+    if (target.length >= PDF_MAX) { msgs.push(`Höchstens ${PDF_MAX} PDF-Anhänge je Pfahl.`); break; }
+    if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) { msgs.push(`„${f.name}“ ist kein PDF.`); continue; }
+    try {
+      const data = await readFileAsDataURL(f);
+      if (window.PDFLib) await window.PDFLib.PDFDocument.load(dataUrlBytes(data));   // Gültigkeit vorab prüfen
+      if (storageUsed() + data.length > DATA_LIMIT) { msgs.push('Der Speicher des Browsers ist fast voll – diese PDF-Datei wurde nicht hinzugefügt.'); break; }
+      target.push({ id: uid(), name: f.name.replace(/\.pdf$/i, '').slice(0, 60), data });
+    } catch { msgs.push(`„${f.name}“ ist keine gültige PDF-Datei.`); }
+  }
+  return msgs;
+}
+
+$('#btnAddPdf').addEventListener('click', () => $('#pdfFile').click());
+$('#pdfFile').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  const msgs = await addPdfFiles(files);
+  renderPdfs();
+  $('#pdfHint').textContent = msgs.join(' ') || 'Anhänge werden beim PDF-Download direkt hinter dem Bohrprotokoll eingefügt, vor eventuellen Fotos. Auch per Drag & Drop auf einen Pfahl in der Liste möglich.';
+});
+$('#pdfList').addEventListener('click', e => {
+  const b = e.target.closest('[data-pdf-rm]');
+  if (!b) return;
+  curPdfs.splice(+b.dataset.pdfRm, 1);
+  renderPdfs();
 });
 
 function updatePruefBox() {
@@ -1995,7 +2093,7 @@ async function exportBackup() {
   toast('Sicherung gespeichert. Sie ist nur mit dem Passwort lesbar.');
 }
 
-/** Prüft eine Sicherung (Datei oder aus der Cloud) auf Gültigkeit; liefert das lokal speicherbare
+/** Prüft eine Sicherungsdatei auf Gültigkeit; liefert das lokal speicherbare
     meta-Objekt und den Daten-Blob, oder null bei ungültiger Struktur. */
 function parseSicherung(o) {
   const iterOk = n => Number.isInteger(n) && n >= 100000 && n <= 5000000;
@@ -2012,6 +2110,18 @@ function parseSicherung(o) {
       : { v: 1, user: o.meta.user, salt: o.meta.salt, iter: o.meta.iter },
     dataBlob: { iv: o.data.iv, ct: o.data.ct },
   };
+}
+
+/** Übernimmt eine gültige Sicherung wie beim manuellen Laden (ersetzt lokale Zugangsdaten und
+    Daten vollständig, verlangt anschließend eine neue Anmeldung) – für frische Geräte ohne
+    bestehende lokale Sitzung (siehe restoreFromFile). */
+function applyIncomingSicherungFresh(parsed) {
+  if (localStorage.getItem(LS_DATA) &&
+    !confirm('Die Sicherung ersetzt alle aktuellen Daten und die Zugangsdaten auf diesem Gerät.\n\nFortfahren?')) return false;
+  localStorage.setItem(LS_META, JSON.stringify(parsed.metaToStore));
+  localStorage.setItem(LS_DATA, JSON.stringify(parsed.dataBlob));
+  lock();
+  return true;
 }
 
 async function restoreFromFile(file) {
@@ -2201,7 +2311,7 @@ async function exportRueckmeldung() {
   toast(`Rückmeldung mit ${plural(count)} gespeichert.`);
 }
 
-/** Übernimmt die Einträge einer entschlüsselten Rückmeldung in state.piles (Datei oder Cloud). */
+/** Übernimmt die Einträge einer entschlüsselten Rückmeldungsdatei in state.piles. */
 async function applyRueckmeldungItems(items) {
   if (!Array.isArray(items)) return null;
   const res = { neu: 0, upd: 0, geprueft: 0, aelter: 0, unbekannt: 0 };
@@ -2239,313 +2349,6 @@ const rueckInput = document.createElement('input');
 rueckInput.type = 'file'; rueckInput.accept = '.json,application/json'; rueckInput.hidden = true;
 document.body.appendChild(rueckInput);
 rueckInput.addEventListener('change', () => { const f = rueckInput.files[0]; rueckInput.value = ''; if (f) importRueckmeldung(f); });
-
-/* =====================================================================
-   Cloud-Sync (Microsoft Graph: OneDrive/SharePoint)
-   Automatisiert nur den Dateitransport von Sicherung und Rückmeldung über
-   einen gemeinsamen Cloud-Ordner; die eigentliche Logik (Verschlüsselung,
-   Gültigkeitsprüfung, feldweises Zusammenführen) ist dieselbe wie oben.
-   Administrator: legt laufend die aktuelle Sicherung ab und liest
-   Rückmeldungen der Bohristen automatisch ein. Bohrist: legt seine
-   Rückmeldung automatisch ab und übernimmt automatisch die neueste
-   Sicherung (eigene, noch nicht vom Admin übernommene Änderungen bleiben
-   dabei erhalten, siehe mergeIncomingState). Die Einrichtung (Client-ID,
-   Anmeldung, Ordner) gilt jeweils nur für das aktuelle Gerät.
-   ===================================================================== */
-const LS_CLOUD = 'bohrpfahl.cloud';
-const CLOUD_SICHERUNG = 'Bohrpfahl-Sicherung.json';
-const GRAPH_SCOPES = ['Files.ReadWrite.All', 'Sites.Read.All'];
-const cloud = { ...(readJSON(LS_CLOUD) || {}) };   // {clientId, tenantId, account, connected, driveId, itemId, folderLabel, lastSync}
-const saveCloud = () => localStorage.setItem(LS_CLOUD, JSON.stringify(cloud));
-const cloudRueckName = () => `Rueckmeldung_${(me?.name || 'bohrist').replace(/[^\wäöüÄÖÜß-]+/g, '_')}.json`;
-
-let msalApp = null, msalReady = null;
-function ensureMsal() {
-  if (!cloud.clientId) return null;
-  if (!msalApp) {
-    msalApp = new msal.PublicClientApplication({
-      auth: { clientId: cloud.clientId, authority: `https://login.microsoftonline.com/${cloud.tenantId || 'common'}`, redirectUri: location.href.split('#')[0] },
-      cache: { cacheLocation: 'localStorage' },
-    });
-    msalReady = msalApp.initialize();
-  }
-  return msalApp;
-}
-
-async function graphToken(interactive) {
-  const app = ensureMsal();
-  if (!app) throw new Error('Cloud-Sync ist nicht eingerichtet.');
-  await msalReady;
-  const account = app.getAllAccounts()[0];
-  try {
-    if (!account) throw new Error('keine Anmeldung');
-    return (await app.acquireTokenSilent({ scopes: GRAPH_SCOPES, account })).accessToken;
-  } catch (e) {
-    if (!interactive) throw e;
-    const r = await app.loginPopup({ scopes: GRAPH_SCOPES });
-    cloud.account = r.account.username; saveCloud();
-    return r.accessToken;
-  }
-}
-
-async function graphFetch(path, opts = {}) {
-  const token = await graphToken(!!opts.interactive);
-  const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, { method: opts.method || 'GET', headers: { Authorization: `Bearer ${token}`, ...(opts.headers || {}) }, body: opts.body });
-  if (res.status === 404) return null;
-  if (!res.ok) {
-    let msg = res.statusText;
-    try { msg = (await res.json()).error?.message || msg; } catch { /* keine JSON-Fehlermeldung */ }
-    throw new Error(`Graph-Fehler ${res.status}: ${msg}`);
-  }
-  return res;
-}
-
-const cloudDriveBase = driveId => driveId ? `/drives/${driveId}` : '/me/drive';
-const cloudFolderBase = () => `${cloudDriveBase(cloud.driveId)}/items/${cloud.itemId || 'root'}`;
-
-async function cloudPutJson(name, obj) {
-  await graphFetch(`${cloudFolderBase()}:/${encodeURIComponent(name)}:/content`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
-}
-async function cloudGetJson(name) {
-  const r = await graphFetch(`${cloudFolderBase()}:/${encodeURIComponent(name)}:/content`);
-  return r ? r.json() : null;
-}
-async function cloudListFiles() {
-  const r = await graphFetch(`${cloudFolderBase()}/children?$select=id,name,lastModifiedDateTime&$top=200`);
-  return r ? (await r.json()).value || [] : [];
-}
-async function cloudDeleteFile(itemId) {
-  await graphFetch(`${cloudDriveBase(cloud.driveId)}/items/${itemId}`, { method: 'DELETE' });
-}
-
-/* --- Ordner-Browser (Dialog) --- */
-const cloudDlg = $('#cloudDlg');
-let browse = { driveId: null, itemId: null, path: [] };
-
-async function browseList() {
-  const r = await graphFetch(`${cloudDriveBase(browse.driveId)}/items/${browse.itemId || 'root'}/children?$select=id,name,folder&$top=200`, { interactive: true });
-  const items = r ? (await r.json()).value || [] : [];
-  return items.filter(it => it.folder).sort((a, b) => a.name.localeCompare(b.name, 'de'));
-}
-
-function cloudMsg(msg, isErr = false) { $('#cloudMsgs').innerHTML = msg ? `<div class="${isErr ? 'e' : 'w'}">${esc(msg)}</div>` : ''; }
-
-async function renderCloudList() {
-  $('#cloudPath').textContent = browse.path.length ? browse.path.map(p => p.name).join(' / ') : (browse.driveId ? 'Freigegebene Dokumente' : 'Mein OneDrive');
-  $('#btnCloudUp').disabled = !browse.path.length;
-  $('#cloudList').innerHTML = '<p class="sub">Lade …</p>';
-  try {
-    const items = await browseList();
-    $('#cloudList').innerHTML = items.length
-      ? items.map(it => `<button type="button" class="cloud-item" data-folder-id="${esc(it.id)}" data-folder-name="${esc(it.name)}">📁 ${esc(it.name)}</button>`).join('')
-      : '<p class="sub">Keine Unterordner.</p>';
-  } catch (e) {
-    $('#cloudList').innerHTML = '';
-    cloudMsg('Ordner konnten nicht geladen werden: ' + e.message, true);
-  }
-}
-
-async function resolveSharePointUrl(url) {
-  const u = new URL(url);
-  const m = u.pathname.match(/^(\/(?:sites|teams)\/[^/]+)/);
-  const r = await graphFetch(m ? `/sites/${u.hostname}:${m[1]}` : `/sites/${u.hostname}`, { interactive: true });
-  if (!r) throw new Error('Seite nicht gefunden.');
-  const site = await r.json();
-  const dr = await graphFetch(`/sites/${site.id}/drive`, { interactive: true });
-  const drive = await dr.json();
-  return { driveId: drive.id, name: site.displayName };
-}
-
-/** Übernimmt eine gültige Sicherung wie beim manuellen Laden (ersetzt lokale Zugangsdaten und
-    Daten vollständig, verlangt anschließend eine neue Anmeldung) – für frische Geräte ohne
-    bestehende lokale Sitzung (siehe restoreFromFile und cloudBootstrapLoad). */
-function applyIncomingSicherungFresh(parsed) {
-  if (localStorage.getItem(LS_DATA) &&
-    !confirm('Die Sicherung ersetzt alle aktuellen Daten und die Zugangsdaten auf diesem Gerät.\n\nFortfahren?')) return false;
-  localStorage.setItem(LS_META, JSON.stringify(parsed.metaToStore));
-  localStorage.setItem(LS_DATA, JSON.stringify(parsed.dataBlob));
-  lock();
-  return true;
-}
-
-async function cloudBootstrapLoad() {
-  cloudMsg('Suche Sicherung im gewählten Ordner …');
-  try {
-    const o = await cloudGetJson(CLOUD_SICHERUNG);
-    if (!o) return cloudMsg('Im gewählten Ordner wurde noch keine Sicherung gefunden.', true);
-    const parsed = parseSicherung(o);
-    if (!parsed) return cloudMsg('Die Datei im Cloud-Ordner ist keine gültige Sicherung.', true);
-    if (applyIncomingSicherungFresh(parsed)) {
-      cloudDlg.close();
-      toast('Sicherung aus der Cloud geladen – bitte mit den Zugangsdaten der Sicherung anmelden.');
-    }
-  } catch (e) { cloudMsg('Fehler beim Laden: ' + e.message, true); }
-}
-
-function openCloud() {
-  cloudMsg('');
-  $('#cl_clientId').value = cloud.clientId || '';
-  $('#cl_tenantId').value = cloud.tenantId || '';
-  $('#cloudSetup').hidden = !!cloud.connected;
-  $('#cloudBrowse').hidden = true;
-  $('#cloudConnected').hidden = !cloud.connected;
-  if (cloud.connected) renderCloudStatus();
-  cloudDlg.showModal();
-}
-
-function renderCloudStatus() {
-  $('#cloudFolderLabel').textContent = `Ordner: ${cloud.folderLabel || '–'} · angemeldet als ${cloud.account || '–'}` +
-    (cloud.lastSync ? ` · zuletzt synchronisiert: ${new Date(cloud.lastSync).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : '');
-}
-
-$('#btnCloud').addEventListener('click', openCloud);
-$('#lockCloud').addEventListener('click', openCloud);
-
-$('#btnCloudLogin').addEventListener('click', async () => {
-  cloud.clientId = $('#cl_clientId').value.trim();
-  cloud.tenantId = $('#cl_tenantId').value.trim();
-  if (!cloud.clientId) return cloudMsg('Bitte die Anwendungs-ID (Client-ID) eingeben.', true);
-  saveCloud();
-  msalApp = null; msalReady = null;
-  cloudMsg('Anmeldung läuft …');
-  try {
-    await graphToken(true);
-    cloudMsg('');
-    $('#cloudSetup').hidden = true;
-    $('#cloudBrowse').hidden = false;
-    browse = { driveId: null, itemId: null, path: [] };
-    renderCloudList();
-  } catch (e) { cloudMsg('Anmeldung fehlgeschlagen: ' + e.message, true); }
-});
-
-$('#cloudList').addEventListener('click', e => {
-  const b = e.target.closest('[data-folder-id]');
-  if (!b) return;
-  browse.path.push({ id: b.dataset.folderId, name: b.dataset.folderName });
-  browse.itemId = b.dataset.folderId;
-  renderCloudList();
-});
-$('#btnCloudUp').addEventListener('click', () => {
-  browse.path.pop();
-  browse.itemId = browse.path.length ? browse.path[browse.path.length - 1].id : null;
-  renderCloudList();
-});
-$('#btnCloudSpGo').addEventListener('click', async () => {
-  const url = $('#cl_spUrl').value.trim();
-  if (!url) return;
-  cloudMsg('');
-  try {
-    const site = await resolveSharePointUrl(url);
-    browse = { driveId: site.driveId, itemId: null, path: [{ id: null, name: site.name }] };
-    renderCloudList();
-  } catch (e) { cloudMsg('SharePoint-Link konnte nicht geöffnet werden: ' + e.message, true); }
-});
-$('#btnCloudUseFolder').addEventListener('click', async () => {
-  cloud.driveId = browse.driveId;
-  cloud.itemId = browse.itemId;
-  cloud.folderLabel = browse.path.length ? browse.path.map(p => p.name).join(' / ') : (browse.driveId ? 'Freigegebene Dokumente' : 'Mein OneDrive');
-  cloud.connected = true;
-  saveCloud();
-  $('#cloudBrowse').hidden = true;
-  $('#cloudConnected').hidden = false;
-  renderCloudStatus();
-  if (!me) {
-    await cloudBootstrapLoad();
-  } else {
-    cloudMsg('Ordner verbunden. Die Synchronisierung läuft ab jetzt automatisch im Hintergrund.');
-    scheduleCloudSync(200);
-  }
-});
-$('#btnCloudSyncNow').addEventListener('click', async () => {
-  cloudMsg('Synchronisiere …');
-  await cloudSyncTick({ interactive: true });
-  cloudMsg('Synchronisierung abgeschlossen.');
-  renderCloudStatus();
-});
-$('#btnCloudDisconnect').addEventListener('click', () => {
-  if (!confirm('Cloud-Sync auf diesem Gerät trennen? Die Dateien im Cloud-Ordner bleiben erhalten.')) return;
-  cloud.connected = false; delete cloud.driveId; delete cloud.itemId; delete cloud.folderLabel;
-  saveCloud();
-  $('#cloudConnected').hidden = true;
-  $('#cloudSetup').hidden = false;
-});
-
-/** Führt eine vom Administrator empfangene Sicherung mit dem lokalen Stand zusammen: eigene, vom
-    Admin noch nicht übernommene Änderungen (updatedRole „borist“, neuer als die eingehende Version)
-    bleiben erhalten; alles andere (Grunddaten, neue/geänderte Pfähle des Admins) wird übernommen. */
-function mergeIncomingState(newState) {
-  state.projekt = newState.projekt;
-  const local = new Map(state.piles.map(p => [p.id, p]));
-  const merged = [];
-  for (const np of newState.piles) {
-    const lp = local.get(np.id);
-    if (lp && lp.updatedRole === 'borist' && (lp.updatedAt || 0) > (np.updatedAt || 0)) merged.push(lp);
-    else merged.push(np);
-    local.delete(np.id);
-  }
-  for (const lp of local.values()) if (lp.quelle === 'borist') merged.push(lp);
-  state.piles = merged;
-}
-
-/** Übernimmt eine aus der Cloud gelesene Sicherung in eine laufende Sitzung, ohne Neuanmeldung zu
-    erzwingen, solange der aktuelle Sitzungsschlüssel sie noch entschlüsseln kann. */
-async function applyCloudSicherung(o) {
-  const parsed = parseSicherung(o);
-  if (!parsed) return;
-  try {
-    mergeIncomingState(await unseal(key, parsed.dataBlob));
-    meta = parsed.metaToStore;
-    localStorage.setItem(LS_META, JSON.stringify(meta));
-    render();
-    await persist();
-  } catch {
-    applyIncomingSicherungFresh(parsed);
-    toast('Neue Sicherung aus der Cloud geladen – bitte erneut anmelden.');
-  }
-}
-
-let cloudSyncing = false;
-async function cloudSyncTick({ interactive = false } = {}) {
-  if (!cloud.connected || !key || cloudSyncing) return;
-  cloudSyncing = true;
-  try {
-    if (isAdmin()) {
-      await cloudPutJson(CLOUD_SICHERUNG, await buildBackupPayload());
-      const files = await cloudListFiles();
-      let mergedAny = false;
-      for (const f of files.filter(x => /^Rueckmeldung_.*\.json$/i.test(x.name))) {
-        const o = await cloudGetJson(f.name);
-        if (!o || o.app !== APP_ID || o.type !== 'rueckmeldung' || !o.data) continue;
-        let items;
-        try { items = JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(o.data.iv) }, key, fromB64(o.data.ct)))).items; }
-        catch { continue; }
-        if (await applyRueckmeldungItems(items)) { await cloudDeleteFile(f.id); mergedAny = true; }
-      }
-      if (mergedAny) await cloudPutJson(CLOUD_SICHERUNG, await buildBackupPayload());
-    } else {
-      const rp = await buildRueckmeldungPayload();
-      if (rp) await cloudPutJson(cloudRueckName(), rp);
-      const o = await cloudGetJson(CLOUD_SICHERUNG);
-      if (o) await applyCloudSicherung(o);
-    }
-    cloud.lastSync = Date.now(); saveCloud();
-    if (cloudDlg.open || interactive) renderCloudStatus();
-  } catch (e) {
-    console.warn('Cloud-Sync fehlgeschlagen:', e);
-    if (interactive) cloudMsg('Synchronisierung fehlgeschlagen: ' + e.message, true);
-  } finally {
-    cloudSyncing = false;
-  }
-}
-
-let cloudSyncTimer = null;
-function scheduleCloudSync(delay = 2500) {
-  if (!cloud.connected) return;
-  clearTimeout(cloudSyncTimer);
-  cloudSyncTimer = setTimeout(() => cloudSyncTick(), delay);
-}
-setInterval(() => scheduleCloudSync(0), 120000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleCloudSync(500); });
 
 /* =====================================================================
    Start
