@@ -3666,10 +3666,10 @@ async function appendPdfBytes(target, bytes) {
 /** Formblatt 08 (Abnahme Bohrpfahl ZBm) für einen Pfahl befüllen: Vorlage (FORMBLATT_08_B64, siehe
     formblatt.js) laden und die Werte an den dafür vorgesehenen Stellen eintragen. Koordinaten sind
     fix auf das Layout der Vorlage abgestimmt (unverändert, Maßeinheit pt, Ursprung unten links) –
-    das Formular selbst darf optisch nicht verändert werden. Einzige Ausnahme: die Zeile
-    „Betontemperatur“ wird komplett entfernt (weiß übermalt), wie vorgegeben. Jeder Wert wird mittig
-    auf der jeweiligen Linie bzw. im jeweiligen Feld platziert (x-Koordinaten unten sind Feldmitten,
-    anhand der Vorlage vermessen – kein linker Rand). Liefert die befüllten PDF-Bytes. */
+    das Formular selbst darf optisch nicht verändert werden, „Betontemperatur“ bleibt daher
+    unausgefüllt im Original stehen. Jeder Wert wird mittig auf der jeweiligen Linie bzw. im
+    jeweiligen Feld platziert (x-Koordinaten unten sind Feldmitten, anhand der Vorlage vermessen –
+    kein linker Rand). Liefert die befüllten PDF-Bytes. */
 async function buildFormblatt08(p) {
   const doc = await window.PDFLib.PDFDocument.load(dataUrlBytes('data:application/pdf;base64,' + FORMBLATT_08_B64));
   const page = doc.getPages()[0];
@@ -3684,9 +3684,6 @@ async function buildFormblatt08(p) {
   const bet = ((p.zeiten && p.zeiten.betonieren) || [])[0] || {};
   const betDatum = fmtDate(bet.d);
   const bauteilcode = /block/i.test(p.bewTyp || '') ? 'B500' : /gsa/i.test(p.bewTyp || '') ? 'B400' : '';
-
-  // Zeile „Betontemperatur“ (Label + Linie) entfernen
-  page.drawRectangle({ x: 396, y: 197, width: 152, height: 13, color: window.PDFLib.rgb(1, 1, 1) });
 
   T(betDatum, 359.8, 741.84);
   T(p.nr, 532.8, 741.84, 8.5);
