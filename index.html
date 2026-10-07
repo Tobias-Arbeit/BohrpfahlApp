@@ -3667,14 +3667,19 @@ async function appendPdfBytes(target, bytes) {
     formblatt.js) laden und die Werte an den dafür vorgesehenen Stellen eintragen. Koordinaten sind
     fix auf das Layout der Vorlage abgestimmt (unverändert, Maßeinheit pt, Ursprung unten links) –
     das Formular selbst darf optisch nicht verändert werden. Einzige Ausnahme: die Zeile
-    „Betontemperatur“ wird komplett entfernt (weiß übermalt), wie vorgegeben. Liefert die befüllten
-    PDF-Bytes. */
+    „Betontemperatur“ wird komplett entfernt (weiß übermalt), wie vorgegeben. Jeder Wert wird mittig
+    auf der jeweiligen Linie bzw. im jeweiligen Feld platziert (x-Koordinaten unten sind Feldmitten,
+    anhand der Vorlage vermessen – kein linker Rand). Liefert die befüllten PDF-Bytes. */
 async function buildFormblatt08(p) {
   const doc = await window.PDFLib.PDFDocument.load(dataUrlBytes('data:application/pdf;base64,' + FORMBLATT_08_B64));
   const page = doc.getPages()[0];
   const font = await doc.embedFont(window.PDFLib.StandardFonts.Helvetica);
   const ink = window.PDFLib.rgb(0, 0.05, 0.4);
-  const T = (text, x, y, size = 9) => { if (text) page.drawText(String(text), { x, y, size, font, color: ink }); };
+  const T = (text, cx, y, size = 9) => {
+    if (!text) return;
+    const s = String(text);
+    page.drawText(s, { x: cx - font.widthOfTextAtSize(s, size) / 2, y, size, font, color: ink });
+  };
 
   const bet = ((p.zeiten && p.zeiten.betonieren) || [])[0] || {};
   const betDatum = fmtDate(bet.d);
@@ -3683,17 +3688,19 @@ async function buildFormblatt08(p) {
   // Zeile „Betontemperatur“ (Label + Linie) entfernen
   page.drawRectangle({ x: 396, y: 197, width: 152, height: 13, color: window.PDFLib.rgb(1, 1, 1) });
 
-  T(betDatum, 315, 741.84);
-  T(p.nr, 504, 741.84, 8.5);
-  T(bauteilcode, 330, 708);
-  T(isNum(p.arbeitsebene) ? fmtPlain(p.arbeitsebene, 3) : '', 162, 612.84);
-  T(isNum(p.bohrlaenge) ? fmtPlain(p.bohrlaenge, 3) : '', 405, 612.84);
-  T(betDatum, 123, 218.04, 8);
-  T(bet.von, 266, 218.04, 8);
-  T(bet.bis, 336, 218.04, 8);
-  T(p.konsistenz, 455, 218.04);
-  T('Fertigbeton B. Nagele GesmbH & Co KG', 380, 180.24, 7.5);
-  T(isNum(p.verbrauchIst) ? fmtPlain(p.verbrauchIst, 2) : '', 470, 87.72);
+  T(betDatum, 359.8, 741.84);
+  T(p.nr, 532.8, 741.84, 8.5);
+  T(bauteilcode, 459, 708);
+  T(isNum(p.arbeitsebene) ? fmtPlain(p.arbeitsebene, 3) : '', 213.33, 612.84);
+  T(isNum(p.bohrlaenge) ? fmtPlain(p.bohrlaenge, 3) : '', 477.33, 612.84);
+  T(betDatum, 192.33, 218.04, 8);
+  T(bet.von, 291.33, 218.04, 8);
+  T(bet.bis, 357.33, 218.04, 8);
+  T(p.konsistenz, 513.33, 218.04);
+  T('siehe Beilage', 195.33, 199.08);
+  T(p.betongute, 234.33, 180.24, 8);
+  T('Fertigbeton B. Nagele GesmbH & Co KG', 461.84, 180.24, 7.5);
+  T(isNum(p.verbrauchIst) ? fmtPlain(p.verbrauchIst, 2) : '', 498, 87.72);
 
   return doc.save();
 }
