@@ -510,46 +510,71 @@ async function appendPdfBytes(target, bytes) {
   pages.forEach(pg => target.addPage(pg));
 }
 
-/** Baut je Pfahl Protokoll (1 Seite) + angehängte PDFs + Fotoseiten zusammen und reiht die Pfähle
-    aneinander. jsPDF kann keine fremden PDF-Seiten einbetten, daher wird nur dann über pdf-lib
-    zusammengefügt (etwas aufwändiger: jedes Teilstück entsteht als eigenes kleines PDF, das per
-    copyPages eingefügt wird), wenn tatsächlich Anhänge vorhanden sind – ohne Anhänge bleibt der
-    einfache, rein jsPDF-basierte Weg wie bisher bestehen. */
+/** Formblatt 08 (Abnahme Bohrpfahl ZBm) für einen Pfahl befüllen: Vorlage (FORMBLATT_08_B64, siehe
+    formblatt.js) laden und die Werte an den dafür vorgesehenen Stellen eintragen. Koordinaten sind
+    fix auf das Layout der Vorlage abgestimmt (unverändert, Maßeinheit pt, Ursprung unten links) –
+    das Formular selbst darf optisch nicht verändert werden. Einzige Ausnahme: die Zeile
+    „Betontemperatur“ wird komplett entfernt (weiß übermalt), wie vorgegeben. Liefert die befüllten
+    PDF-Bytes. */
+async function buildFormblatt08(p) {
+  const doc = await window.PDFLib.PDFDocument.load(dataUrlBytes('data:application/pdf;base64,' + FORMBLATT_08_B64));
+  const page = doc.getPages()[0];
+  const font = await doc.embedFont(window.PDFLib.StandardFonts.Helvetica);
+  const ink = window.PDFLib.rgb(0, 0.05, 0.4);
+  const T = (text, x, y, size = 9) => { if (text) page.drawText(String(text), { x, y, size, font, color: ink }); };
+
+  const bet = ((p.zeiten && p.zeiten.betonieren) || [])[0] || {};
+  const betDatum = fmtDate(bet.d);
+  const bauteilcode = /block/i.test(p.bewTyp || '') ? 'B500' : /gsa/i.test(p.bewTyp || '') ? 'B400' : '';
+
+  // Zeile „Betontemperatur“ (Label + Linie) entfernen
+  page.drawRectangle({ x: 396, y: 197, width: 152, height: 13, color: window.PDFLib.rgb(1, 1, 1) });
+
+  T(betDatum, 315, 741.84);
+  T(p.nr, 504, 741.84, 8.5);
+  T(bauteilcode, 330, 708);
+  T(isNum(p.arbeitsebene) ? fmtPlain(p.arbeitsebene, 3) : '', 162, 612.84);
+  T(isNum(p.bohrlaenge) ? fmtPlain(p.bohrlaenge, 3) : '', 405, 612.84);
+  T(betDatum, 123, 218.04, 8);
+  T(bet.von, 266, 218.04, 8);
+  T(bet.bis, 336, 218.04, 8);
+  T(p.konsistenz, 455, 218.04);
+  T('Fertigbeton B. Nagele GesmbH & Co KG', 380, 180.24, 7.5);
+  T(isNum(p.verbrauchIst) ? fmtPlain(p.verbrauchIst, 2) : '', 470, 87.72);
+
+  return doc.save();
+}
+
+/** Baut je Pfahl Protokoll (1 Seite) + Formblatt 08 + angehängte PDFs + Fotoseiten zusammen und
+    reiht die Pfähle aneinander. jsPDF kann keine fremden PDF-Seiten einbetten, daher wird über
+    pdf-lib zusammengefügt: jedes Teilstück entsteht als eigenes kleines PDF, das per copyPages
+    eingefügt wird. */
 async function exportProtokolle(list, { fotos = true, pdfs = true } = {}) {
   if (!list.length) return toast('Keine Pfähle für den Export vorhanden.');
   if (!window.jspdf) return toast('PDF-Bibliothek nicht geladen.');
+  if (!window.PDFLib) return toast('PDF-Bibliothek (pdf-lib) nicht geladen.');
   const name = list.length === 1
     ? fileBase('Bohrprotokoll_' + String(list[0].nr).replace(/[^\wäöüÄÖÜß-]+/g, '_'))
     : fileBase('Bohrprotokolle');
 
-  const anyPdfs = pdfs && list.some(p => (p.pdfs || []).length);
-  if (!anyPdfs) {
-    const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
-    list.forEach((p, i) => {
-      if (i) doc.addPage();
-      drawProtokoll(doc, p, state.projekt);
-      if (fotos) drawFotoSeiten(doc, p, state.projekt);   // eigene Seite(n) mit Fotos, falls vorhanden
-    });
-    doc.save(name + '.pdf');
-  } else {
-    if (!window.PDFLib) return toast('PDF-Bibliothek (pdf-lib) für Anhänge nicht geladen.');
-    const merged = await window.PDFLib.PDFDocument.create();
-    for (const p of list) {
-      const protoDoc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
-      drawProtokoll(protoDoc, p, state.projekt);
-      await appendPdfBytes(merged, protoDoc.output('arraybuffer'));
-      for (const f of (pdfs ? (p.pdfs || []) : [])) {
-        if (!f?.data) continue;
-        try { await appendPdfBytes(merged, dataUrlBytes(f.data)); }
-        catch { toast(`Anhang „${f.name || 'PDF'}“ bei Pfahl „${p.nr}“ konnte nicht eingefügt werden (beschädigte Datei?).`); }
-      }
-      if (fotos && (p.fotos || []).length) {
-        const fotoDoc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
-        drawFotoSeiten(fotoDoc, p, state.projekt, { fresh: true });
-        await appendPdfBytes(merged, fotoDoc.output('arraybuffer'));
-      }
+  const merged = await window.PDFLib.PDFDocument.create();
+  for (const p of list) {
+    const protoDoc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+    drawProtokoll(protoDoc, p, state.projekt);
+    await appendPdfBytes(merged, protoDoc.output('arraybuffer'));
+    try { await appendPdfBytes(merged, await buildFormblatt08(p)); }
+    catch { toast(`Formblatt 08 für Pfahl „${p.nr}“ konnte nicht eingefügt werden.`); }
+    for (const f of (pdfs ? (p.pdfs || []) : [])) {
+      if (!f?.data) continue;
+      try { await appendPdfBytes(merged, dataUrlBytes(f.data)); }
+      catch { toast(`Anhang „${f.name || 'PDF'}“ bei Pfahl „${p.nr}“ konnte nicht eingefügt werden (beschädigte Datei?).`); }
     }
-    download(await merged.save(), name + '.pdf', 'application/pdf');
+    if (fotos && (p.fotos || []).length) {
+      const fotoDoc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+      drawFotoSeiten(fotoDoc, p, state.projekt, { fresh: true });
+      await appendPdfBytes(merged, fotoDoc.output('arraybuffer'));
+    }
   }
+  download(await merged.save(), name + '.pdf', 'application/pdf');
   toast(list.length === 1 ? `Bohrprotokoll „${list[0].nr}“ erstellt.` : `Bohrprotokolle erstellt: ${plural(list.length)}.`);
 }
