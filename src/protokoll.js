@@ -525,8 +525,10 @@ async function appendPdfBytes(target, bytes) {
     unausgefüllt im Original stehen. Einzige Ausnahme: das Original-Label „Ausbreitmass:“ wird durch
     „Ausbreitmaß IST“ ersetzt und bleibt unausgefüllt (keine Verknüpfung mehr mit der Konsistenz).
     Jeder Wert wird mittig auf der jeweiligen Linie bzw. im jeweiligen Feld platziert (x-Koordinaten
-    unten sind Feldmitten, anhand der Vorlage vermessen – kein linker Rand). Liefert die befüllten
-    PDF-Bytes. */
+    unten sind Feldmitten, anhand der Vorlage vermessen – kein linker Rand). Datum und Bohrpfahl-
+    NUMMER stehen zusätzlich vertikal mittig in ihrem Rechteck (y = Boxmitte); x bleibt auf die Mitte
+    des freien Felds neben dem Label begrenzt, sonst würde der Wert bei langen Pfahlnummern das
+    Label „Bohrpfahl - NUMMER:“ überlagern. Liefert die befüllten PDF-Bytes. */
 async function buildFormblatt08(p) {
   const doc = await window.PDFLib.PDFDocument.load(dataUrlBytes('data:application/pdf;base64,' + FORMBLATT_08_B64));
   const page = doc.getPages()[0];
@@ -546,8 +548,8 @@ async function buildFormblatt08(p) {
   page.drawRectangle({ x: 396, y: 213.2, width: 152, height: 13, color: window.PDFLib.rgb(1, 1, 1) });
   page.drawText('Ausbreitmaß IST', { x: 398.4, y: 218.04, size: 9, font, color: ink });
 
-  T(betDatum, 359.8, 741.84);
-  T(p.nr, 532.8, 741.84, 8.5);
+  T(betDatum, 359.8, 736.45);
+  T(p.nr, 532.8, 736.6, 8.5);
   T(bauteilcode, 459, 708);
   T(isNum(p.arbeitsebene) ? fmtPlain(p.arbeitsebene, 3) : '', 213.33, 612.84);
   T(isNum(p.bohrlaenge) ? fmtPlain(p.bohrlaenge, 3) : '', 477.33, 612.84);
