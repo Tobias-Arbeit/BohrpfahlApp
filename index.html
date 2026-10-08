@@ -3300,11 +3300,12 @@ function drawProtokoll(doc, p, proj) {
   T('Pfahl Nr.:', 42, 104, { size: 11.3 });     T(p.nr, 119.2, 104, { size: 11.3, style: 'bold', maxW: 84 });
   T('Ort:', 209.4, 104, { size: 11.3 });        T(proj.ort, 268.6, 104, { size: 11.3, style: 'bold', maxW: 272 });
   L(41, 111.1, 543.6, 111.1, 1);
-  T('Pfahlart:', 42, 125, { size: 11.3 });      T(p.pfahlart, 91.2, 125, { size: 11.3, maxW: 110 });
-  T('Neigung:', 209.9, 125, { size: 11.3 });    T(fmtFlex(p.neigung), 300, 125, { size: 10.3, align: 'center', maxW: 60 });
-  T('°', 339, 125.2, { size: 10.3 });
-  T('Pfahl-Ø :', 386.2, 125, { size: 11.3 });   T(fmtFlex(p.durchmesser), 485.4, 124.7, { size: 10.3, align: 'center', maxW: 60 });
-  T('m', 515.7, 125.2, { size: 10.3 });
+  T('Pfahlart:', 42, 125, { size: 11.3 });        T(p.pfahlart, 87, 125, { size: 11.3, maxW: 45 });
+  T('Bohrverfahren:', 135, 125, { size: 11.3 });  T(pileTyp(p), 213, 125, { size: 11.3, maxW: 145 });
+  T('Neigung:', 365, 125, { size: 11.3 });        T(fmtFlex(p.neigung), 424, 125, { size: 10.3, align: 'center', maxW: 22 });
+  T('°', 440, 125.2, { size: 10.3 });
+  T('Pfahl-Ø :', 450, 125, { size: 11.3 });       T(fmtFlex(p.durchmesser), 515, 124.7, { size: 10.3, align: 'center', maxW: 20 });
+  T('m', 528, 125.2, { size: 10.3 });
   L(41, 132.2, 543.6, 132.2, 1.6);
   L(41, 139.6, 543.6, 139.6, 1.6);
 
@@ -4212,7 +4213,10 @@ async function unseal(k, blob) {
 const emptyZeiten = () => Object.fromEntries(ZEIT_GROUPS.map(g => [g.k, [{}]]));
 
 /** Bohrverfahren: fest vorgegebene Liste, wird je Bohrgerät gewählt (nicht mehr frei je Pfahl). */
-const VERFAHREN_OPTIONS = ['Kellybohrung', 'SOB', 'VdW', 'Greiferbohrung'];
+const VERFAHREN_OPTIONS = ['Kellybohrung verrohrt', 'SOB', 'VdW', 'Greiferbohrung verrohrt'];
+/** Alte, vor der Umbenennung gespeicherte Verfahren-Bezeichnungen auf die aktuellen überführen. */
+const VERFAHREN_RENAME = { Kellybohrung: 'Kellybohrung verrohrt', Greiferbohrung: 'Greiferbohrung verrohrt' };
+const renameVerfahren = v => VERFAHREN_RENAME[v] || v;
 
 const defaultProjekt = () => ({
   nr: '', name: '', ort: '', titel: 'Ortbetonbohrpfähle', norm: 'nach EN 1536',
@@ -4266,6 +4270,7 @@ function migratePile(p, fromVersion) {
   q.zeiten = z;
   if (!Array.isArray(q.fotos)) q.fotos = [];
   if (!Array.isArray(q.pdfs)) q.pdfs = [];
+  if (q.geraetInfo) q.geraetInfo = { ...q.geraetInfo, verfahren: renameVerfahren(q.geraetInfo.verfahren) };
   // Schichten: früheres Häkchen „hart“ → Art
   q.schichten = (Array.isArray(q.schichten) ? q.schichten : []).map(s => {
     const { hart, ...rest } = s;
@@ -4277,9 +4282,11 @@ function migratePile(p, fromVersion) {
 /** Ein Eintrag in state.projects: { id, projekt, piles } – ein eigenständiges Projekt mit eigenen
     Projektdaten und eigenen Pfählen. */
 function normalizeProjectEntry(o, v) {
+  const projekt = { ...defaultProjekt(), ...(typeof o.projekt === 'string' ? { name: o.projekt } : (o.projekt || {})) };
+  if (Array.isArray(projekt.geraete)) projekt.geraete = projekt.geraete.map(g => ({ ...g, verfahren: renameVerfahren(g.verfahren) }));
   return {
     id: o.id || uid(),
-    projekt: { ...defaultProjekt(), ...(typeof o.projekt === 'string' ? { name: o.projekt } : (o.projekt || {})) },
+    projekt,
     piles: Array.isArray(o.piles) ? o.piles.map(p => migratePile(p, v)) : [],
   };
 }

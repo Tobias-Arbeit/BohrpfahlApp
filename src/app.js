@@ -101,7 +101,10 @@ async function unseal(k, blob) {
 const emptyZeiten = () => Object.fromEntries(ZEIT_GROUPS.map(g => [g.k, [{}]]));
 
 /** Bohrverfahren: fest vorgegebene Liste, wird je Bohrgerät gewählt (nicht mehr frei je Pfahl). */
-const VERFAHREN_OPTIONS = ['Kellybohrung', 'SOB', 'VdW', 'Greiferbohrung'];
+const VERFAHREN_OPTIONS = ['Kellybohrung verrohrt', 'SOB', 'VdW', 'Greiferbohrung verrohrt'];
+/** Alte, vor der Umbenennung gespeicherte Verfahren-Bezeichnungen auf die aktuellen überführen. */
+const VERFAHREN_RENAME = { Kellybohrung: 'Kellybohrung verrohrt', Greiferbohrung: 'Greiferbohrung verrohrt' };
+const renameVerfahren = v => VERFAHREN_RENAME[v] || v;
 
 const defaultProjekt = () => ({
   nr: '', name: '', ort: '', titel: 'Ortbetonbohrpfähle', norm: 'nach EN 1536',
@@ -155,6 +158,7 @@ function migratePile(p, fromVersion) {
   q.zeiten = z;
   if (!Array.isArray(q.fotos)) q.fotos = [];
   if (!Array.isArray(q.pdfs)) q.pdfs = [];
+  if (q.geraetInfo) q.geraetInfo = { ...q.geraetInfo, verfahren: renameVerfahren(q.geraetInfo.verfahren) };
   // Schichten: früheres Häkchen „hart“ → Art
   q.schichten = (Array.isArray(q.schichten) ? q.schichten : []).map(s => {
     const { hart, ...rest } = s;
@@ -166,9 +170,11 @@ function migratePile(p, fromVersion) {
 /** Ein Eintrag in state.projects: { id, projekt, piles } – ein eigenständiges Projekt mit eigenen
     Projektdaten und eigenen Pfählen. */
 function normalizeProjectEntry(o, v) {
+  const projekt = { ...defaultProjekt(), ...(typeof o.projekt === 'string' ? { name: o.projekt } : (o.projekt || {})) };
+  if (Array.isArray(projekt.geraete)) projekt.geraete = projekt.geraete.map(g => ({ ...g, verfahren: renameVerfahren(g.verfahren) }));
   return {
     id: o.id || uid(),
-    projekt: { ...defaultProjekt(), ...(typeof o.projekt === 'string' ? { name: o.projekt } : (o.projekt || {})) },
+    projekt,
     piles: Array.isArray(o.piles) ? o.piles.map(p => migratePile(p, v)) : [],
   };
 }

@@ -147,11 +147,12 @@ function drawProtokoll(doc, p, proj) {
   T('Pfahl Nr.:', 42, 104, { size: 11.3 });     T(p.nr, 119.2, 104, { size: 11.3, style: 'bold', maxW: 84 });
   T('Ort:', 209.4, 104, { size: 11.3 });        T(proj.ort, 268.6, 104, { size: 11.3, style: 'bold', maxW: 272 });
   L(41, 111.1, 543.6, 111.1, 1);
-  T('Pfahlart:', 42, 125, { size: 11.3 });      T(p.pfahlart, 91.2, 125, { size: 11.3, maxW: 110 });
-  T('Neigung:', 209.9, 125, { size: 11.3 });    T(fmtFlex(p.neigung), 300, 125, { size: 10.3, align: 'center', maxW: 60 });
-  T('°', 339, 125.2, { size: 10.3 });
-  T('Pfahl-Ø :', 386.2, 125, { size: 11.3 });   T(fmtFlex(p.durchmesser), 485.4, 124.7, { size: 10.3, align: 'center', maxW: 60 });
-  T('m', 515.7, 125.2, { size: 10.3 });
+  T('Pfahlart:', 42, 125, { size: 11.3 });        T(p.pfahlart, 87, 125, { size: 11.3, maxW: 45 });
+  T('Bohrverfahren:', 135, 125, { size: 11.3 });  T(pileTyp(p), 213, 125, { size: 11.3, maxW: 145 });
+  T('Neigung:', 365, 125, { size: 11.3 });        T(fmtFlex(p.neigung), 424, 125, { size: 10.3, align: 'center', maxW: 22 });
+  T('°', 440, 125.2, { size: 10.3 });
+  T('Pfahl-Ø :', 450, 125, { size: 11.3 });       T(fmtFlex(p.durchmesser), 515, 124.7, { size: 10.3, align: 'center', maxW: 20 });
+  T('m', 528, 125.2, { size: 10.3 });
   L(41, 132.2, 543.6, 132.2, 1.6);
   L(41, 139.6, 543.6, 139.6, 1.6);
 
