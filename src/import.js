@@ -25,6 +25,7 @@ const IMP_GROUPS = [
     ['sBohrlaenge', 'Bohrlänge – SOLL', 'num', 3], ['sPfahllaenge', 'Pfahllänge – SOLL', 'num', 3], ['sLeerbohrung', 'Leerbohrung – SOLL', 'num', 3],
     ['arbeitsebene', 'Arbeitsebene – IST', 'num', 3], ['oberkante', 'Pfahl-OK – IST', 'num', 3], ['unterkante', 'Pfahl-UK – IST', 'num', 3],
     ['bohrlaenge', 'Bohrlänge – IST', 'num', 3], ['pfahllaenge', 'Pfahllänge – IST', 'num', 3], ['leerbohrung', 'Leerbohrung – IST', 'num', 3],
+    ['wasserauflastAb', 'Wasserauflast ab', 'num', 2], ['wasserauflastLaenge', 'Länge Wasserauflast', 'num', 3],
     ['gwTiefe', 'Grundwasser ab', 'num', 2], ['grundwasser', 'Bohren im GW', 'num', 3], ['abstich', 'Abstichmaß Überbeton', 'num', 2],
   ] },
   { label: 'Bodenaufschluss', fields: [
@@ -68,6 +69,8 @@ const IMP_ALIASES = (() => {
     bohrlaenge: ['bohrlaenge', 'bohrtiefe'],
     pfahllaenge: ['pfahllaenge', 'laenge'],
     leerbohrung: ['leerbohrung', 'leerbohrlaenge'],
+    wasserauflastAb: ['wasserauflastab', 'wasserauflastvon', 'wasservon'],
+    wasserauflastLaenge: ['laengewasserauflast', 'wasserauflastlaenge'],
     gwTiefe: ['grundwasserab', 'gwab', 'grundwassertiefe', 'gwtiefe', 'grundwasserstand', 'gwstand'],
     grundwasser: ['bohrenimgw', 'bohrenimgrundwasser', 'grundwasser', 'gw', 'imgrundwasser', 'gwbohrung'],
     planNr: ['bewehrungltplannr', 'ltplannr', 'plannr', 'plan', 'bewehrungplannr', 'planbewehrung',

@@ -1087,6 +1087,10 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
             </div>
           </div>
           <div class="field">
+            <label for="f_wasserauflastAb">Wasserauflast ab <span class="unit">[m unter Bohrebene]</span></label>
+            <input id="f_wasserauflastAb" name="wasserauflastAb" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
             <label for="f_gwTiefe">Grundwasser ab <span class="unit">[m unter Bohrebene]</span></label>
             <input id="f_gwTiefe" name="gwTiefe" type="text" inputmode="decimal" autocomplete="off">
           </div>
@@ -1164,6 +1168,11 @@ dialog.wide { width: min(920px, calc(100vw - 24px)); }
           </div>
 
           <div class="grid" style="margin-top:14px">
+            <div class="field">
+              <label for="f_wasserauflastLaenge">Länge Wasserauflast <span class="unit">[m]</span></label>
+              <input id="f_wasserauflastLaenge" name="wasserauflastLaenge" type="text" inputmode="decimal" autocomplete="off">
+              <span class="hint" data-auto-hint="wasserauflastLaenge"></span>
+            </div>
             <div class="field">
               <label for="f_grundwasser">Bohren im GW <span class="unit">[m]</span></label>
               <input id="f_grundwasser" name="grundwasser" type="text" inputmode="decimal" autocomplete="off">
@@ -3513,7 +3522,14 @@ function drawProtokoll(doc, p, proj) {
     T(unit, 501.2, y, { maxW: 40 });
     L(384.2, y + 4.7, 499.6, y + 4.7, 0.5, HAIR);
   };
-  single('Wasserauflast:', p.wasserauflast ? 'Ja' : 'Nein', 278.2, '');
+  T('Wasserauflast:', 268.4, 278.2);
+  T(p.wasserauflast ? 'Ja' : 'Nein', 345, 278.2);
+  if (isNum(p.wasserauflastLaenge)) {
+    T('Länge:', 395, 278.2);
+    T(fmtPlain(p.wasserauflastLaenge, 3), 466, 278.2, { align: 'center', maxW: 52 });
+    T('m', 501.2, 278.2, { maxW: 40 });
+  }
+  L(384.2, 283, 499.6, 283, 0.5, HAIR);
   single('Bohren im GW', fmtPlain(p.grundwasser, 3), 294.4, 'm');
   dual('Abstichmaß Überbeton:', abstichSoll(p), p.abstich, 310.6, 'cm', 1);
   L(267.6, 315.8, 543.6, 315.8, 1.6);
@@ -3668,9 +3684,11 @@ async function appendPdfBytes(target, bytes) {
     formblatt.js) laden und die Werte an den dafür vorgesehenen Stellen eintragen. Koordinaten sind
     fix auf das Layout der Vorlage abgestimmt (unverändert, Maßeinheit pt, Ursprung unten links) –
     das Formular selbst darf optisch nicht verändert werden, „Betontemperatur“ bleibt daher
-    unausgefüllt im Original stehen. Jeder Wert wird mittig auf der jeweiligen Linie bzw. im
-    jeweiligen Feld platziert (x-Koordinaten unten sind Feldmitten, anhand der Vorlage vermessen –
-    kein linker Rand). Liefert die befüllten PDF-Bytes. */
+    unausgefüllt im Original stehen. Einzige Ausnahme: das Original-Label „Ausbreitmass:“ wird durch
+    „Ausbreitmaß IST“ ersetzt und bleibt unausgefüllt (keine Verknüpfung mehr mit der Konsistenz).
+    Jeder Wert wird mittig auf der jeweiligen Linie bzw. im jeweiligen Feld platziert (x-Koordinaten
+    unten sind Feldmitten, anhand der Vorlage vermessen – kein linker Rand). Liefert die befüllten
+    PDF-Bytes. */
 async function buildFormblatt08(p) {
   const doc = await window.PDFLib.PDFDocument.load(dataUrlBytes('data:application/pdf;base64,' + FORMBLATT_08_B64));
   const page = doc.getPages()[0];
@@ -3686,6 +3704,10 @@ async function buildFormblatt08(p) {
   const betDatum = fmtDate(bet.d);
   const bauteilcode = /block/i.test(p.bewTyp || '') ? 'B500' : /gsa/i.test(p.bewTyp || '') ? 'B400' : '';
 
+  // Label „Ausbreitmass:“ durch „Ausbreitmaß IST“ ersetzen; die Zeile bleibt unausgefüllt
+  page.drawRectangle({ x: 396, y: 213.2, width: 152, height: 13, color: window.PDFLib.rgb(1, 1, 1) });
+  page.drawText('Ausbreitmaß IST', { x: 398.4, y: 218.04, size: 9, font, color: ink });
+
   T(betDatum, 359.8, 741.84);
   T(p.nr, 532.8, 741.84, 8.5);
   T(bauteilcode, 459, 708);
@@ -3694,7 +3716,6 @@ async function buildFormblatt08(p) {
   T(betDatum, 192.33, 218.04, 8);
   T(bet.von, 291.33, 218.04, 8);
   T(bet.bis, 357.33, 218.04, 8);
-  T(p.konsistenz, 513.33, 218.04);
   T('siehe Beilage', 195.33, 199.08);
   T(p.betongute, 234.33, 180.24, 8);
   T('Fertigbeton B. Nagele GesmbH & Co KG', 461.84, 180.24, 7.5);
@@ -4148,7 +4169,7 @@ const ZEIT_GROUPS = [
 /* Was der Bohrist bei importierten bzw. vom Administrator angelegten Pfählen ergänzen darf:
    Ist-Werte, Grundwasser, Wasserauflast, Abstichmaß, Betonverbrauch IST, Bodenaufschluss, Zeiten,
    Bemerkungen (extern und intern) */
-const BOHRIST_NUM = ['arbeitsebene', 'oberkante', 'unterkante', 'bohrlaenge', 'pfahllaenge', 'leerbohrung', 'gwTiefe', 'grundwasser', 'abstich', 'verbrauchIst'];
+const BOHRIST_NUM = ['arbeitsebene', 'oberkante', 'unterkante', 'bohrlaenge', 'pfahllaenge', 'leerbohrung', 'wasserauflastAb', 'wasserauflastLaenge', 'gwTiefe', 'grundwasser', 'abstich', 'verbrauchIst'];
 const BOHRIST_KEYS = [...BOHRIST_NUM, 'wasserauflast', 'bemerkung', 'bemerkungIntern', 'schichten', 'zeiten', 'geraet', 'geraetInfo', 'fotos'];
 
 /** Bohrgerät als Text („Typ · Inv.-Nr. …“); nutzt die Projektliste, sonst die gespeicherte Kopie am Pfahl */
@@ -4235,7 +4256,7 @@ const emptyPile = () => ({
   ost: null, nord: null,
   sArbeitsebene: null, sOberkante: null, sUnterkante: null, sBohrlaenge: null, sPfahllaenge: null, sLeerbohrung: null,
   arbeitsebene: null, oberkante: null, unterkante: null, bohrlaenge: null, pfahllaenge: null, leerbohrung: null,
-  wasserauflast: false, gwTiefe: null, grundwasser: null, abstich: null,
+  wasserauflast: false, wasserauflastAb: null, wasserauflastLaenge: null, gwTiefe: null, grundwasser: null, abstich: null,
   schichten: [], planNr: '', masse: null,
   betongute: '', konsistenz: '', verbrauchIst: null,
   zeiten: emptyZeiten(), bemerkung: '', bemerkungIntern: '',
@@ -4471,6 +4492,8 @@ const COLS = [
   { k: 'pfahllaenge',   label: 'Pfahllänge Ist',        unit: 'm',       kind: 'h',    t: true, sum: true },
   { k: 'leerbohrung',   label: 'Leerbohrung Ist',       unit: 'm',       kind: 'h' },
   { k: 'wasserauflast', label: 'Wasserauflast',         unit: '',        kind: 'bool', t: true },
+  { k: 'wasserauflastAb', label: 'Wasserauflast ab',    unit: 'm u. Bohrebene', kind: 'm' },
+  { k: 'wasserauflastLaenge', label: 'Länge Wasserauflast', unit: 'm',   kind: 'h',    t: true, sum: true },
   { k: 'gwTiefe',       label: 'Grundwasser ab',        unit: 'm u. Bohrebene', kind: 'm' },
   { k: 'grundwasser',   label: 'Bohren im GW',          unit: 'm',       kind: 'h',    t: true, sum: true },
   { k: 'abstichSoll',   label: 'Abstichmaß Überbeton Soll', unit: 'cm', kind: 'cm' },
@@ -5167,7 +5190,7 @@ const NUM_FIELDS = {
   durchmesser: 2, neigung: 1,
   sArbeitsebene: 3, sOberkante: 3, sUnterkante: 3, sBohrlaenge: 3, sPfahllaenge: 3, sLeerbohrung: 3,
   arbeitsebene: 3, oberkante: 3, unterkante: 3, bohrlaenge: 3, pfahllaenge: 3, leerbohrung: 3,
-  gwTiefe: 2, grundwasser: 3, abstich: 1,
+  wasserauflastAb: 2, wasserauflastLaenge: 3, gwTiefe: 2, grundwasser: 3, abstich: 1,
   masse: 2, verbrauchIst: 2, ost: 8, nord: 8,
 };
 const TEXT_FIELDS = ['nr', 'bewTyp', 'planNr', 'betongute', 'konsistenz', 'bemerkung', 'bemerkungIntern'];
@@ -5177,6 +5200,7 @@ const LABEL = {
   sBohrlaenge: 'Bohrlänge (Soll)', sPfahllaenge: 'Pfahllänge (Soll)', sLeerbohrung: 'Leerbohrung (Soll)',
   arbeitsebene: 'Arbeitsebene (Ist)', oberkante: 'Pfahl-OK (Ist)', unterkante: 'Pfahl-UK (Ist)',
   bohrlaenge: 'Bohrlänge (Ist)', pfahllaenge: 'Pfahllänge (Ist)', leerbohrung: 'Leerbohrung (Ist)',
+  wasserauflastAb: 'Wasserauflast ab', wasserauflastLaenge: 'Länge Wasserauflast',
   gwTiefe: 'Grundwasser ab', grundwasser: 'Bohren im GW', abstich: 'Abstichmaß Überbeton (Ist)',
   masse: 'Masse', verbrauchIst: 'Verbrauch IST', ost: 'Rechtswert/Ost', nord: 'Hochwert/Nord',
 };
@@ -5200,6 +5224,10 @@ const AUTO = {
                     const bl = isNum(v.bohrlaenge) ? v.bohrlaenge : v.sBohrlaenge;
                     return (isNum(v.gwTiefe) && isNum(bl)) ? rd(Math.max(0, bl - v.gwTiefe), 3) : null;
                   }, hint: 'Bohrlänge − Grundwasser ab' },
+  wasserauflastLaenge: { from: v => {
+                    const bl = isNum(v.bohrlaenge) ? v.bohrlaenge : v.sBohrlaenge;
+                    return (isNum(v.wasserauflastAb) && isNum(bl)) ? rd(Math.max(0, bl - v.wasserauflastAb), 3) : null;
+                  }, hint: 'Bohrlänge − Wasserauflast ab' },
 };
 let editing = null;
 let autoOn = {};
@@ -5546,6 +5574,8 @@ function validate(strict) {
   }
   if (isNum(p.grundwasser) && p.grundwasser < 0) { errs.push('Bohren im GW darf nicht negativ sein.'); bad.add('grundwasser'); }
   if (isNum(p.gwTiefe) && p.gwTiefe < 0) { errs.push('Grundwasser ab: Tiefe darf nicht negativ sein.'); bad.add('gwTiefe'); }
+  if (isNum(p.wasserauflastLaenge) && p.wasserauflastLaenge < 0) { errs.push('Länge Wasserauflast darf nicht negativ sein.'); bad.add('wasserauflastLaenge'); }
+  if (isNum(p.wasserauflastAb) && p.wasserauflastAb < 0) { errs.push('Wasserauflast ab: Tiefe darf nicht negativ sein.'); bad.add('wasserauflastAb'); }
 
   const hasO = p.ost !== null && !Number.isNaN(p.ost), hasN = p.nord !== null && !Number.isNaN(p.nord);
   if (hasO !== hasN && !Number.isNaN(p.ost) && !Number.isNaN(p.nord)) { errs.push('Rechtswert und Hochwert müssen beide angegeben werden.'); bad.add('ost'); bad.add('nord'); }
@@ -5555,6 +5585,7 @@ function validate(strict) {
 
   const blAny = isNum(p.bohrlaenge) ? p.bohrlaenge : p.sBohrlaenge;
   if (isNum(p.grundwasser) && isNum(blAny) && p.grundwasser > blAny) warns.push('Bohren im GW ist größer als die Bohrlänge.');
+  if (isNum(p.wasserauflastLaenge) && isNum(blAny) && p.wasserauflastLaenge > blAny) warns.push('Länge Wasserauflast ist größer als die Bohrlänge.');
 
   // Schichten
   let prev = 0;
@@ -5674,13 +5705,15 @@ function fillGrunddaten(p) {
    dabei aber zu „In Ausführung“, bis alle Angaben vollständig sind (siehe updateRequired(), form-submit).
    Arbeitsebene/Pfahl-OK/-UK/Bohrlänge/Pfahllänge/Leerbohrung sind für den Bohrist bei fremden Pfählen
    nicht mehr zugänglich (siehe "i"-Panel-Entfernung in pile-dialog.html) und deshalb nicht mehr Pflicht.
-   Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkungen, Fotos. */
+   Nicht verlangt: Grundwasser, Bohren im GW, Abstichmaß, Bohrhindernis/harte Schicht (Zeiten), Bemerkungen, Fotos.
+   Ausnahme: Wasserauflast ab wird Pflicht, sobald Wasserauflast auf „Ja“ steht (siehe requiredEls()). */
 const REQ_NUM = ['verbrauchIst'];
 const empty = el => !el.value || !String(el.value).trim();
 
 function requiredEls() {
   const e = form.elements, out = [];
   for (const k of REQ_NUM) out.push({ el: e[k], label: LABEL[k] });
+  if (e.wasserauflast.value === 'ja') out.push({ el: e.wasserauflastAb, label: LABEL.wasserauflastAb });
   out.push({ el: e.geraet, label: 'Bohrgerät' });
   $$('#schichtRows .schicht').forEach((r, i) => {
     out.push({ el: $('[data-s=bis]', r), label: `Bodenaufschluss, Schicht ${i + 1}: Tiefe` });
@@ -7452,6 +7485,7 @@ const IMP_GROUPS = [
     ['sBohrlaenge', 'Bohrlänge – SOLL', 'num', 3], ['sPfahllaenge', 'Pfahllänge – SOLL', 'num', 3], ['sLeerbohrung', 'Leerbohrung – SOLL', 'num', 3],
     ['arbeitsebene', 'Arbeitsebene – IST', 'num', 3], ['oberkante', 'Pfahl-OK – IST', 'num', 3], ['unterkante', 'Pfahl-UK – IST', 'num', 3],
     ['bohrlaenge', 'Bohrlänge – IST', 'num', 3], ['pfahllaenge', 'Pfahllänge – IST', 'num', 3], ['leerbohrung', 'Leerbohrung – IST', 'num', 3],
+    ['wasserauflastAb', 'Wasserauflast ab', 'num', 2], ['wasserauflastLaenge', 'Länge Wasserauflast', 'num', 3],
     ['gwTiefe', 'Grundwasser ab', 'num', 2], ['grundwasser', 'Bohren im GW', 'num', 3], ['abstich', 'Abstichmaß Überbeton', 'num', 2],
   ] },
   { label: 'Bodenaufschluss', fields: [
@@ -7495,6 +7529,8 @@ const IMP_ALIASES = (() => {
     bohrlaenge: ['bohrlaenge', 'bohrtiefe'],
     pfahllaenge: ['pfahllaenge', 'laenge'],
     leerbohrung: ['leerbohrung', 'leerbohrlaenge'],
+    wasserauflastAb: ['wasserauflastab', 'wasserauflastvon', 'wasservon'],
+    wasserauflastLaenge: ['laengewasserauflast', 'wasserauflastlaenge'],
     gwTiefe: ['grundwasserab', 'gwab', 'grundwassertiefe', 'gwtiefe', 'grundwasserstand', 'gwstand'],
     grundwasser: ['bohrenimgw', 'bohrenimgrundwasser', 'grundwasser', 'gw', 'imgrundwasser', 'gwbohrung'],
     planNr: ['bewehrungltplannr', 'ltplannr', 'plannr', 'plan', 'bewehrungplannr', 'planbewehrung',

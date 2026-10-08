@@ -360,7 +360,14 @@ function drawProtokoll(doc, p, proj) {
     T(unit, 501.2, y, { maxW: 40 });
     L(384.2, y + 4.7, 499.6, y + 4.7, 0.5, HAIR);
   };
-  single('Wasserauflast:', p.wasserauflast ? 'Ja' : 'Nein', 278.2, '');
+  T('Wasserauflast:', 268.4, 278.2);
+  T(p.wasserauflast ? 'Ja' : 'Nein', 345, 278.2);
+  if (isNum(p.wasserauflastLaenge)) {
+    T('Länge:', 395, 278.2);
+    T(fmtPlain(p.wasserauflastLaenge, 3), 466, 278.2, { align: 'center', maxW: 52 });
+    T('m', 501.2, 278.2, { maxW: 40 });
+  }
+  L(384.2, 283, 499.6, 283, 0.5, HAIR);
   single('Bohren im GW', fmtPlain(p.grundwasser, 3), 294.4, 'm');
   dual('Abstichmaß Überbeton:', abstichSoll(p), p.abstich, 310.6, 'cm', 1);
   L(267.6, 315.8, 543.6, 315.8, 1.6);
@@ -515,9 +522,11 @@ async function appendPdfBytes(target, bytes) {
     formblatt.js) laden und die Werte an den dafür vorgesehenen Stellen eintragen. Koordinaten sind
     fix auf das Layout der Vorlage abgestimmt (unverändert, Maßeinheit pt, Ursprung unten links) –
     das Formular selbst darf optisch nicht verändert werden, „Betontemperatur“ bleibt daher
-    unausgefüllt im Original stehen. Jeder Wert wird mittig auf der jeweiligen Linie bzw. im
-    jeweiligen Feld platziert (x-Koordinaten unten sind Feldmitten, anhand der Vorlage vermessen –
-    kein linker Rand). Liefert die befüllten PDF-Bytes. */
+    unausgefüllt im Original stehen. Einzige Ausnahme: das Original-Label „Ausbreitmass:“ wird durch
+    „Ausbreitmaß IST“ ersetzt und bleibt unausgefüllt (keine Verknüpfung mehr mit der Konsistenz).
+    Jeder Wert wird mittig auf der jeweiligen Linie bzw. im jeweiligen Feld platziert (x-Koordinaten
+    unten sind Feldmitten, anhand der Vorlage vermessen – kein linker Rand). Liefert die befüllten
+    PDF-Bytes. */
 async function buildFormblatt08(p) {
   const doc = await window.PDFLib.PDFDocument.load(dataUrlBytes('data:application/pdf;base64,' + FORMBLATT_08_B64));
   const page = doc.getPages()[0];
@@ -533,6 +542,10 @@ async function buildFormblatt08(p) {
   const betDatum = fmtDate(bet.d);
   const bauteilcode = /block/i.test(p.bewTyp || '') ? 'B500' : /gsa/i.test(p.bewTyp || '') ? 'B400' : '';
 
+  // Label „Ausbreitmass:“ durch „Ausbreitmaß IST“ ersetzen; die Zeile bleibt unausgefüllt
+  page.drawRectangle({ x: 396, y: 213.2, width: 152, height: 13, color: window.PDFLib.rgb(1, 1, 1) });
+  page.drawText('Ausbreitmaß IST', { x: 398.4, y: 218.04, size: 9, font, color: ink });
+
   T(betDatum, 359.8, 741.84);
   T(p.nr, 532.8, 741.84, 8.5);
   T(bauteilcode, 459, 708);
@@ -541,7 +554,6 @@ async function buildFormblatt08(p) {
   T(betDatum, 192.33, 218.04, 8);
   T(bet.von, 291.33, 218.04, 8);
   T(bet.bis, 357.33, 218.04, 8);
-  T(p.konsistenz, 513.33, 218.04);
   T('siehe Beilage', 195.33, 199.08);
   T(p.betongute, 234.33, 180.24, 8);
   T('Fertigbeton B. Nagele GesmbH & Co KG', 461.84, 180.24, 7.5);
